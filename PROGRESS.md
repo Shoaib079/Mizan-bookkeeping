@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S12 month pack Excel finish:** Summary + Card clearing use shared `finish_data_table`. Tag `v0.s12-month-pack-excel-finish`. Do not push until owner says. S13 not started.
+- **Test-only Month Pack range follow-up:** Partial-month filename and cross-month-live API behavior pinned. Tag `v0.month-pack-range-pins`. No product code changed; S13 not started.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S12)* |
-| **Last completed slice** | S12 Month pack Summary + card-clearing finish (`v0.s12-month-pack-excel-finish`) |
-| **Last tag** | `v0.s12-month-pack-excel-finish` |
+| **Active slice** | *(none — test-only follow-up complete)* |
+| **Last completed slice** | Test-only Month Pack partial/cross-month API pins (not S13; `v0.month-pack-range-pins`) |
+| **Last tag** | `v0.month-pack-range-pins` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | S13 Delivery/POS/activity masthead + delivery filename |
 

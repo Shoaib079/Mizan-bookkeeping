@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of S12)* |
+| **Active slice**         | *(none — test-only Month Pack range follow-up complete; S13 not started)* |
 | **Next up**              | **S13** Delivery/POS/activity masthead + delivery filename |
-| **Last completed slice** | S12 Month pack Summary + card-clearing shared finish (`v0.s12-month-pack-excel-finish`) |
-| **Last commit/tag**      | `v0.s12-month-pack-excel-finish` |
+| **Last completed slice** | Test-only Month Pack partial/cross-month API pins (not S13; `v0.month-pack-range-pins`) |
+| **Last commit/tag**      | `v0.month-pack-range-pins` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Test-only Month Pack arbitrary range API pins | `v0.month-pack-range-pins`                             | Partial-month date filename + cross-month live status after August close; mutation-checked wrong period segment → red |
 | 2026-08-21 | S12 month pack Summary + card-clearing finish  | `v0.s12-month-pack-excel-finish`                       | Metric header + finish_data_table money_cols on Summary and Card clearing; mutation-checked wrong header_row / dropped money_cols |
 | 2026-08-21 | S10 follow-up remaining parity gaps            | `v0.s10-export-parity-gaps-closed`                     | Staff/customer/supplier ledger + activity + POS + delivery activity screen==file; mutation-checked doubled activity closing |
 | 2026-08-21 | S10 export screen==file amount parity          | `v0.s10-export-screen-file-parity`                     | P&L/BS/CF/KDV/delivery/period + sealed/live stamps + partner running; mutation-checked doubled P&L net → red |

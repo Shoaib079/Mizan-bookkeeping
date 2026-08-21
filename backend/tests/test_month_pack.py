@@ -521,6 +521,41 @@ def test_month_pack_pdf_invalid_date_range(client, books):
     assert response.status_code == 422
 
 
+def test_month_pack_api_partial_month_range_in_filename(client, books):
+    response = client.get(
+        f"/entities/{books['entity_id']}/reports/month-pack",
+        params={"from": "2026-08-15", "to": "2026-08-30"},
+    )
+
+    assert response.status_code == 200
+    disposition = response.headers.get("content-disposition", "")
+    assert "2026-08-15-2026-08-30" in disposition
+
+
+def test_month_pack_api_cross_month_stays_live_when_august_closed(
+    db_session, client, books
+):
+    _sale(db_session, books, date(2026, 8, 20), 100_000)
+    close_period(
+        db_session,
+        books["entity_id"],
+        lock_kind=PeriodLockKind.MONTH,
+        anchor_date=date(2026, 8, 31),
+        actor_id=books["owner_id"],
+    )
+
+    response = client.get(
+        f"/entities/{books['entity_id']}/reports/month-pack",
+        params={"from": "2026-08-15", "to": "2026-09-30"},
+    )
+
+    assert response.status_code == 200
+    disposition = response.headers.get("content-disposition", "")
+    assert "2026-08-15" in disposition
+    assert "2026-09-30" in disposition
+    assert 'filename="restaurant-a-books-2026-08-15-2026-09-30-live.xlsx"' in disposition
+
+
 def test_what_we_hold_is_tinted_like_the_cash_bridge(db_session, books):
     """Cash and bank are what a partner opens the pack to find.
 
