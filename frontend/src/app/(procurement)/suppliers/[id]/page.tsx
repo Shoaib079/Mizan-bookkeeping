@@ -33,6 +33,7 @@ import { currentMonthRange } from "@/lib/date-range";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { supplierBalanceHeading } from "@/lib/supplier-balance";
 import {
   isInvoiceWorkbenchStatus,
   isPendingReviewStatus,
@@ -226,7 +227,8 @@ export default function SupplierDetailPage() {
       balance={
         ledger && (
           <EntityBalanceSticker
-            label="Current balance"
+            label={supplierBalanceHeading(ledger.balance_kurus)}
+            caption="Current balance"
             signedBalanceMinor={ledger.balance_kurus}
             details={
               invoiceCountParts.length > 0 ? (

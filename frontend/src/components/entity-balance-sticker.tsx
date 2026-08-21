@@ -27,6 +27,8 @@ export function balanceStickerDirection(
 
 type Props = {
   label: string;
+  /** Small secondary line under the heading (e.g. "Current balance"). */
+  caption?: string;
   /** Signed balance — magnitude is shown; sign picks colour. */
   signedBalanceMinor: number;
   format?: AmountFormatter;
@@ -37,6 +39,7 @@ type Props = {
 
 export function EntityBalanceSticker({
   label,
+  caption,
   signedBalanceMinor,
   format = formatTry,
   details,
@@ -60,6 +63,9 @@ export function EntityBalanceSticker({
       )}
     >
       <p className="text-xs font-medium leading-snug opacity-90">{label}</p>
+      {caption ? (
+        <p className="text-[0.65rem] leading-snug opacity-70">{caption}</p>
+      ) : null}
       <p className="mt-0.5 text-lg font-semibold tabular-nums leading-tight">
         {format(Math.abs(signedBalanceMinor))}
       </p>

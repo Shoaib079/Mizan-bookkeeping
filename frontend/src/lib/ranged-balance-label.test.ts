@@ -1,13 +1,15 @@
-/** S16 follow-up — sticker Current balance vs activity Closing in range.
+/** S16 follow-up — direction heading + Current balance caption vs Closing.
 
-Assert output labels. The sticker must never share the ranged closing wording
-with the activity Closing KPI (those figures can disagree).
+Sticker: balanceHeading direction + "Current balance" caption (today's
+ledger). Never "Closing in range". Activity Closing alone uses the ranged
+helper with the range-closing figure.
 */
 
 import { describe, expect, it } from "vitest";
 
 import { rangedBalanceLabel } from "@/lib/ranged-balance-label";
 import { formatTrDate } from "@/lib/money";
+import { supplierBalanceHeading } from "@/lib/supplier-balance";
 import { sourceDeclaring } from "@/test-support/source";
 
 const TODAY = "2026-08-21";
@@ -18,13 +20,6 @@ describe("rangedBalanceLabel (activity Closing only)", () => {
     expect(
       rangedBalanceLabel({
         rangeTo: null,
-        currentLabel: CLOSING,
-        today: TODAY,
-      }),
-    ).toBe(CLOSING);
-    expect(
-      rangedBalanceLabel({
-        rangeTo: undefined,
         currentLabel: CLOSING,
         today: TODAY,
       }),
@@ -54,24 +49,37 @@ describe("rangedBalanceLabel (activity Closing only)", () => {
 });
 
 describe("supplier sticker vs activity Closing labels", () => {
-  it("sticker is always Current balance — never rangedBalanceLabel", () => {
+  it("sticker uses direction heading + Current balance caption", () => {
     const page = sourceDeclaring("SupplierDetailPage");
-    expect(page).toContain('label="Current balance"');
+    expect(page).toContain("supplierBalanceHeading(ledger.balance_kurus)");
+    expect(page).toContain('caption="Current balance"');
     expect(page).not.toContain("rangedBalanceLabel");
     expect(page).not.toContain("Closing in range");
+    // Direction wording comes from the shared helper — not a second rule.
+    expect(supplierBalanceHeading(50_000)).toBe("You owe supplier");
+    expect(supplierBalanceHeading(-50_000)).toBe("Supplier owes you");
+    expect(supplierBalanceHeading(0)).toBe("Settled");
   });
 
-  it("sticker stays Current balance even when the page owns a past activity range", () => {
-    // The page still holds activityRange for the panel; the sticker label
-    // must not depend on it.
+  it("sticker keeps direction + Current balance when the page owns a past range", () => {
     const page = sourceDeclaring("SupplierDetailPage");
     expect(page).toContain("activityRange");
     expect(page).toMatch(
-      /<EntityBalanceSticker[\s\S]*?label="Current balance"/,
+      /<EntityBalanceSticker[\s\S]*?supplierBalanceHeading\(ledger\.balance_kurus\)/,
+    );
+    expect(page).toMatch(
+      /<EntityBalanceSticker[\s\S]*?caption="Current balance"/,
     );
     expect(page).not.toMatch(
       /<EntityBalanceSticker[\s\S]*?rangedBalanceLabel/,
     );
+    expect(page).not.toContain("Closing in range");
+  });
+
+  it("sticker component supports an optional caption slot", () => {
+    const sticker = sourceDeclaring("EntityBalanceSticker");
+    expect(sticker).toContain("caption?: string");
+    expect(sticker).toContain("{caption}");
   });
 
   it("activity Closing KPI uses the ranged helper", () => {

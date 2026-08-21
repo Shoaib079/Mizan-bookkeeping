@@ -39,6 +39,12 @@ describe("EntityBalanceSticker", () => {
     expect(src).toContain("format = formatTry");
     expect(formatTry(12_345)).toMatch(/123/);
   });
+
+  it("accepts an optional caption under the heading without rebuilding", () => {
+    const src = sourceDeclaring("EntityBalanceSticker");
+    expect(src).toContain("caption?: string");
+    expect(src).toContain("{caption ? (");
+  });
 });
 
 describe("detail pages share one sticker", () => {

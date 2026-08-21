@@ -4,9 +4,11 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **2026-08-21 — Partner ledger PDF column alignment:** `test_subledger_pdf_money_columns_share_one_geometry` renders a multi-page partner PDF and asserts (PyMuPDF word positions) Amount/Running header right edges match value right edges on page 1 and the page-2 repeated header, and that a long wrapping description keeps the same money-column x as a short row; summary NET label/value share a left edge. Mutation: left-align money headers → red; restored → green.
 
-**2026-08-22 — S16 follow-up sticker Current vs Closing:** `ranged-balance-label.test.ts` — sticker source is always `label="Current balance"` and must not import `rangedBalanceLabel`; activity Closing past range → Closing in range. Mutation: sticker wired through ranged helper → red; restored → green.
+**2026-08-22 — S16 follow-up direction + Current balance caption:** `ranged-balance-label.test.ts` — sticker uses `supplierBalanceHeading` + `caption="Current balance"`; never Closing in range / rangedBalanceLabel; activity Closing past range unchanged. Mutation: drop direction heading → red; restored → green.
 
-**2026-08-22 — S16 supplier closing-in-range label:** `ranged-balance-label.test.ts` — no range / to≥today → current heading; past to → `Closing in range · as of [to]`. Activity panel render asserts the Closing KPI text for a May range. Mutation: hardcode current label for past to → red; restored → green. *(Sticker wording superseded by S16 follow-up.)*
+**2026-08-22 — S16 follow-up sticker Current vs Closing:** `ranged-balance-label.test.ts` — sticker source is always `label="Current balance"` and must not import `rangedBalanceLabel`; activity Closing past range → Closing in range. Mutation: sticker wired through ranged helper → red; restored → green. *(Superseded by direction+caption follow-up.)*
+
+**2026-08-22 — S16 supplier closing-in-range label:** `ranged-balance-label.test.ts` — no range / to≥today → current heading; past to → `Closing in range · as of [to]`. Activity panel render asserts the Closing KPI text for a May range. Mutation: hardcode current label for past to → red; restored → green. *(Sticker wording superseded by S16 follow-ups.)*
 
 **2026-08-21 — S15 subledger display honesty:** Part A `directory-balance-direction.test.tsx` — shared `directoryBalanceDirection` / `DirectoryBalanceCell`; flip sign flips label; all four directory pages import the cell. Part B `test_s15_customer_running_export.py` — screen running accumulates on credit sales + payment; Excel/PDF Running cells match screen `running_balance_kurus`. Mutation: flip label wording → red; blank export `running_minor` → red; restored → green.
 

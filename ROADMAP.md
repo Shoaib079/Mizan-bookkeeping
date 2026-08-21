@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none — S16 follow-up done; awaiting owner push)* |
 | **Next up**              | **GS-FX** forex-only group sales (design locked) — do not start until owner says |
-| **Last completed slice** | **S16 follow-up** sticker Current balance vs activity Closing (`v0.s16-sticker-current-vs-closing`) |
-| **Last commit/tag**      | `v0.s16-sticker-current-vs-closing` |
+| **Last completed slice** | **S16 follow-up** direction heading + Current balance caption (`v0.s16-sticker-direction-caption`) |
+| **Last commit/tag**      | `v0.s16-sticker-direction-caption` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1922,7 +1922,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S13** | Delivery/POS/activity masthead + delivery filename | med | **DONE** `v0.s13-export-masthead-filenames` — shared title block with entity + TR period; delivery uses `export_filename` |
 | **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | **DONE** `v0.s14-export-headers-pdf-banner` — `money_header` / `quantity_header`; PDF Amount (₺) + S6 sealed/live masthead line |
 | **S15** | Directory direction labels + customer Running on export | med | **DONE** `v0.s15-subledger-display-honesty` — shared `directoryBalanceDirection`; customer `running_balance_kurus` screen=export (hub payables headline already via S9) |
-| **S16** | Supplier sticker vs activity range closing label | med | **DONE** `v0.s16-supplier-closing-in-range` + follow-up `v0.s16-sticker-current-vs-closing` — sticker = Current balance; activity Closing alone uses ranged label |
+| **S16** | Supplier sticker vs activity range closing label | med | **DONE** `v0.s16-supplier-closing-in-range` + `v0.s16-sticker-current-vs-closing` + `v0.s16-sticker-direction-caption` — direction heading + Current balance caption; Closing alone uses ranged label |
 
 ---
 
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | S16 follow-up direction + Current balance caption | `v0.s16-sticker-direction-caption`                   | supplierBalanceHeading + caption; optional sticker caption slot; mutation drop direction → red |
 | 2026-08-22 | S16 follow-up sticker Current vs Closing        | `v0.s16-sticker-current-vs-closing`                    | Sticker always Current balance; activity Closing keeps ranged label; mutation sticker→ranged → red |
 | 2026-08-22 | S16 supplier closing-in-range label             | `v0.s16-supplier-closing-in-range`                     | rangedBalanceLabel on sticker + activity Closing; past to → Closing in range; mutation hardcode current → red |
 | 2026-08-21 | S15 subledger display honesty                   | `v0.s15-subledger-display-honesty`                     | Part A directory direction labels; Part B customer Running on Excel/PDF from get_customer_ledger; mutation flip label / blank running → red |
