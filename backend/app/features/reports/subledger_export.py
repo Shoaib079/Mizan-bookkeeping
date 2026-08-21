@@ -11,9 +11,10 @@ rows — is the same statement about a different subject.
 
 Callers convert their own entries into `SubledgerRow` rather than this module
 reaching into them, because the four ledgers disagree about field names:
-`amount_kurus` for partner, customer and supplier, `amount_minor` for staff,
-and only partner carries a running balance. Normalising at the edge keeps that
-disagreement visible in each feature instead of hidden behind getattr here.
+`amount_kurus` for partner, customer and supplier, `amount_minor` for staff.
+Partner and customer carry a running balance from their ledger service; the
+rest leave the column empty. Normalising at the edge keeps that disagreement
+visible in each feature instead of hidden behind getattr here.
 """
 
 from __future__ import annotations
@@ -68,7 +69,7 @@ class SubledgerRow:
     movement: str
     description: str
     amount_minor: int
-    #: Only partner ledgers carry one; the rest leave the column empty.
+    #: Partner and customer ledgers carry one from get_*_ledger; others leave empty.
     running_minor: int | None = None
     status: str = ""
 

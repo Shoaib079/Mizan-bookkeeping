@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — S14 done; awaiting owner push)* |
-| **Next up**              | **S15** (see Master build order — do not start until owner says) |
-| **Last completed slice** | **S14** Salaries / FX holdings headers + PDF Amount (₺) / sealed banner (`v0.s14-export-headers-pdf-banner`) |
-| **Last commit/tag**      | `v0.s14-export-headers-pdf-banner` |
+| **Active slice**         | *(none — S15 done; awaiting owner push)* |
+| **Next up**              | **S16** Supplier sticker vs activity range closing label — do not start until owner says |
+| **Last completed slice** | **S15** Subledger display honesty — directory direction labels + customer Running export (`v0.s15-subledger-display-honesty`) |
+| **Last commit/tag**      | `v0.s15-subledger-display-honesty` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1921,7 +1921,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S12** | Month pack Summary (+ card-clearing) shared finish | med | **DONE** `v0.s12-month-pack-excel-finish` — accounting format / print / freeze where a header exists |
 | **S13** | Delivery/POS/activity masthead + delivery filename | med | **DONE** `v0.s13-export-masthead-filenames` — shared title block with entity + TR period; delivery uses `export_filename` |
 | **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | **DONE** `v0.s14-export-headers-pdf-banner` — `money_header` / `quantity_header`; PDF Amount (₺) + S6 sealed/live masthead line |
-| **S15** | Directory / hub direction labels + payables “Total owed” copy | med | **PARTIAL via S9** — hub payables headline = Payables + guard; rest of directory direction labels deferred |
+| **S15** | Directory direction labels + customer Running on export | med | **DONE** `v0.s15-subledger-display-honesty` — shared `directoryBalanceDirection`; customer `running_balance_kurus` screen=export (hub payables headline already via S9) |
 | **S16** | Supplier sticker vs activity range closing label | med | “Closing in range” or sync when range selected |
 
 ---
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S15 subledger display honesty                   | `v0.s15-subledger-display-honesty`                     | Part A directory direction labels; Part B customer Running on Excel/PDF from get_customer_ledger; mutation flip label / blank running → red |
 | 2026-08-21 | S14 salaries/FX headers + PDF Amount/sealed     | `v0.s14-export-headers-pdf-banner`                     | money_header/quantity_header on Salaries+FX sheets; PDF Amount (₺)+S6 As closed/Live masthead; mutation drop header or sealed → red |
 | 2026-08-21 | Partner ledger PDF column alignment               | `v0.partner-ledger-pdf-columns`                        | Shared subledger PDF one geometry for Amount/Running header+body+page-2; PyMuPDF pins; mutation left-align headers → red |
 | 2026-08-21 | S13 export mastheads + delivery filenames         | `v0.s13-export-masthead-filenames`                     | Delivery/POS/supplier activity entity + TR period mastheads; shared delivery filename; mutation-checked missing delivery entity → red |

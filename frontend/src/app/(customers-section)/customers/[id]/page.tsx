@@ -73,6 +73,8 @@ type CustomerLedgerEntry = {
   payment_account_id: string | null;
   display_kind: SubledgerDisplayKind;
   was_corrected?: boolean;
+  /** Same running total the export reads — from get_customer_ledger. */
+  running_balance_kurus?: number | null;
 };
 
 type CustomerLedgerResponse = {
@@ -280,6 +282,7 @@ export default function CustomerDetailPage() {
                 { key: "description", label: "Description" },
                 { key: "pax", label: "Pax / forex" },
                 { key: "amount", label: "Amount", align: "right" },
+                { key: "balance", label: "Balance", align: "right" },
               ]}
               hasActions
               isEmpty={ledger.entries.length === 0}
@@ -315,6 +318,11 @@ export default function CustomerDetailPage() {
                     </DataTableCell>
                     <DataTableCell align="right">
                       {formatTry(entry.amount_kurus)}
+                    </DataTableCell>
+                    <DataTableCell align="right">
+                      {entry.running_balance_kurus != null
+                        ? formatTry(entry.running_balance_kurus)
+                        : "—"}
                     </DataTableCell>
                     <DataTableCell align="right">
                       <CustomerLedgerRowActions

@@ -6,20 +6,13 @@ the label. Pages must not invent a second "owes you" / "you owe" rule.
 
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 import { DirectoryBalanceCell } from "@/components/directory-balance-cell";
 import {
   balanceHeading,
   directoryBalanceDirection,
 } from "@/lib/subledger-balance";
-
-const ROOT = join(__dirname, "..");
-
-function pageSource(rel: string): string {
-  return readFileSync(join(ROOT, rel), "utf8");
-}
+import { sourceDeclaring, sourceFiles } from "@/test-support/source";
 
 describe("directoryBalanceDirection", () => {
   it("matches balanceHeading for every party (single rule)", () => {
@@ -67,21 +60,28 @@ describe("DirectoryBalanceCell", () => {
     expect(negative).toContain("Partner owes you");
     expect(negative).toContain('data-balance-sign="negative"');
   });
+
+  it("delegates wording to directoryBalanceDirection", () => {
+    expect(sourceDeclaring("DirectoryBalanceCell")).toContain(
+      "directoryBalanceDirection",
+    );
+  });
 });
 
 describe("directories use DirectoryBalanceCell", () => {
-  it("each list page imports the shared cell (no local owes-you copy)", () => {
-    const pages = [
+  it("each list page imports the shared cell", () => {
+    const needles = [
       "app/staff/page.tsx",
       "app/partners/page.tsx",
       "app/(customers-section)/customers/page.tsx",
       "app/(procurement)/suppliers/page.tsx",
     ];
-    for (const page of pages) {
-      const src = pageSource(page);
-      expect(src).toContain("DirectoryBalanceCell");
-      expect(src).not.toMatch(/owes you"/);
-      expect(src).not.toMatch(/You owe /);
+    const byPath = new Map(sourceFiles().map((f) => [f.path, f.text]));
+    for (const needle of needles) {
+      const text = byPath.get(needle);
+      expect(text, needle).toBeDefined();
+      expect(text!).toContain("DirectoryBalanceCell");
+      expect(text!).not.toMatch(/owes you"/);
     }
   });
 });

@@ -47,7 +47,7 @@ def _export(
                 movement=format_customer_movement(entry.movement_type),
                 description=entry.description,
                 amount_minor=entry.amount_kurus,
-                running_minor=None,
+                running_minor=entry.running_balance_kurus,
                 status=row_status(entry),
             )
             for entry in effective_entries(ledger.entries)

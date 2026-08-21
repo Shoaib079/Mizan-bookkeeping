@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S14 done:** Salaries / FX holdings Excel headers via `money_header` / `quantity_header`; statement PDF Amount (₺) + sealed/live masthead from S6 `figures_label`. Tag `v0.s14-export-headers-pdf-banner`. Do not start S15 until owner says. Do not push until owner says.
+- **S15 done:** Part A directory direction labels (`directoryBalanceDirection` + `DirectoryBalanceCell`); Part B customer ledger `running_balance_kurus` on screen + Excel/PDF. Tag `v0.s15-subledger-display-honesty`. Do not start S16. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — S14 done; awaiting review / push)* |
-| **Last completed slice** | S14 Salaries / FX holdings headers + PDF Amount (₺) / sealed banner |
-| **Last tag** | `v0.s14-export-headers-pdf-banner` |
+| **Active slice** | *(none — S15 done; awaiting review / push)* |
+| **Last completed slice** | S15 Subledger display honesty |
+| **Last tag** | `v0.s15-subledger-display-honesty` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S15 — wait for owner |
+| **Next up** | S16 — wait for owner |
 

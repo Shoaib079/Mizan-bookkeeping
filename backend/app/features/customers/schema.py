@@ -84,6 +84,9 @@ class CustomerLedgerEntryRead(BaseModel):
     created_at: datetime
     display_kind: SubledgerDisplayKind = SubledgerDisplayKind.EFFECTIVE
     was_corrected: bool = False
+    #: Accumulated over the same entry list the screen shows (effective rows
+    #: only add). Export reads this — it must not recompute a second running.
+    running_balance_kurus: int | None = None
 
 
 class ForexOutstanding(BaseModel):
