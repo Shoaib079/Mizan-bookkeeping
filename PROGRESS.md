@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S13 complete:** Delivery activity, POS daily sales, and supplier activity exports carry shared entity/TR-period mastheads; delivery filenames use the shared export convention. Tag `v0.s13-export-masthead-filenames`.
+- **Partner ledger PDF columns:** Amount/Running header+body+repeated header share one geometry in `build_subledger_pdf`. Tag `v0.partner-ledger-pdf-columns`. S14 not started.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — S13 complete)* |
-| **Last completed slice** | S13 Delivery/POS/activity masthead + delivery filename |
-| **Last tag** | `v0.s13-export-masthead-filenames` |
+| **Active slice** | *(none — PDF column follow-up; S14 not started)* |
+| **Last completed slice** | Partner ledger PDF column alignment (`v0.partner-ledger-pdf-columns`) |
+| **Last tag** | `v0.partner-ledger-pdf-columns` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | S14 Salaries / FX holdings headers + PDF Amount (₺) / sealed banner |
 

@@ -2,6 +2,8 @@
 
 Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULES.md §8).
 
+**2026-08-21 — Partner ledger PDF column alignment:** `test_subledger_pdf_money_columns_share_one_geometry` renders a multi-page partner PDF and asserts (PyMuPDF word positions) Amount/Running header right edges match value right edges on page 1 and the page-2 repeated header, and that a long wrapping description keeps the same money-column x as a short row; summary NET label/value share a left edge. Mutation: left-align money headers → red; restored → green.
+
 **2026-08-21 — S13 export mastheads + filenames:** `test_delivery_activity_export_xlsx`, `test_export_daily_summaries_xlsx`, and `test_activity_export_endpoint` load API workbooks with openpyxl and assert the English title, restaurant name, Turkish period, and response period filename. `test_s8_excel_finish.py` keeps shared finish / numeric money guards while passing entity names to all three builders. Mutation: removed the delivery entity from A2 → delivery API test red; restored → green.
 
 **2026-08-21 — Month Pack arbitrary range API pins:** `test_month_pack_api_partial_month_range_in_filename` (Aug 15–30 returns 200 and both dates in the filename); `test_month_pack_api_cross_month_stays_live_when_august_closed` (Aug 15–Sep 30 returns 200 and `-live.xlsx` after August close). Mutation: hardcoded the wrong arbitrary `period_segment` value → both red; restored → green.

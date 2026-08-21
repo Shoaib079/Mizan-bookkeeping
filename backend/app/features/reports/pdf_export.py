@@ -278,6 +278,8 @@ def summary_band(pairs: list[tuple[str, int]]) -> list:
             [
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(_BAND)),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                # Labels and values share the left edge of each box.
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("TOPPADDING", (0, 0), (-1, 0), 7),
                 ("BOTTOMPADDING", (0, 1), (-1, 1), 7),
                 ("LEFTPADDING", (0, 0), (-1, -1), 9),

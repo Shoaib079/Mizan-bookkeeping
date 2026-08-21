@@ -38,8 +38,9 @@ from app.core.ledger.subledger_display import (
     is_effective_subledger_row,
 )
 from app.core.money import format_try
-from app.core.pdf.fonts import PDF_FONT_NAME, register_bundled_fonts
+from app.core.pdf.fonts import PDF_FONT_BOLD_NAME, PDF_FONT_NAME, register_bundled_fonts
 from app.features.reports.pdf_export import (
+    _MUTED,
     _NEGATIVE,
     _SLATE,
     PdfExportDependencyError,
@@ -53,6 +54,11 @@ from app.features.reports.pdf_export import (
 #: Where the summary figures start, leaving room for the two title rows.
 _SUMMARY_FIRST_ROW = 3
 
+#: One column geometry for the subledger PDF table — header, body, and every
+#: repeated page header (``repeatRows=1``). Percentages of the usable width.
+#: Amount / Running are the money columns (right-aligned in header and body).
+_SUBLEDGER_PDF_COL_WIDTHS: tuple[str, ...] = ("10%", "16%", "42%", "16%", "16%")
+_SUBLEDGER_PDF_MONEY_COLS: tuple[int, ...] = (3, 4)
 
 @dataclass(frozen=True)
 class SubledgerRow:
@@ -210,6 +216,12 @@ def build_subledger_pdf(export: SubledgerExport) -> bytes:
     # cell does not wrap. It overflows, silently, straight across the Amount
     # and Running columns. Only a Paragraph wraps, so the text columns are
     # Paragraphs and the row grows to fit instead of colliding.
+    #
+    # Paragraphs also ignore the table's ALIGN command (it only moves plain
+    # strings). Headers used to be plain left-aligned "Amount"/"Running" while
+    # body money was a right-aligned Paragraph — so the labels sat ~70pt left
+    # of the figures. Header and body now share the same Paragraph styles and
+    # the same ``_SUBLEDGER_PDF_COL_WIDTHS`` geometry.
     styles = getSampleStyleSheet()
     body_style = ParagraphStyle(
         "SubledgerCell",
@@ -218,6 +230,7 @@ def build_subledger_pdf(export: SubledgerExport) -> bytes:
         fontSize=8.5,
         leading=10.5,
         textColor=colors.HexColor(_SLATE),
+        alignment=0,  # left — Date / Movement / Description
     )
     money_style = ParagraphStyle(
         "SubledgerMoney", parent=body_style, alignment=2  # right
@@ -226,6 +239,20 @@ def build_subledger_pdf(export: SubledgerExport) -> bytes:
         "SubledgerMoneyOut",
         parent=money_style,
         textColor=colors.HexColor(_NEGATIVE),
+    )
+    header_left_style = ParagraphStyle(
+        "SubledgerHeaderLeft",
+        parent=body_style,
+        fontName=PDF_FONT_BOLD_NAME,
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.HexColor(_MUTED),
+        alignment=0,
+    )
+    header_right_style = ParagraphStyle(
+        "SubledgerHeaderRight",
+        parent=header_left_style,
+        alignment=2,
     )
 
     def cell_para(text: str, style: ParagraphStyle = body_style) -> Paragraph:
@@ -256,23 +283,25 @@ def build_subledger_pdf(export: SubledgerExport) -> bytes:
 
     table_data: list[list] = [
         [
-            _cell("Date"),
-            _cell("Movement"),
-            _cell("Description"),
-            _cell("Amount"),
-            _cell("Running"),
+            cell_para("Date", header_left_style),
+            cell_para("Movement", header_left_style),
+            cell_para("Description", header_left_style),
+            cell_para("Amount", header_right_style),
+            cell_para("Running", header_right_style),
         ]
     ]
     for entry in export.rows:
         table_data.append(
             [
                 # dd.mm.yyyy, as everywhere else the app shows a date to a
-                # person. `str(movement_date)` printed ISO.
-                _cell(format_date(entry.movement_date)),
+                # person. `str(movement_date)` printed ISO. Left-aligned
+                # Paragraph so it shares geometry with the header cell.
+                cell_para(format_date(entry.movement_date), body_style),
                 cell_para(entry.movement),
                 # Not truncated. Cutting at 80 characters severed references
                 # mid-string while still overflowing, because truncating does
-                # not make a string wrap.
+                # not make a string wrap. Fixed Description width keeps money
+                # columns from shifting when a note wraps.
                 cell_para(entry.description),
                 money_para(entry.amount_minor),
                 money_para(entry.running_minor),
@@ -282,12 +311,12 @@ def build_subledger_pdf(export: SubledgerExport) -> bytes:
     table = Table(
         table_data,
         repeatRows=1,
-        colWidths=["10%", "16%", "42%", "16%", "16%"],
+        colWidths=list(_SUBLEDGER_PDF_COL_WIDTHS),
     )
-    # Money columns are right-aligned by the Paragraph styles above, so the
-    # table style only needs the header rule and row hairlines. VALIGN TOP
-    # keeps a wrapped two-line description level with its date and amount.
-    table.setStyle(_table_style(money_cols=()))
+    # Money columns: Paragraph alignment carries the right edge; money_cols
+    # ALIGN is belt-and-suspenders for any plain-string cell. VALIGN TOP keeps
+    # a wrapped two-line description level with its date and amount.
+    table.setStyle(_table_style(money_cols=_SUBLEDGER_PDF_MONEY_COLS))
     table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
     elements.append(table)
     return _build_pdf(

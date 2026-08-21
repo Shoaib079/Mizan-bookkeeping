@@ -312,3 +312,173 @@ class TestTheSummaryPrintsOnlyWhatIsTrue:
             self._summary(balance_kurus=0, current_account_kurus=-1_203_609)
         )
         assert summary["Net balance"] == -1_203_609
+
+
+_ALIGN_TOL_PT = 2.0
+
+
+def _header_word(words, page_index: int, label: str):
+    matches = [
+        w for pi, w in words if pi == page_index and w[4] == label
+    ]
+    assert matches, f"{label!r} header missing on page {page_index + 1}"
+    return min(matches, key=lambda w: w[1])
+
+
+def _money_tail_right(words, page_index: int, *, below_y: float, above_y: float, col_left: float, col_right: float) -> float:
+    """Right edge of the trailing ₺ (or last money fragment) in a column band."""
+    tails = [
+        w
+        for pi, w in words
+        if pi == page_index
+        and below_y < w[1] < above_y
+        and col_left <= (w[0] + w[2]) / 2 <= col_right
+        and (w[4] == "₺" or "," in w[4])
+    ]
+    assert tails, "expected money in column band"
+    return max(w[2] for w in tails)
+
+
+def test_subledger_pdf_money_columns_share_one_geometry() -> None:
+    """Amount / Running header right edges match value right edges — every page.
+
+    Owner report (India Gate / Canan Takan, 2026-08-21): headers sat left in
+    the money columns while figures sat right. Geometry is defined once and
+    used for the header, body, and repeated page-2 header; long wrapping
+    descriptions must not shove the money columns sideways.
+    """
+    from app.features.reports.subledger_export import (
+        SubledgerExport,
+        SubledgerRow,
+        build_subledger_pdf,
+    )
+
+    long_desc = (
+        "SYED FAIZAN ALI BUKHARI*TR470006400000175030614324*MASALY*"
+        "H2606620775209 Sicil: 25610010110437550500152000 Borc Kodu: 04101"
+    )
+    rows = [
+        SubledgerRow(
+            movement_date=date(2026, 6, 1),
+            movement="Profit allocation",
+            description="Short",
+            amount_minor=100_000,
+            running_minor=100_000,
+        ),
+        SubledgerRow(
+            movement_date=date(2026, 6, 2),
+            movement="Drawing",
+            description=long_desc,
+            amount_minor=-50_000,
+            running_minor=50_000,
+        ),
+    ]
+    for i in range(40):
+        rows.append(
+            SubledgerRow(
+                movement_date=date(2026, 6, 3),
+                movement="Profit allocation",
+                description=f"pad-{i}",
+                amount_minor=10_000,
+                running_minor=60_000 + i * 10_000,
+            )
+        )
+
+    data = build_subledger_pdf(
+        SubledgerExport(
+            entity_name="India Gate",
+            subject_name="Canan Takan",
+            ledger_label="Partner ledger",
+            sheet_name="Partner",
+            summary=[
+                ("Net balance", 1_234_567),
+                ("Capital in business", 5_000_000),
+                ("Profit allocated", 2_000_000),
+                ("Fronted expenses", 900_000),
+            ],
+            rows=rows,
+        )
+    )
+
+    import fitz
+
+    with fitz.open(stream=data, filetype="pdf") as doc:
+        assert doc.page_count >= 2, "fixture must span a repeated header page"
+        words = [
+            (page_index, word)
+            for page_index, page in enumerate(doc)
+            for word in page.get_text("words")
+        ]
+
+    # Page-1 and page-2 repeated headers share the same right edges.
+    for label in ("Amount", "Running"):
+        p1 = _header_word(words, 0, label)
+        p2 = _header_word(words, 1, label)
+        assert abs(p1[2] - p2[2]) <= _ALIGN_TOL_PT, (
+            f"{label} header right page1={p1[2]:.2f} page2={p2[2]:.2f}"
+        )
+
+    amount_hdr = _header_word(words, 0, "Amount")
+    running_hdr = _header_word(words, 0, "Running")
+    # Column bands: midpoints fall inside the money columns.
+    amount_band = (amount_hdr[0] - 40, (amount_hdr[2] + running_hdr[0]) / 2)
+    running_band = ((amount_hdr[2] + running_hdr[0]) / 2, running_hdr[2] + 40)
+
+    # Short-description row (page 1).
+    short = next(w for pi, w in words if pi == 0 and w[4] == "Short")
+    short_amt_right = _money_tail_right(
+        words,
+        0,
+        below_y=short[1] - 2,
+        above_y=short[3] + 2,
+        col_left=amount_band[0],
+        col_right=amount_band[1],
+    )
+    short_run_right = _money_tail_right(
+        words,
+        0,
+        below_y=short[1] - 2,
+        above_y=short[3] + 2,
+        col_left=running_band[0],
+        col_right=running_band[1],
+    )
+    assert abs(short_amt_right - amount_hdr[2]) <= _ALIGN_TOL_PT, (
+        f"Amount header {amount_hdr[2]:.2f} vs value {short_amt_right:.2f}"
+    )
+    assert abs(short_run_right - running_hdr[2]) <= _ALIGN_TOL_PT, (
+        f"Running header {running_hdr[2]:.2f} vs value {short_run_right:.2f}"
+    )
+
+    # Long wrapping description — money columns keep the same right edge.
+    long_frag = next(
+        w for pi, w in words if pi == 0 and w[4].startswith("SYED")
+    )
+    long_words_y0 = long_frag[1]
+    long_words_y1 = max(
+        w[3]
+        for pi, w in words
+        if pi == 0 and (w[4].startswith("SYED") or "TR4700" in w[4] or "Sicil" in w[4])
+    )
+    long_amt_right = _money_tail_right(
+        words,
+        0,
+        below_y=long_words_y0 - 2,
+        above_y=long_words_y1 + 4,
+        col_left=amount_band[0],
+        col_right=amount_band[1],
+    )
+    long_run_right = _money_tail_right(
+        words,
+        0,
+        below_y=long_words_y0 - 2,
+        above_y=long_words_y1 + 4,
+        col_left=running_band[0],
+        col_right=running_band[1],
+    )
+    assert abs(long_amt_right - short_amt_right) <= _ALIGN_TOL_PT
+    assert abs(long_run_right - short_run_right) <= _ALIGN_TOL_PT
+
+    # Four-box summary: each label shares its box's left edge with its value.
+    net = next(w for pi, w in words if pi == 0 and w[4] == "NET")
+    value = next(w for pi, w in words if pi == 0 and w[4] == "12.345,67")
+    assert abs(net[0] - value[0]) <= _ALIGN_TOL_PT

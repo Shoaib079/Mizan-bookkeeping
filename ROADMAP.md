@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — S13 complete)* |
+| **Active slice**         | *(none — partner ledger PDF column follow-up; S14 not started)* |
 | **Next up**              | **S14** Salaries / FX holdings headers + PDF Amount (₺) / sealed banner |
-| **Last completed slice** | **S13** Delivery/POS/activity masthead + delivery filename |
-| **Last commit/tag**      | `v0.s13-export-masthead-filenames` |
+| **Last completed slice** | Partner ledger PDF column alignment (`v0.partner-ledger-pdf-columns`) — not S14 |
+| **Last commit/tag**      | `v0.partner-ledger-pdf-columns` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Partner ledger PDF column alignment               | `v0.partner-ledger-pdf-columns`                        | Shared subledger PDF one geometry for Amount/Running header+body+page-2; PyMuPDF pins; mutation left-align headers → red |
 | 2026-08-21 | S13 export mastheads + delivery filenames         | `v0.s13-export-masthead-filenames`                     | Delivery/POS/supplier activity entity + TR period mastheads; shared delivery filename; mutation-checked missing delivery entity → red |
 | 2026-08-21 | Test-only Month Pack arbitrary range API pins | `v0.month-pack-range-pins`                             | Partial-month date filename + cross-month live status after August close; mutation-checked wrong period segment → red |
 | 2026-08-21 | S12 month pack Summary + card-clearing finish  | `v0.s12-month-pack-excel-finish`                       | Metric header + finish_data_table money_cols on Summary and Card clearing; mutation-checked wrong header_row / dropped money_cols |
