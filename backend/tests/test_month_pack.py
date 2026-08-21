@@ -19,7 +19,7 @@ from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.excel.workbook import money_header
+from app.core.excel.workbook import MONEY_FORMAT_ACCOUNTING, money_header
 from app.core.fx import posting as fx_posting
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry
@@ -215,7 +215,8 @@ def test_money_stays_a_number_so_excel_can_total_it(db_session, books):
         if isinstance(summary.cell(row=r, column=2).value, (int, float))
     ]
     assert money, "expected at least one numeric money cell"
-    assert all(cell.number_format == "#,##0.00" for cell in money)
+    assert all(isinstance(cell.value, (int, float)) for cell in money)
+    assert all(cell.number_format == MONEY_FORMAT_ACCOUNTING for cell in money)
 
 
 def test_the_pack_shows_foreign_currency_held(db_session, books):
@@ -593,3 +594,39 @@ def test_sales_sheet_carries_a_running_net(db_session, books):
         ),
         2,
     )
+
+
+def _assert_finished_metric_sheet(ws) -> int:
+    """Shared finish: Metric / Amount (₺) header, freeze, accounting money."""
+    header_row = None
+    expected = ["Metric", money_header()]
+    for r in range(1, ws.max_row + 1):
+        vals = [ws.cell(row=r, column=c).value for c in range(1, 3)]
+        if vals == expected:
+            header_row = r
+            break
+    assert header_row is not None, "Metric / Amount header not found"
+    assert ws.freeze_panes == f"A{header_row + 1}"
+    assert ws.page_setup.fitToWidth == 1
+    money_seen = False
+    for r in range(header_row + 1, ws.max_row + 1):
+        cell = ws.cell(row=r, column=2)
+        if isinstance(cell.value, (int, float)):
+            money_seen = True
+            assert cell.number_format == MONEY_FORMAT_ACCOUNTING
+            assert not isinstance(cell.value, str)
+    assert money_seen
+    return header_row
+
+
+def test_summary_sheet_uses_shared_table_finish(db_session, books):
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    wb, _ = _pack(db_session, books)
+    _assert_finished_metric_sheet(wb["Summary"])
+
+
+def test_card_clearing_sheet_uses_shared_table_finish(db_session, books):
+    _sale(db_session, books, date(2026, 6, 10), 100_000)
+    wb, _ = _pack(db_session, books)
+    assert "Card clearing" in wb.sheetnames
+    _assert_finished_metric_sheet(wb["Card clearing"])

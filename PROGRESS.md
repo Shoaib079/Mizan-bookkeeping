@@ -17,15 +17,15 @@
 
 ## Current
 
-- **S10 follow-up parity gaps:** staff/customer/supplier ledger + activity + POS + delivery activity pinned. Tag `v0.s10-export-parity-gaps-closed` (on top of `v0.s10-export-screen-file-parity`). Do not push until owner says. S12 not started.
+- **S12 month pack Excel finish:** Summary + Card clearing use shared `finish_data_table`. Tag `v0.s12-month-pack-excel-finish`. Do not push until owner says. S13 not started.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S10 follow-up)* |
-| **Last completed slice** | S10 follow-up parity gaps closed (`v0.s10-export-parity-gaps-closed`) |
-| **Last tag** | `v0.s10-export-parity-gaps-closed` |
+| **Active slice** | *(none — await owner review of S12)* |
+| **Last completed slice** | S12 Month pack Summary + card-clearing finish (`v0.s12-month-pack-excel-finish`) |
+| **Last tag** | `v0.s12-month-pack-excel-finish` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S12 Month pack Summary (+ card-clearing) shared finish |
+| **Next up** | S13 Delivery/POS/activity masthead + delivery filename |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

@@ -51,7 +51,6 @@ from app.core.excel.workbook import (
     money_header,
     quantity_header,
     save_workbook_to_bytes,
-    style_money_columns,
     style_signed_money,
     tint_row,
     write_date,
@@ -330,6 +329,8 @@ def _write_summary(
     write_meta_pair(ws, 2, "Period", format_period(ctx.from_date, ctx.to_date))
     write_meta_pair(ws, 3, "Figures", _figures_label(ctx))
 
+    header_row = 4
+    write_header_row(ws, header_row, ["Metric", money_header()])
     row = 5
     row = write_section_header(ws, row, "Sales & result", end_col=2)
     sales_figures = [
@@ -472,13 +473,14 @@ def _write_summary(
         ws.cell(row=row, column=1, value=name)
         row += 1
 
-    fit_columns_from_content(
+    finish_data_table(
         ws,
-        first_row=5,
-        last_row=row - 1,
-        last_col=2,
-        min_widths={1: 28, 2: 14},
-        max_widths={1: 64, 2: 18},
+        header_row=header_row,
+        last_data_row=row - 1,
+        end_col=2,
+        money_cols=(2,),
+        autofilter=False,
+        print_footer=_print_footer(ctx, "Month Pack — Summary"),
     )
     ws.sheet_view.showGridLines = False
 
@@ -968,8 +970,8 @@ def _write_card_clearing(ws, reconciliation, ctx: MonthPackContext) -> None:
         end_col=2,
     )
     row = write_section_header(ws, 4, "Summary", end_col=2)
-    data_start = row
-    row = data_start
+    header_row = row
+    row = write_header_row(ws, header_row, ["Metric", money_header()])
     for label, value in [
         ("Opening in transit", reconciliation.opening_in_transit_kurus),
         ("Card sales in period", reconciliation.period_card_sales_kurus),
@@ -981,8 +983,14 @@ def _write_card_clearing(ws, reconciliation, ctx: MonthPackContext) -> None:
         ws.cell(row=row, column=1, value=label)
         write_money(ws, row, 2, value)
         row += 1
-    style_money_columns(
-        ws, money_cols=(2,), first_row=data_start, last_row=row - 1
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=row - 1,
+        end_col=2,
+        money_cols=(2,),
+        autofilter=False,
+        print_footer=_print_footer(ctx, "Month Pack — Card clearing"),
     )
 
     if reconciliation.aging:
@@ -999,18 +1007,10 @@ def _write_card_clearing(ws, reconciliation, ctx: MonthPackContext) -> None:
             header_row=age_header,
             last_data_row=row - 1,
             end_col=2,
+            freeze_panes=f"A{header_row + 1}",
             autofilter=False,
             money_cols=(2,),
         )
-
-    fit_columns_from_content(
-        ws,
-        first_row=4,
-        last_row=row - 1,
-        last_col=2,
-        min_widths={1: 28, 2: 14},
-        max_widths={1: 52, 2: 18},
-    )
     ws.sheet_view.showGridLines = False
 
 

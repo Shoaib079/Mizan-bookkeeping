@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of S10 follow-up)* |
-| **Next up**              | **S12** Month pack Summary (+ card-clearing) shared finish |
-| **Last completed slice** | S10 follow-up parity gaps closed (`v0.s10-export-parity-gaps-closed`) |
-| **Last commit/tag**      | `v0.s10-export-parity-gaps-closed` |
+| **Active slice**         | *(none — await owner review of S12)* |
+| **Next up**              | **S13** Delivery/POS/activity masthead + delivery filename |
+| **Last completed slice** | S12 Month pack Summary + card-clearing shared finish (`v0.s12-month-pack-excel-finish`) |
+| **Last commit/tag**      | `v0.s12-month-pack-excel-finish` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1918,7 +1918,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S9** | Cash book / expense register / GL standalone export | high | **DONE** `v0.standalone-book-exports` — cash-bank multi-sheet xlsx; hand-recorded expenses xlsx; GL By account + All entries; payables hub headline lock (S15 partial) |
 | **S10** | Export screen==file amount parity tests | high | **DONE** `v0.s10-export-screen-file-parity` + follow-up `v0.s10-export-parity-gaps-closed` (staff/customer/supplier ledger, activity, POS, delivery activity) |
 | **S11** | Excel money_cols gaps (cash flow, KDV, delivery-sales, period-comparison) | med | **DONE** `v0.s11-excel-money-cols` — pass `money_cols` into `finish_data_table` |
-| **S12** | Month pack Summary (+ card-clearing) shared finish | med | Accounting format / print / freeze where a header exists |
+| **S12** | Month pack Summary (+ card-clearing) shared finish | med | **DONE** `v0.s12-month-pack-excel-finish` — accounting format / print / freeze where a header exists |
 | **S13** | Delivery/POS/activity masthead + delivery filename | med | Entity name, TR dates, English sheet title; `export_filename` |
 | **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | `money_header` / `quantity_header`; PDF headers + sealed line |
 | **S15** | Directory / hub direction labels + payables “Total owed” copy | med | **PARTIAL via S9** — hub payables headline = Payables + guard; rest of directory direction labels deferred |
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S12 month pack Summary + card-clearing finish  | `v0.s12-month-pack-excel-finish`                       | Metric header + finish_data_table money_cols on Summary and Card clearing; mutation-checked wrong header_row / dropped money_cols |
 | 2026-08-21 | S10 follow-up remaining parity gaps            | `v0.s10-export-parity-gaps-closed`                     | Staff/customer/supplier ledger + activity + POS + delivery activity screen==file; mutation-checked doubled activity closing |
 | 2026-08-21 | S10 export screen==file amount parity          | `v0.s10-export-screen-file-parity`                     | P&L/BS/CF/KDV/delivery/period + sealed/live stamps + partner running; mutation-checked doubled P&L net → red |
 | 2026-08-21 | S11 Excel money_cols (CF/KDV/delivery/period)  | `v0.s11-excel-money-cols`                              | Pass money_cols on four Phase 7 report finishes; mutation-checked wrong header_row and dropped money_cols |
