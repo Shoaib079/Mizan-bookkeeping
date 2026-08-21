@@ -17,15 +17,15 @@
 
 ## Current
 
-- **S7 BS Excel finish:** shared `finish_data_table` with real header + money_cols. Tag `v0.s7-balance-sheet-excel-finish`. Do not push until owner says.
+- **S8 shared Excel finish:** subledger / supplier activity / delivery / POS use `finish_data_table` (no autosize-only). Tag `v0.s8-shared-excel-finish`. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S7)* |
-| **Last completed slice** | S7 Balance sheet Excel finish (`v0.s7-balance-sheet-excel-finish`) |
-| **Last tag** | `v0.s7-balance-sheet-excel-finish` |
+| **Active slice** | *(none — await owner review of S8)* |
+| **Last completed slice** | S8 Shared Excel finish (`v0.s8-shared-excel-finish`) |
+| **Last tag** | `v0.s8-shared-excel-finish` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S8 Shared Excel finish for subledger / activity / delivery / POS |
+| **Next up** | S10 Export screen==file amount parity tests |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

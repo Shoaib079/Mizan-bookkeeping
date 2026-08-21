@@ -2,6 +2,8 @@
 
 Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULES.md §8).
 
+**2026-08-21 — S8 shared Excel finish:** `test_s8_excel_finish.py` loads workbooks for subledger / supplier activity / POS / delivery (both sheets) — freeze on real header, autofilter, fitToWidth, `MONEY_FORMAT_ACCOUNTING` on money cols, header content. Mutation: wrong `header_row` / dropped `money_cols` on subledger → red.
+
 **2026-08-21 — S7 BS Excel finish:** `test_balance_sheet_export` loads workbook — freeze on real header, `MONEY_FORMAT_ACCOUNTING` on amount cells, header content; `test_profit_and_loss_export_keeps_shared_table_finish` regression. Mutation: wrong `header_row` / dropped `money_cols` → red.
 
 **2026-08-21 — S6 P&L/BS export view:** `test_statement_export_view.py` (sealed default + `-as-closed` + “As closed”; live after F3 amend + `-live` + “Live”; open month no suffix; HTTP forwards view); FE `report-download-query.test.ts` (URL carries view; mutation strip → red).

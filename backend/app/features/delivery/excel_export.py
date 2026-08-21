@@ -6,11 +6,12 @@ import uuid
 from datetime import date
 
 from app.core.excel.workbook import (
-    autosize_columns,
     bold_row,
     create_workbook,
+    finish_data_table,
     money_header,
     save_workbook_to_bytes,
+    write_header_row,
     write_money,
 )
 from app.features.delivery.schema import DeliveryReportRead, DeliverySettlementRead
@@ -26,7 +27,7 @@ def build_delivery_activity_xlsx(
     settlements: list[DeliverySettlementRead],
 ) -> bytes:
     wb, ws_sales = create_workbook("Sales")
-    row = _write_header(
+    header_row = _write_header(
         ws_sales,
         title="Delivery sales",
         entity_id=entity_id,
@@ -43,10 +44,7 @@ def build_delivery_activity_xlsx(
         "Status",
         "Description",
     ]
-    for col, header in enumerate(sales_headers, start=1):
-        ws_sales.cell(row=row, column=col, value=header)
-    bold_row(ws_sales, row, end_col=len(sales_headers))
-    row += 1
+    row = write_header_row(ws_sales, header_row, sales_headers)
 
     sales_total = 0
     for item in sales:
@@ -64,10 +62,16 @@ def build_delivery_activity_xlsx(
     ws_sales.cell(row=row, column=1, value="Posted total")
     write_money(ws_sales, row, 4, sales_total)
     bold_row(ws_sales, row, end_col=4)
-    autosize_columns(ws_sales)
+    finish_data_table(
+        ws_sales,
+        header_row=header_row,
+        last_data_row=row,
+        end_col=6,
+        money_cols=(4,),
+    )
 
     ws_settle = wb.create_sheet("Settlements")
-    row = _write_header(
+    header_row = _write_header(
         ws_settle,
         title="Delivery settlements",
         entity_id=entity_id,
@@ -82,10 +86,7 @@ def build_delivery_activity_xlsx(
         money_header("Amount"),
         "Description",
     ]
-    for col, header in enumerate(settle_headers, start=1):
-        ws_settle.cell(row=row, column=col, value=header)
-    bold_row(ws_settle, row, end_col=len(settle_headers))
-    row += 1
+    row = write_header_row(ws_settle, header_row, settle_headers)
 
     settle_total = 0
     for item in settlements:
@@ -100,7 +101,13 @@ def build_delivery_activity_xlsx(
     ws_settle.cell(row=row, column=1, value="Total")
     write_money(ws_settle, row, 3, settle_total)
     bold_row(ws_settle, row, end_col=3)
-    autosize_columns(ws_settle)
+    finish_data_table(
+        ws_settle,
+        header_row=header_row,
+        last_data_row=row,
+        end_col=4,
+        money_cols=(3,),
+    )
 
     return save_workbook_to_bytes(wb)
 

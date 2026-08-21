@@ -24,12 +24,12 @@ from datetime import date
 
 from app.core.dates import format_date
 from app.core.excel.workbook import (
-    autosize_columns,
-    bold_row,
     create_workbook,
+    finish_data_table,
     money_header,
     save_workbook_to_bytes,
     write_date,
+    write_header_row,
     write_money,
     write_sheet_title,
 )
@@ -161,11 +161,8 @@ def build_subledger_xlsx(export: SubledgerExport) -> bytes:
         money_header("Running"),
         "Status",
     ]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=header_row, column=col, value=header)
-    bold_row(ws, header_row, end_col=len(headers))
+    row = write_header_row(ws, header_row, headers)
 
-    row = header_row + 1
     for entry in export.rows:
         # A real date cell, not text. `str(movement_date)` wrote "2026-06-30"
         # as a string, which Excel sorts alphabetically and will not filter by
@@ -180,7 +177,13 @@ def build_subledger_xlsx(export: SubledgerExport) -> bytes:
         ws.cell(row=row, column=6, value=entry.status)
         row += 1
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=max(row - 1, header_row),
+        end_col=6,
+        money_cols=(4, 5),
+    )
     return save_workbook_to_bytes(wb)
 
 

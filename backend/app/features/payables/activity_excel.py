@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from app.core.excel.workbook import (
-    autosize_columns,
-    bold_row,
     create_workbook,
+    finish_data_table,
     money_header,
     save_workbook_to_bytes,
+    write_header_row,
     write_money,
 )
 from app.features.payables.schema import SupplierActivityRead
@@ -41,11 +41,8 @@ def build_supplier_activity_xlsx(report: SupplierActivityRead) -> bytes:
         "Receipt",
         money_header("Balance"),
     ]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=header_row, column=col, value=header)
-    bold_row(ws, header_row, end_col=len(headers))
+    row = write_header_row(ws, header_row, headers)
 
-    row = header_row + 1
     for item in report.rows:
         ws.cell(row=row, column=1, value=str(item.movement_date))
         ws.cell(row=row, column=2, value=item.movement_label)
@@ -61,5 +58,11 @@ def build_supplier_activity_xlsx(report: SupplierActivityRead) -> bytes:
         write_money(ws, row, 10, item.balance_kurus)
         row += 1
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=max(row - 1, header_row),
+        end_col=10,
+        money_cols=(5, 6, 7, 10),
+    )
     return save_workbook_to_bytes(wb)

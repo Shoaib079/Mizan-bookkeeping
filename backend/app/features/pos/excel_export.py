@@ -6,11 +6,12 @@ import uuid
 from datetime import date
 
 from app.core.excel.workbook import (
-    autosize_columns,
     bold_row,
     create_workbook,
+    finish_data_table,
     money_header,
     save_workbook_to_bytes,
+    write_header_row,
     write_money,
 )
 from app.features.pos.schema import PosDailySummaryRead
@@ -30,7 +31,7 @@ def build_pos_daily_summaries_xlsx(
     ws.cell(row=2, column=2, value=f"Period: {from_date} to {to_date}")
     ws.cell(row=3, column=1, value=f"Filter: {review_label}")
 
-    row = 5
+    header_row = 5
     headers = [
         "Date",
         "Status",
@@ -41,10 +42,7 @@ def build_pos_daily_summaries_xlsx(
         "Review reason",
         "Posted at",
     ]
-    for col, header in enumerate(headers, start=1):
-        ws.cell(row=row, column=col, value=header)
-    bold_row(ws, row, end_col=len(headers))
-    row += 1
+    row = write_header_row(ws, header_row, headers)
 
     cash_total = 0
     card_total = 0
@@ -70,5 +68,11 @@ def build_pos_daily_summaries_xlsx(
     write_money(ws, row, 5, total_total)
     bold_row(ws, row, end_col=5)
 
-    autosize_columns(ws)
+    finish_data_table(
+        ws,
+        header_row=header_row,
+        last_data_row=row,
+        end_col=8,
+        money_cols=(3, 4, 5, 6),
+    )
     return save_workbook_to_bytes(wb)
