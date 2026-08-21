@@ -8,7 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-22
 
-- **S16 — Supplier sticker closing-in-range label (`v0.s16-supplier-closing-in-range`).** Shared `rangedBalanceLabel`: no range / to-date on or after today → current-balance wording (`supplierBalanceHeading`); past to-date → `Closing in range · as of [to]`. Supplier detail owns the activity from/to and passes it to the sticker and the activity Closing KPI. Figure unchanged. Partner/staff/customer have no activity range on the sticker — listed for a later consistency pass. Mutation: hardcode the no-range label for past ranges → red; restored → green.
+- **S16 follow-up — sticker Current balance vs activity Closing (`v0.s16-sticker-current-vs-closing`).** Sticker always labels today's `ledger.balance_kurus` as **Current balance** (no `rangedBalanceLabel`). Activity Closing KPI alone uses `rangedBalanceLabel` (past to → Closing in range · as of [to]; else Closing). Fixes two figures sharing one label. Mutation: wire sticker through ranged helper → red; restored → green.
+- **S16 — Supplier sticker closing-in-range label (`v0.s16-supplier-closing-in-range`).** Shared `rangedBalanceLabel`: no range / to-date on or after today → current-balance wording (`supplierBalanceHeading`); past to-date → `Closing in range · as of [to]`. Supplier detail owns the activity from/to and passes it to the sticker and the activity Closing KPI. Figure unchanged. Partner/staff/customer have no activity range on the sticker — listed for a later consistency pass. Mutation: hardcode the no-range label for past ranges → red; restored → green. *(Superseded for the sticker by the follow-up above.)*
 
 ## 2026-08-21
 

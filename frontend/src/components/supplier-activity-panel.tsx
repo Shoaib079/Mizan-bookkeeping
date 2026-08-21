@@ -174,7 +174,7 @@ export function SupplierActivityPanel({
               <dt className="text-muted-foreground">
                 {rangedBalanceLabel({
                   rangeTo: range.to,
-                  currentLabel: "Closing (posted)",
+                  currentLabel: "Closing",
                 })}
               </dt>
               <dd className="tabular-nums font-medium">

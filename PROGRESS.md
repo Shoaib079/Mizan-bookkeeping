@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S16 done:** Supplier sticker + activity Closing use `rangedBalanceLabel` (past to-date → Closing in range · as of [to]; MTD/today → current heading). Tag `v0.s16-supplier-closing-in-range`. Do not start GS-FX. Do not push until owner says.
+- **S16 follow-up done:** Sticker = Current balance (today's ledger); activity Closing alone uses `rangedBalanceLabel`. Tag `v0.s16-sticker-current-vs-closing`. Do not start GS-FX. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — S16 done; awaiting review / push)* |
-| **Last completed slice** | S16 Supplier sticker closing-in-range label |
-| **Last tag** | `v0.s16-supplier-closing-in-range` |
+| **Active slice** | *(none — S16 follow-up done; awaiting review / push)* |
+| **Last completed slice** | S16 follow-up sticker Current balance vs activity Closing |
+| **Last tag** | `v0.s16-sticker-current-vs-closing` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | GS-FX — wait for owner |
 
