@@ -26,6 +26,7 @@ import {
   directoryInactiveSplitIndex,
   sortDirectoryActiveFirst,
 } from "@/lib/directory-list";
+import { DirectoryBalanceCell } from "@/components/directory-balance-cell";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -77,11 +78,14 @@ function PartnerCardList({
               </>
             }
             amount={
-              balances.has(row.id)
-                ? formatTry(balances.get(row.id)!)
-                : balancesLoading
-                  ? "…"
-                  : "—"
+              <DirectoryBalanceCell
+                balanceMinor={
+                  balances.has(row.id) ? balances.get(row.id) : undefined
+                }
+                party="partner"
+                loading={balancesLoading && !balances.has(row.id)}
+                formatAbs={(abs) => formatTry(abs)}
+              />
             }
           />
         </Fragment>
@@ -139,12 +143,15 @@ function PartnerTable({
               <DataTableCell>
                 <StatusBadge status={row.is_active ? "active" : "inactive"} />
               </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {balances.has(row.id)
-                  ? formatTry(balances.get(row.id)!)
-                  : balancesLoading
-                    ? "…"
-                    : "—"}
+              <DataTableCell align="right">
+                <DirectoryBalanceCell
+                  balanceMinor={
+                    balances.has(row.id) ? balances.get(row.id) : undefined
+                  }
+                  party="partner"
+                  loading={balancesLoading && !balances.has(row.id)}
+                  formatAbs={(abs) => formatTry(abs)}
+                />
               </DataTableCell>
             </DataTableRow>
           </Fragment>

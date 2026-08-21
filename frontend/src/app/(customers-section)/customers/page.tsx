@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { UserCircle } from "lucide-react";
+import { DirectoryBalanceCell } from "@/components/directory-balance-cell";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatForexBalanceSummary } from "@/lib/fx-money";
@@ -30,7 +31,6 @@ import { formatTry } from "@/lib/money";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useCustomerBalances } from "@/lib/use-balance-map";
-import { cn } from "@/lib/utils";
 
 export default function CustomersPage() {
   const { entityId } = useEntity();
@@ -54,7 +54,7 @@ export default function CustomersPage() {
                 <DataTableHeaderCell>Name</DataTableHeaderCell>
                 <DataTableHeaderCell>Identifier</DataTableHeaderCell>
                 <DataTableHeaderCell>Status</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Owed to you</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
               </tr>
             </DataTableHead>
             <DataTableBody>
@@ -78,16 +78,17 @@ export default function CustomersPage() {
                       <StatusBadge status={row.is_active ? "active" : "inactive"} />
                     </DataTableCell>
                     {/* The lira figure is the ledger's truth, so it stays the
-                        headline. The agreed currency sits under it, because
-                        that is the sum the customer will actually hand over
-                        and it is the one they will quote back at you. */}
-                    <DataTableCell
-                      align="right"
-                      className={cn("tabular-nums", balance > 0 && "text-success")}
-                    >
-                      {balance === 0 ? "—" : formatTry(balance)}
+                        headline. Direction words come from the shared helper
+                        (same sign rule as detail stickers). The agreed currency
+                        sits under it — what the customer will actually hand over. */}
+                    <DataTableCell align="right">
+                      <DirectoryBalanceCell
+                        balanceMinor={balance}
+                        party="customer"
+                        formatAbs={(abs) => formatTry(abs)}
+                      />
                       {forexSummary && (
-                        <span className="block text-xs font-normal text-muted-foreground">
+                        <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
                           {forexSummary}
                         </span>
                       )}
@@ -121,8 +122,13 @@ export default function CustomersPage() {
                         {forexSummary && <span>{forexSummary}</span>}
                       </>
                     }
-                    amount={balance === 0 ? "—" : formatTry(balance)}
-                    amountClassName={cn(balance > 0 && "text-success")}
+                    amount={
+                      <DirectoryBalanceCell
+                        balanceMinor={balance}
+                        party="customer"
+                        formatAbs={(abs) => formatTry(abs)}
+                      />
+                    }
                   />
                 );
               })}

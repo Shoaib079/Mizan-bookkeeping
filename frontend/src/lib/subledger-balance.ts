@@ -30,6 +30,17 @@ export function balanceCaption(balanceMinor: number): string {
   return "Nothing owed either way";
 }
 
+/**
+ * Directory rows: same sign→words rule as detail stickers (`balanceHeading`).
+ * One helper so Staff / Partners / Customers / Suppliers cannot drift.
+ */
+export function directoryBalanceDirection(
+  balanceMinor: number,
+  party: "employee" | "partner" | "customer" | "supplier",
+): string {
+  return balanceHeading(balanceMinor, party);
+}
+
 function capitalise(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1);
 }

@@ -23,10 +23,10 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { Users } from "lucide-react";
+import { DirectoryBalanceCell } from "@/components/directory-balance-cell";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
-import { formatSupplierPayableBalance, isSupplierAdvanceBalance } from "@/lib/supplier-balance";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useSupplierBalances } from "@/lib/use-balance-map";
@@ -43,7 +43,6 @@ function SupplierCardList({
     <MobileCardList>
       {rows.map((row) => {
         const balance = balances.get(row.id) ?? 0;
-        const advance = isSupplierAdvanceBalance(balance);
         return (
           <MobileCardRow
             key={row.id}
@@ -56,17 +55,16 @@ function SupplierCardList({
               </>
             }
             amount={
-              balance === 0
-                ? "—"
-                : advance
-                  ? formatTry(Math.abs(balance))
-                  : formatTry(balance)
+              <DirectoryBalanceCell
+                balanceMinor={balance}
+                party="supplier"
+                formatAbs={(abs) => formatTry(abs)}
+                className={cn(
+                  balance > 0 && "text-destructive",
+                  balance < 0 && "text-success",
+                )}
+              />
             }
-            amountNote={advance ? "Advance · invoice pending" : undefined}
-            amountClassName={cn(
-              balance > 0 && "text-destructive",
-              advance && "text-success",
-            )}
           />
         );
       })}
@@ -88,7 +86,7 @@ function SupplierTable({
           <DataTableHeaderCell>Name</DataTableHeaderCell>
           <DataTableHeaderCell>VKN</DataTableHeaderCell>
           <DataTableHeaderCell>Status</DataTableHeaderCell>
-          <DataTableHeaderCell align="right">Balance owed</DataTableHeaderCell>
+          <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
         </tr>
       </DataTableHead>
       <DataTableBody>
@@ -108,15 +106,16 @@ function SupplierTable({
               <DataTableCell>
                 <StatusBadge status={row.is_active ? "active" : "inactive"} />
               </DataTableCell>
-              <DataTableCell
-                align="right"
-                className={cn(
-                  "tabular-nums",
-                  balance > 0 && "text-destructive",
-                  balance < 0 && "text-success",
-                )}
-              >
-                {balance === 0 ? "—" : formatSupplierPayableBalance(balance)}
+              <DataTableCell align="right">
+                <DirectoryBalanceCell
+                  balanceMinor={balance}
+                  party="supplier"
+                  formatAbs={(abs) => formatTry(abs)}
+                  className={cn(
+                    balance > 0 && "text-destructive",
+                    balance < 0 && "text-success",
+                  )}
+                />
               </DataTableCell>
             </DataTableRow>
           );

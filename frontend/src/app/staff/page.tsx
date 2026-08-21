@@ -26,6 +26,7 @@ import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
+import { DirectoryBalanceCell } from "@/components/directory-balance-cell";
 import { formatStaffBalanceMinor } from "@/lib/format-staff-balance";
 import {
   countInactiveDirectoryRows,
@@ -63,11 +64,16 @@ function StaffCardList({
               </>
             }
             amount={
-              balances.has(row.id)
-                ? formatStaffBalanceMinor(balances.get(row.id) ?? 0, row.pay_currency)
-                : balancesLoading
-                  ? "…"
-                  : "—"
+              <DirectoryBalanceCell
+                balanceMinor={
+                  balances.has(row.id) ? balances.get(row.id) : undefined
+                }
+                party="employee"
+                loading={balancesLoading && !balances.has(row.id)}
+                formatAbs={(abs) =>
+                  formatStaffBalanceMinor(abs, row.pay_currency)
+                }
+              />
             }
           />
         </Fragment>
@@ -123,15 +129,17 @@ function StaffTable({
               <DataTableCell>
                 <StatusBadge status={row.is_active ? "active" : "inactive"} />
               </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {balances.has(row.id)
-                  ? formatStaffBalanceMinor(
-                      balances.get(row.id) ?? 0,
-                      row.pay_currency,
-                    )
-                  : balancesLoading
-                    ? "…"
-                    : "—"}
+              <DataTableCell align="right">
+                <DirectoryBalanceCell
+                  balanceMinor={
+                    balances.has(row.id) ? balances.get(row.id) : undefined
+                  }
+                  party="employee"
+                  loading={balancesLoading && !balances.has(row.id)}
+                  formatAbs={(abs) =>
+                    formatStaffBalanceMinor(abs, row.pay_currency)
+                  }
+                />
               </DataTableCell>
             </DataTableRow>
           </Fragment>
