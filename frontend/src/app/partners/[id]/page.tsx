@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { DataTableCell, DataTableRow } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch, entityPath } from "@/lib/api";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
@@ -69,6 +70,7 @@ export default function PartnerDetailPage() {
   const params = useParams<{ id: string }>();
   const partnerId = params.id;
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
 
   const [editOpen, setEditOpen] = useState(false);
   const [recordOpen, setRecordOpen] = useState(false);
@@ -178,25 +180,29 @@ export default function PartnerDetailPage() {
           )
         }
         primaryAction={
-          <Button type="button" onClick={() => setRecordOpen(true)}>
-            Record
-          </Button>
+          showWrite ? (
+            <Button type="button" onClick={() => setRecordOpen(true)}>
+              Record
+            </Button>
+          ) : undefined
         }
         actions={
           <>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={(ledger?.unpaid_profit_kurus ?? 0) <= 0}
-              onClick={() => setPayProfitOpen(true)}
-              title={
-                (ledger?.unpaid_profit_kurus ?? 0) <= 0
-                  ? "No unpaid allocated profit — allocate on the Partners list first"
-                  : undefined
-              }
-            >
-              Pay profit
-            </Button>
+            {showWrite && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={(ledger?.unpaid_profit_kurus ?? 0) <= 0}
+                onClick={() => setPayProfitOpen(true)}
+                title={
+                  (ledger?.unpaid_profit_kurus ?? 0) <= 0
+                    ? "No unpaid allocated profit — allocate on the Partners list first"
+                    : undefined
+                }
+              >
+                Pay profit
+              </Button>
+            )}
             <SubledgerDownloadMenu
               basePath={
                 entityId && partnerId
@@ -207,7 +213,11 @@ export default function PartnerDetailPage() {
             />
           </>
         }
-        titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
+        titleAction={
+          showWrite ? (
+            <EditTitleButton onClick={() => setEditOpen(true)} />
+          ) : undefined
+        }
         balance={
           ledger && (
             <EntityBalanceSticker

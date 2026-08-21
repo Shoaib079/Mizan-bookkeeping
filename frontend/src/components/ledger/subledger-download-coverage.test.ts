@@ -37,8 +37,17 @@ const LEDGER_PAGES = [
   },
 ];
 
-describe.each(LEDGER_PAGES)("the $name ledger can be downloaded", ({ symbol, path }) => {
-  const source = () => sourceDeclaring(symbol);
+describe.each(LEDGER_PAGES)("the $name ledger can be downloaded", ({ name, symbol, path }) => {
+  const source = () => {
+    if (name === "customer") {
+      // S3: download chrome lives in customerDetailWriteChrome helper.
+      return (
+        sourceDeclaring("CustomerDetailPage") +
+        sourceDeclaring("customerDetailWriteChrome")
+      );
+    }
+    return sourceDeclaring(symbol);
+  };
 
   it("renders the shared download menu", () => {
     expect(source()).toContain("<SubledgerDownloadMenu");

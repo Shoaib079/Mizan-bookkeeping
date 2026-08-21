@@ -49,7 +49,8 @@ describe("Count cash vs Close day split", () => {
     }
     expect(split).toContain("Banking → Cash");
     expect(split).toContain("Send to one more place");
-    expect(banking).toContain("Add cash drawer");
+    expect(banking).toContain("cashPageWriteHeader");
+    expect(sourceDeclaring("cashPageWriteHeader")).toContain("Add cash drawer");
   });
 
   it("Record desk wires both modes", () => {

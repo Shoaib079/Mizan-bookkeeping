@@ -37,8 +37,33 @@ vi.mock("next/navigation", () => ({
   // `DataTableRow` reaches for it to make a row clickable when given an href.
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
 }));
+const accessState = {
+  role: "owner" as const,
+  grants: [
+    "operations:write",
+    "daily_transactions:write",
+    "nav:partners",
+  ] as string[],
+};
+
 vi.mock("@/lib/entity-context", () => ({
   useEntity: () => ({ entityId: "ent-1", actorId: "act-1" }),
+}));
+vi.mock("@/lib/use-entity-access", () => ({
+  useEntityAccess: () => ({
+    role: accessState.role,
+    grants: accessState.grants,
+    loading: false,
+    membershipSettled: true,
+    canWriteOperations: accessState.grants.includes("operations:write"),
+    canWriteDailyTransactions: accessState.grants.includes(
+      "daily_transactions:write",
+    ),
+    canReadFinancialReports: true,
+    canReadReports: true,
+    canAccessSettings: true,
+    reload: async () => undefined,
+  }),
 }));
 vi.mock("@/components/layout/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -448,5 +473,40 @@ describe("editing a salary the partner paid from pocket", () => {
     expect(screen.getByTestId("void-dialog").dataset.value).toBe(
       "/entities/ent-1/staff/partner-funded-salary/je-salary/void",
     );
+  });
+});
+
+describe("S3 write chrome on partner detail", () => {
+  afterEach(() => {
+    cleanup();
+    accessState.role = "owner";
+    accessState.grants = [
+      "operations:write",
+      "daily_transactions:write",
+      "nav:partners",
+    ];
+  });
+
+  it("owner sees Record, Pay profit, and Edit title", async () => {
+    respond({});
+    renderWithQuery(<PartnerDetailPage />);
+    await waitFor(() => expect(screen.getByText("Record")).toBeTruthy());
+    expect(screen.getByText("Pay profit")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+  });
+
+  it("partner_view_only does not see Record, Pay profit, or Edit title", async () => {
+    accessState.role = "partner_view_only";
+    accessState.grants = [
+      "financial_reports:read",
+      "reports:read",
+      "nav:partners",
+      "nav:reports",
+    ];
+    respond({});
+    renderWithQuery(<PartnerDetailPage />);
+    await waitFor(() => expect(screen.getByText("Canan Takan")).toBeTruthy());
+    expect(screen.queryByText("Record")).toBeNull();
+    expect(screen.queryByText("Pay profit")).toBeNull();
   });
 });

@@ -17,15 +17,15 @@
 
 ## Current
 
-- **File-size ratchet slice (export splits):** supplier activity export button split (panel 398 lines, off baseline); expenses/api 464, reports/api 512, GL panel 539; expenses-review already under 400. Baseline lowered/deleted downward-only; `check_file_sizes` + pytest + vitest + build green.
+- **S3 write chrome gates:** detail + directory + delivery + banking write controls grant-gated on the frontend; vitest 1133 + build green. Tag `v0.s3-write-chrome-gates`. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of file-size ratchet slice)* |
-| **Last completed slice** | File-size ratchet export splits (`ff493f8` / `ab64050`) — after money-safety guards |
-| **Last tag** | `v0.money-safety-sweep-guards` |
+| **Active slice** | *(none — await owner review of S3)* |
+| **Last completed slice** | S3 write chrome grant-gated expanded (`v0.s3-write-chrome-gates`) |
+| **Last tag** | `v0.s3-write-chrome-gates` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S3 detail write chrome grant-gated (after sign-off) |
+| **Next up** | S4 supplier payment Edit/Void via capabilities (after sign-off) |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

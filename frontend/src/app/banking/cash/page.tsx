@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { cashPageWriteHeader } from "@/components/banking/cash-page-write-actions";
+import { useWriteChrome } from "@/lib/use-write-chrome";
+import { useEntity } from "@/lib/entity-context";
 import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import type {
@@ -35,11 +38,12 @@ import type {
   MoneyAccountLeaf,
   MoneyAccountTree,
 } from "@/lib/banking-types";
-import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function CashDrawerPage() {
   const { entityId, actorId } = useEntity();
+  const { showWrite: showOpsWrite, showCountCash, showCloseDay } =
+    useWriteChrome();
   const { toast } = useToast();
   const [sessions, setSessions] = useState<CashDrawerSessionRead[]>([]);
   /** Closed counts only — an open session has nothing counted yet. */
@@ -197,35 +201,16 @@ export default function CashDrawerPage() {
     <>
       <PageHeader
         title="Cash"
-        primaryAction={
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setMovementOpen(true)}
-          >
-            Record movement
-          </Button>
-        }
-        actions={
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!entityId}
-            onClick={() => setCountCashOpen(true)}
-          >
-            Count cash
-          </Button>
-        }
-        overflowActions={[
-          {
-            label: "Close day",
-            onSelect: () => setCloseDayOpen(true),
-          },
-          {
-            label: "Add cash drawer",
-            onSelect: () => setAddDrawerOpen(true),
-          },
-        ]}
+        {...cashPageWriteHeader({
+          entityId,
+          showOpsWrite,
+          showCountCash,
+          showCloseDay,
+          onMovement: () => setMovementOpen(true),
+          onCountCash: () => setCountCashOpen(true),
+          onCloseDay: () => setCloseDayOpen(true),
+          onAddDrawer: () => setAddDrawerOpen(true),
+        })}
       />
 
       {!entityId && (
@@ -358,7 +343,7 @@ export default function CashDrawerPage() {
                       Reopen (owner)
                     </Button>
                   )}
-                  {detail.status === "open" && (
+                  {detail.status === "open" && showOpsWrite && (
                     <Button type="button" onClick={() => setCloseOpen(true)}>
                       Close drawer
                     </Button>

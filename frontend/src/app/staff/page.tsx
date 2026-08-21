@@ -22,6 +22,7 @@ import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { UsersRound } from "lucide-react";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useLedgerBalanceMap } from "@/lib/use-ledger-balance-map";
@@ -142,6 +143,7 @@ function StaffTable({
 
 export default function StaffPage() {
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const [showInactive, setShowInactive] = useState(false);
   const listPath = useMemo(
     () => `/staff/employees?include_inactive=${showInactive ? "true" : "false"}`,
@@ -197,13 +199,15 @@ export default function StaffPage() {
           ) : undefined
         }
         primaryAction={
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setFormOpen(true)}
-          >
-            New employee
-          </Button>
+          showWrite ? (
+            <Button
+              type="button"
+              disabled={!entityId}
+              onClick={() => setFormOpen(true)}
+            >
+              New employee
+            </Button>
+          ) : undefined
         }
         toolbar={
           entityId && (

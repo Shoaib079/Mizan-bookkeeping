@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of money-safety sweep guards)* |
-| **Next up**              | **S3** detail write chrome grant-gated (after sign-off) |
-| **Last completed slice** | Money-safety sweep guards (`v0.money-safety-sweep-guards`) |
-| **Last commit/tag**      | `v0.money-safety-sweep-guards` |
+| **Active slice**         | *(none — await owner review of S3 write-chrome gates)* |
+| **Next up**              | **S4** supplier payment Edit/Void via capabilities (after sign-off) |
+| **Last completed slice** | S3 write chrome grant-gated expanded (`v0.s3-write-chrome-gates`) |
+| **Last commit/tag**      | `v0.s3-write-chrome-gates` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1909,7 +1909,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 |---|-------|--------|-------|
 | **S1** | Staff money-figure correctness | high | **DONE** `v0.staff-sticker-ledger-net` — sticker hero + heading from ledger net; residual ≠ Settled; hub colour TRY-only; mobile sticker width |
 | **S2** | Ledger freshness funnel | high | **DONE** `v0.ledger-freshness-funnel` — `completeSubmit` emits `mizan:ledger-changed`; partner/staff/supplier detail + activity + directory balance maps on React Query (absorbs former S5) |
-| **S3** | Detail write chrome grant-gated | high | Partner/Staff/Supplier Record·Pay·Edit use `shouldShowWriteChrome` / `canWriteOperations` |
+| **S3** | Detail write chrome grant-gated | high | **DONE** `v0.s3-write-chrome-gates` — Partner/Staff/Supplier/Customer + directories/delivery/banking write controls use `shouldShowWriteChrome` / `canUseRecordAction` |
 | **S4** | Supplier payment Edit/Void via capabilities | high | Activity payments through `useEntryActions` / backend `can_edit` (no always-on Edit) |
 | **S5** | Ledger-changed freshness (directories + detail) | high | **DONE via S2** — emit + query-backed fetchers shipped in `v0.ledger-freshness-funnel` |
 | **S6** | P&L / BS export `view` (live vs sealed) | high | Download + export API pass `view`; stamp sealed/live in file + filename |
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S3 write chrome grant-gated (expanded)       | `v0.s3-write-chrome-gates`                             | Hide detail/directory/delivery/banking write controls without ops or daily grants; FE-only; mutation-checked vitest |
 | 2026-08-20 | Money-safety sweep guards                    | `v0.money-safety-sweep-guards`                         | Guard 1 every-leg void/correct; Guard 2 voided rows never move totals; Guard 3 subledger sources refuse generic void; mutation-checked |
 | 2026-08-20 | S9 Cash / expenses / GL standalone Excel         | `v0.standalone-book-exports`                           | Multi-sheet cash-bank book; hand-recorded expenses xlsx; GL By account + All entries; hub Payables headline guard |
 | 2026-08-20 | S2 Ledger freshness funnel                       | `v0.ledger-freshness-funnel`                           | completeSubmit emits mizan:ledger-changed; partner/staff/supplier detail + activity + directory balances on RQ; absorbs S5 |

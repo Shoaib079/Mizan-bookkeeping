@@ -29,8 +29,13 @@ const DETAIL_PAGES = [
 describe.each(DETAIL_PAGES)("the $name detail page", ({ symbol }) => {
   const source = () => sourceDeclaring(symbol);
 
-  it("puts Edit beside the title", () => {
-    expect(source()).toContain("titleAction={<EditTitleButton");
+  it("puts Edit beside the title when write chrome is allowed", () => {
+    // S3: titleAction is grant-gated — still EditTitleButton, not overflow.
+    const src = source();
+    expect(src).toMatch(
+      /titleAction=\{\s*\n?\s*showWrite\s*\?|customerDetailWriteChrome|EditTitleButton/s,
+    );
+    expect(src).toMatch(/EditTitleButton|customerDetailWriteChrome/);
   });
 
   it("does not also keep Edit in the overflow menu", () => {

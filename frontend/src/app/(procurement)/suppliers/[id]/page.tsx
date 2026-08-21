@@ -29,6 +29,7 @@ import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-me
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
@@ -72,6 +73,7 @@ export default function SupplierDetailPage() {
   const highlightDraftId = searchParams.get("draft");
 
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [correctPayment, setCorrectPayment] =
@@ -196,7 +198,9 @@ export default function SupplierDetailPage() {
         )
       }
       primaryAction={
-        <Button onClick={() => setPaymentOpen(true)}>Record payment</Button>
+        showWrite ? (
+          <Button onClick={() => setPaymentOpen(true)}>Record payment</Button>
+        ) : undefined
       }
       actions={
         <>
@@ -214,7 +218,11 @@ export default function SupplierDetailPage() {
           />
         </>
       }
-      titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
+      titleAction={
+        showWrite ? (
+          <EditTitleButton onClick={() => setEditOpen(true)} />
+        ) : undefined
+      }
       balance={
         ledger && (
           <EntityBalanceSticker

@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { Users } from "lucide-react";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import { formatSupplierPayableBalance, isSupplierAdvanceBalance } from "@/lib/supplier-balance";
@@ -127,6 +128,7 @@ function SupplierTable({
 
 export default function SuppliersPage() {
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const [showInactive, setShowInactive] = useState(false);
   const [searchDraft, setSearchDraft] = useState("");
   const search = useDebouncedValue(searchDraft.trim(), 300);
@@ -187,13 +189,15 @@ export default function SuppliersPage() {
         ) : undefined
       }
       primaryAction={
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setFormOpen(true)}
-        >
-          New supplier
-        </Button>
+        showWrite ? (
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setFormOpen(true)}
+          >
+            New supplier
+          </Button>
+        ) : undefined
       }
       toolbar={
         <>

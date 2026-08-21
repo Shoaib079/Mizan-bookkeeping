@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-21
+
+- **S3 — Write chrome grant-gated (expanded class) (`v0.s3-write-chrome-gates`).** Partner / Staff / Supplier / Customer detail Record·Pay·Edit, group-sale Record payment, directory Add buttons, delivery report/settle, and banking transfers / cash movement / count / close hide when the member lacks the grant that backs the API (`shouldShowWriteChrome` / `canUseRecordAction`). Backend 403 unchanged. Mutation-checked vitest in `write-chrome-gates.test.ts` + partner detail render cases.
+
 ## 2026-08-20
 
 - Split supplier activity Excel export into `supplier-activity-export-button.tsx` (panel ≤400; dropped from `FILE_SIZE_BASELINE.json`).

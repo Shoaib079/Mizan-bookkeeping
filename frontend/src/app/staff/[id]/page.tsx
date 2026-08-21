@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch, entityPath } from "@/lib/api";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import {
@@ -90,6 +91,7 @@ export default function StaffDetailPage() {
   const params = useParams<{ id: string }>();
   const employeeId = params.id;
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
 
   const [editOpen, setEditOpen] = useState(false);
   const [accrualOpen, setAccrualOpen] = useState(false);
@@ -211,19 +213,23 @@ export default function StaffDetailPage() {
           )
         }
         primaryAction={
-          <Button type="button" onClick={() => setPaymentOpen(true)}>
-            Pay salary
-          </Button>
+          showWrite ? (
+            <Button type="button" onClick={() => setPaymentOpen(true)}>
+              Pay salary
+            </Button>
+          ) : undefined
         }
         actions={
           <>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => setAdvanceOpen(true)}
-            >
-              Give advance
-            </Button>
+            {showWrite && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setAdvanceOpen(true)}
+              >
+                Give advance
+              </Button>
+            )}
             <SubledgerDownloadMenu
               basePath={
                 entityId && employeeId
@@ -233,22 +239,33 @@ export default function StaffDetailPage() {
             />
           </>
         }
-        overflowActions={[
-          {
-            label: "Extra days",
-            show: isTry,
-            onSelect: () => setExtraDaysOpen(true),
-          },
-          {
-            label: "Return advance",
-            title:
-              "Record cash returned by the employee for an advance/overpayment",
-            show: isTry && hasAdvance,
-            onSelect: () => setReturnOpen(true),
-          },
-          { label: "Adjust accrual", onSelect: () => setAccrualOpen(true) },
-        ]}
-        titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
+        overflowActions={
+          showWrite
+            ? [
+                {
+                  label: "Extra days",
+                  show: isTry,
+                  onSelect: () => setExtraDaysOpen(true),
+                },
+                {
+                  label: "Return advance",
+                  title:
+                    "Record cash returned by the employee for an advance/overpayment",
+                  show: isTry && hasAdvance,
+                  onSelect: () => setReturnOpen(true),
+                },
+                {
+                  label: "Adjust accrual",
+                  onSelect: () => setAccrualOpen(true),
+                },
+              ]
+            : []
+        }
+        titleAction={
+          showWrite ? (
+            <EditTitleButton onClick={() => setEditOpen(true)} />
+          ) : undefined
+        }
         balance={
           ledger && (
             <EntityBalanceSticker

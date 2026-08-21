@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { UserCircle } from "lucide-react";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatForexBalanceSummary } from "@/lib/fx-money";
 import { formatTry } from "@/lib/money";
@@ -33,6 +34,7 @@ import { cn } from "@/lib/utils";
 
 export default function CustomersPage() {
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const [searchDraft, setSearchDraft] = useState("");
   const search = useDebouncedValue(searchDraft.trim(), 300);
   const listPath = useMemo(() => {
@@ -138,13 +140,15 @@ export default function CustomersPage() {
         ) : undefined
       }
       primaryAction={
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setFormOpen(true)}
-        >
-          New customer
-        </Button>
+        showWrite ? (
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setFormOpen(true)}
+          >
+            New customer
+          </Button>
+        ) : undefined
       }
       toolbar={
         <Input

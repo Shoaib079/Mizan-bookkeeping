@@ -28,6 +28,7 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
 import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import type { GroupSaleRead } from "@/lib/group-sales-types";
@@ -44,6 +45,7 @@ export default function GroupSaleDetailPage() {
   const router = useRouter();
   const saleId = params.id;
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const { toast } = useToast();
 
   const [sale, setSale] = useState<GroupSaleRead | null>(null);
@@ -155,11 +157,11 @@ export default function GroupSaleDetailPage() {
         />
       }
       primaryAction={
-        sale.status === "posted" && (
+        showWrite && sale.status === "posted" ? (
           <Button type="button" onClick={() => setPaymentOpen(true)}>
             Record payment
           </Button>
-        )
+        ) : undefined
       }
       actions={
         sale.status === "posted" &&

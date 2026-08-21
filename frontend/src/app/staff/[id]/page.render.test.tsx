@@ -37,6 +37,20 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/entity-context", () => ({
   useEntity: () => ({ entityId: "ent-1", actorId: "act-1" }),
 }));
+vi.mock("@/lib/use-entity-access", () => ({
+  useEntityAccess: () => ({
+    role: "owner",
+    grants: ["operations:write", "daily_transactions:write", "nav:staff"],
+    loading: false,
+    membershipSettled: true,
+    canWriteOperations: true,
+    canWriteDailyTransactions: true,
+    canReadFinancialReports: true,
+    canReadReports: true,
+    canAccessSettings: true,
+    reload: async () => undefined,
+  }),
+}));
 vi.mock("@/lib/toast", () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock("@/components/layout/app-shell", () => ({
   AppShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

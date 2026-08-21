@@ -12,12 +12,14 @@ import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import type { DeliveryClearingReconciliation } from "@/lib/pos-delivery-types";
 
 export default function DeliveryPage() {
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const [recon, setRecon] = useState<DeliveryClearingReconciliation | null>(
     null,
   );
@@ -56,23 +58,27 @@ export default function DeliveryPage() {
         title="Delivery"
         meta="Platform sales, commission, and settlement reconciliation."
         primaryAction={
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setReportFormOpen(true)}
-          >
-            Record sales
-          </Button>
+          showWrite ? (
+            <Button
+              type="button"
+              disabled={!entityId}
+              onClick={() => setReportFormOpen(true)}
+            >
+              Record sales
+            </Button>
+          ) : undefined
         }
         actions={
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!entityId}
-            onClick={() => setSettleFormOpen(true)}
-          >
-            Record settlement
-          </Button>
+          showWrite ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!entityId}
+              onClick={() => setSettleFormOpen(true)}
+            >
+              Record settlement
+            </Button>
+          ) : undefined
         }
       />
 

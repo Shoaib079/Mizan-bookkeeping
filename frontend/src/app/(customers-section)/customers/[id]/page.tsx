@@ -10,10 +10,9 @@ import {
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { LedgerTable } from "@/components/page/ledger-table";
-import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
+import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
-import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
   CorrectCustomerPaymentForm,
@@ -37,7 +36,6 @@ import {
   CustomerWriteOffDialog,
   type CorrectableWriteOffRow,
 } from "@/components/forms/customer-write-off-dialog";
-import { Button } from "@/components/ui/button";
 import {
   DataTableCell,
   DataTableRow,
@@ -45,6 +43,8 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch, entityPath } from "@/lib/api";
 import { type ForexOutstanding } from "@/lib/use-balance-map";
+import { customerDetailWriteChrome } from "@/components/customers/customer-detail-write-chrome";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatForexBalanceSummary, formatFxNative } from "@/lib/fx-money";
 import { formatTrDate, formatTry } from "@/lib/money";
@@ -136,6 +136,7 @@ export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const customerId = params.id;
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
 
   const [customer, setCustomer] = useState<CustomerRow | null>(null);
   const [ledger, setLedger] = useState<CustomerLedgerResponse | null>(null);
@@ -241,38 +242,16 @@ export default function CustomerDetailPage() {
           />
         )
       }
-      primaryAction={
-        <Button type="button" onClick={() => setPaymentOpen(true)}>
-          Record payment
-        </Button>
-      }
-      actions={
-        <>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setSaleOpen(true)}
-          >
-            Group sale
-          </Button>
-          <SubledgerDownloadMenu
-            basePath={
-              entityId && customerId
-                ? `/entities/${entityId}/customers/${customerId}/ledger`
-                : null
-            }
-          />
-        </>
-      }
-      titleAction={<EditTitleButton onClick={() => setEditOpen(true)} />}
-      overflowActions={[
-        {
-          label: "Write off balance",
-          title: "Write off part or all of the outstanding balance",
-          show: (ledger?.balance_kurus ?? 0) > 0,
-          onSelect: () => setWriteOffOpen(true),
-        },
-      ]}
+      {...customerDetailWriteChrome({
+        showWrite,
+        entityId,
+        customerId,
+        balanceKurus: ledger?.balance_kurus ?? 0,
+        onPayment: () => setPaymentOpen(true),
+        onSale: () => setSaleOpen(true),
+        onEdit: () => setEditOpen(true),
+        onWriteOff: () => setWriteOffOpen(true),
+      })}
       headline={
         ledger && (
           <HeadlineFigure

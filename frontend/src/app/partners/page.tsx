@@ -26,6 +26,7 @@ import {
   directoryInactiveSplitIndex,
   sortDirectoryActiveFirst,
 } from "@/lib/directory-list";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import { extractPartnerBalanceKurus } from "@/lib/partner-balance";
@@ -155,6 +156,7 @@ function PartnerTable({
 
 export default function PartnersPage() {
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const [showInactive, setShowInactive] = useState(false);
   const [items, setItems] = useState<PartnerRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -233,23 +235,27 @@ export default function PartnersPage() {
         loading={loading}
         error={error}
         primaryAction={
-          <Button
-            type="button"
-            disabled={!entityId}
-            onClick={() => setFormOpen(true)}
-          >
-            New partner
-          </Button>
+          showWrite ? (
+            <Button
+              type="button"
+              disabled={!entityId}
+              onClick={() => setFormOpen(true)}
+            >
+              New partner
+            </Button>
+          ) : undefined
         }
         actions={
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!entityId}
-            onClick={() => setAllocateOpen(true)}
-          >
-            Allocate profit
-          </Button>
+          showWrite ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!entityId}
+              onClick={() => setAllocateOpen(true)}
+            >
+              Allocate profit
+            </Button>
+          ) : undefined
         }
         toolbar={
           entityId && (

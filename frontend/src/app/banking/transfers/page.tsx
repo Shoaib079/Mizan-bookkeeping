@@ -21,6 +21,7 @@ import { ArrowLeftRight } from "lucide-react";
 import type { AccountTransferRead } from "@/lib/banking-types";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { useWriteChrome } from "@/lib/use-write-chrome";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
 
@@ -28,6 +29,7 @@ type MoneyAccount = { id: string; name: string };
 
 export default function TransfersPage() {
   const { entityId } = useEntity();
+  const { showWrite } = useWriteChrome();
   const { items, total, loading, error, reload, offset, setOffset, pageSize } =
     useEntityList<AccountTransferRead>("/banking/transfers", entityId);
   const [accounts, setAccounts] = useState<Record<string, string>>({});
@@ -36,7 +38,7 @@ export default function TransfersPage() {
   // ?new=1 (Record hub deep link, M3) opens the form once, then cleans the URL.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.has("new")) {
+    if (params.has("new") && showWrite) {
       setTransferOpen(true);
       params.delete("new");
       const query = params.toString();
@@ -46,7 +48,7 @@ export default function TransfersPage() {
         `${window.location.pathname}${query ? `?${query}` : ""}`,
       );
     }
-  }, []);
+  }, [showWrite]);
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
@@ -72,13 +74,15 @@ export default function TransfersPage() {
       loading={loading}
       error={error}
       primaryAction={
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setTransferOpen(true)}
-        >
-          New transfer
-        </Button>
+        showWrite ? (
+          <Button
+            type="button"
+            disabled={!entityId}
+            onClick={() => setTransferOpen(true)}
+          >
+            New transfer
+          </Button>
+        ) : undefined
       }
       countLabel={`${total} transfer${total === 1 ? "" : "s"}`}
       skeletonColumns={5}
