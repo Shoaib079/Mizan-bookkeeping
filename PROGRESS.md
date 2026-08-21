@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S8 shared Excel finish:** subledger / supplier activity / delivery / POS use `finish_data_table` (no autosize-only). Tag `v0.s8-shared-excel-finish`. Do not push until owner says.
+- **S11 Excel money_cols:** cash flow / KDV / delivery-sales / period-comparison pass `money_cols` into shared finish. Tag `v0.s11-excel-money-cols`. Do not push until owner says. S10 still next in queue (not started).
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S8)* |
-| **Last completed slice** | S8 Shared Excel finish (`v0.s8-shared-excel-finish`) |
-| **Last tag** | `v0.s8-shared-excel-finish` |
+| **Active slice** | *(none — await owner review of S11)* |
+| **Last completed slice** | S11 Excel money_cols gaps (`v0.s11-excel-money-cols`) |
+| **Last tag** | `v0.s11-excel-money-cols` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | S10 Export screen==file amount parity tests |
 

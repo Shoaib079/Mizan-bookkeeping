@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of S8)* |
+| **Active slice**         | *(none — await owner review of S11)* |
 | **Next up**              | **S10** Export screen==file amount parity tests |
-| **Last completed slice** | S8 Shared Excel finish subledger/activity/delivery/POS (`v0.s8-shared-excel-finish`) |
-| **Last commit/tag**      | `v0.s8-shared-excel-finish` |
+| **Last completed slice** | S11 Excel money_cols gaps (`v0.s11-excel-money-cols`) |
+| **Last commit/tag**      | `v0.s11-excel-money-cols` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1917,7 +1917,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S8** | Shared Excel finish for subledger / activity / delivery / POS | high | **DONE** `v0.s8-shared-excel-finish` — `write_header_row` + `finish_data_table` (no autosize-only bypass) |
 | **S9** | Cash book / expense register / GL standalone export | high | **DONE** `v0.standalone-book-exports` — cash-bank multi-sheet xlsx; hand-recorded expenses xlsx; GL By account + All entries; payables hub headline lock (S15 partial) |
 | **S10** | Export screen==file amount parity tests | high | Assert key totals for same params/`view` |
-| **S11** | Excel money_cols gaps (cash flow, KDV, delivery-sales, period-comparison) | med | Pass `money_cols` into `finish_data_table` |
+| **S11** | Excel money_cols gaps (cash flow, KDV, delivery-sales, period-comparison) | med | **DONE** `v0.s11-excel-money-cols` — pass `money_cols` into `finish_data_table` |
 | **S12** | Month pack Summary (+ card-clearing) shared finish | med | Accounting format / print / freeze where a header exists |
 | **S13** | Delivery/POS/activity masthead + delivery filename | med | Entity name, TR dates, English sheet title; `export_filename` |
 | **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | `money_header` / `quantity_header`; PDF headers + sealed line |
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S11 Excel money_cols (CF/KDV/delivery/period)  | `v0.s11-excel-money-cols`                              | Pass money_cols on four Phase 7 report finishes; mutation-checked wrong header_row and dropped money_cols |
 | 2026-08-21 | S8 shared Excel finish (subledger/activity/delivery/POS) | `v0.s8-shared-excel-finish`                    | Replaced autosize-only with finish_data_table + money_cols; mutation-checked wrong header_row and dropped money_cols |
 | 2026-08-21 | S7 BS Excel shared table finish                | `v0.s7-balance-sheet-excel-finish`                     | Real column header + money_cols via finish_data_table; freeze/autofilter; mutation-checked wrong header_row and dropped money_cols |
 | 2026-08-21 | S6 P&L / BS export view (live vs sealed)       | `v0.s6-statement-export-view`                          | Export routes + Download pass page `view`; same get_* service; file stamp + filename suffix; open month unchanged; mutation-checked |

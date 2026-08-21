@@ -252,6 +252,7 @@ def build_cash_flow_xlsx(report: CashFlowRead) -> bytes:
         header_row=header_row,
         last_data_row=max(row - 1, data_start),
         end_col=3,
+        money_cols=(2, 3),
     )
     return save_workbook_to_bytes(wb)
 
@@ -294,7 +295,7 @@ def build_kdv_input_xlsx(report: KdvInputReportRead) -> bytes:
     bold_row(ws, row, end_col=4)
 
     finish_data_table(
-        ws, header_row=header_row, last_data_row=row, end_col=4
+        ws, header_row=header_row, last_data_row=row, end_col=4, money_cols=(2, 3)
     )
     return save_workbook_to_bytes(wb)
 
@@ -335,7 +336,7 @@ def build_delivery_sales_xlsx(report: DeliverySalesReportRead) -> bytes:
     bold_row(ws, row, end_col=4)
 
     finish_data_table(
-        ws, header_row=header_row, last_data_row=row, end_col=4
+        ws, header_row=header_row, last_data_row=row, end_col=4, money_cols=(3,)
     )
     return save_workbook_to_bytes(wb)
 
@@ -383,7 +384,11 @@ def build_period_comparison_xlsx(report: PeriodComparisonRead) -> bytes:
         row += 1
 
     finish_data_table(
-        ws, header_row=header_row, last_data_row=max(row - 1, data_start), end_col=5
+        ws,
+        header_row=header_row,
+        last_data_row=max(row - 1, data_start),
+        end_col=5,
+        money_cols=(2, 3, 4),
     )
     return save_workbook_to_bytes(wb)
 
