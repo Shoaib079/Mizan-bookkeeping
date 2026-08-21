@@ -179,9 +179,7 @@ def get_supplier_activity(
             document_ref = "—"
             invoice_draft_id: uuid.UUID | None = None
             has_document = False
-            can_edit = False
             expense_account_id: uuid.UUID | None = None
-            draft_journal_entry_id: uuid.UUID | None = None
 
             movement_label = _movement_label(entry.movement_type)
             affects_balance = True
@@ -191,7 +189,6 @@ def get_supplier_activity(
 
                 if draft is not None:
                     invoice_draft_id = draft.id
-                    draft_journal_entry_id = draft.journal_entry_id
                     document_ref = draft.invoice_number
                     has_document = _has_stored_document(draft)
 
@@ -219,24 +216,19 @@ def get_supplier_activity(
                     amount_kurus = entry.amount_kurus
                     document_ref = entry.description[:64]
 
+                # Expense picker for the correct form — offer itself comes from
+                # entry_actions stamped below (not a second can_edit opinion).
                 if journal is not None and not is_void_reversal:
-                    can_edit = invoice_edit.supplier_invoice_row_is_editable(
+                    expense_account_id = invoice_edit.expense_account_id_from_journal(
                         session,
-                        entry,
-                        draft_journal_entry_id=draft_journal_entry_id,
+                        entity_id,
+                        journal,
                     )
-                    if can_edit:
-                        expense_account_id = invoice_edit.expense_account_id_from_journal(
-                            session,
-                            entity_id,
-                            journal,
-                        )
             elif entry.movement_type == SupplierMovementType.CREDIT_NOTE:
                 draft = _invoice_draft_for_entry(session, entry)
 
                 if draft is not None:
                     invoice_draft_id = draft.id
-                    draft_journal_entry_id = draft.journal_entry_id
                     document_ref = draft.invoice_number
                     has_document = _has_stored_document(draft)
 
@@ -277,8 +269,6 @@ def get_supplier_activity(
 
             if is_void_reversal:
                 movement_label = "Voided"
-            if display_kind != SubledgerDisplayKind.EFFECTIVE:
-                can_edit = False
 
             raw_rows.append(
                 (
@@ -304,7 +294,6 @@ def get_supplier_activity(
                         invoice_draft_id=invoice_draft_id,
                         journal_entry_id=entry.journal_entry_id,
                         has_document=has_document,
-                        can_edit=can_edit,
                         expense_account_id=expense_account_id,
                         display_kind=display_kind,
                         was_corrected=was_corrected,
@@ -383,6 +372,11 @@ def get_supplier_activity(
             row.balance_kurus = running
 
     rows = [item[3] for item in raw_rows]
+    from app.features.payables.supplier_activity_actions import (
+        stamp_activity_capabilities,
+    )
+
+    stamp_activity_capabilities(session, entity_id, rows)
 
     # Restore which money account each payment used so the edit form reopens with
     # the recorded account instead of defaulting to the first in the list.

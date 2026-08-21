@@ -6,7 +6,6 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { EditedBadge } from "@/components/ledger/corrected-badge";
-import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { type CorrectableSupplierPaymentRow } from "@/components/forms/correct-supplier-payment-form";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
@@ -15,6 +14,10 @@ import { InvoiceDraftReview } from "@/components/invoice-draft-review";
 import { InvoiceDocumentPreview } from "@/components/invoice-document-preview";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { SupplierActivityExportButton } from "@/components/supplier-activity-export-button";
+import { SupplierActivityRowActions } from "@/components/supplier-activity-row-actions";
+import {
+  type SupplierActivityRow,
+} from "@/components/supplier-activity-types";
 import { Button } from "@/components/ui/button";
 import {
   DataTable,
@@ -25,39 +28,15 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, entityPath } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
-import {
-  subledgerRowClassName,
-  type SubledgerDisplayKind,
-} from "@/lib/ledger-display";
+import { subledgerRowClassName } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
-export type SupplierActivityRow = {
-  movement_date: string;
-  movement_kind: string;
-  movement_label: string;
-  document_ref: string;
-  detail: string;
-  net_kurus: number | null;
-  vat_kurus: number | null;
-  amount_kurus: number | null;
-  bank_name: string | null;
-  dekont_ref: string | null;
-  balance_kurus: number;
-  affects_balance: boolean;
-  invoice_draft_id: string | null;
-  journal_entry_id: string | null;
-  has_document: boolean;
-  can_edit: boolean;
-  expense_account_id: string | null;
-  payment_account_id: string | null;
-  display_kind?: SubledgerDisplayKind;
-  was_corrected?: boolean;
-};
+export type { SupplierActivityRow } from "@/components/supplier-activity-types";
 
 type SupplierActivity = {
   supplier_id: string;
@@ -95,9 +74,9 @@ export function SupplierActivityPanel({
   const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
   const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
-    journal_entry_id: string;
     description: string;
     kind: "payment" | "invoice";
+    void_path: string;
   } | null>(null);
 
   const alwaysShowActivityRow = useCallback(
@@ -282,50 +261,12 @@ export function SupplierActivityPanel({
                     )}
                   </DataTableCell>
                   <DataTableCell>
-                    {row.movement_kind === "payment" && onCorrectPayment && (
-                      <SubledgerRowActions
-                        row={row}
-                        onEdit={() =>
-                          onCorrectPayment({
-                            journal_entry_id: row.journal_entry_id!,
-                            movement_date: row.movement_date,
-                            amount_kurus: row.amount_kurus ?? 0,
-                            description: row.detail,
-                            payment_account_id: row.payment_account_id,
-                          })
-                        }
-                        onVoid={() =>
-                          setVoidTarget({
-                            journal_entry_id: row.journal_entry_id!,
-                            description: row.detail,
-                            kind: "payment",
-                          })
-                        }
-                      />
-                    )}
-                    {row.movement_kind === "invoice" &&
-                      row.can_edit &&
-                      onEditInvoice && (
-                        <SubledgerRowActions
-                          row={row}
-                          onEdit={() =>
-                            onEditInvoice({
-                              journal_entry_id: row.journal_entry_id!,
-                              movement_date: row.movement_date,
-                              amount_kurus: row.amount_kurus ?? 0,
-                              description: row.detail,
-                              expense_account_id: row.expense_account_id,
-                            })
-                          }
-                          onVoid={() =>
-                            setVoidTarget({
-                              journal_entry_id: row.journal_entry_id!,
-                              description: row.detail,
-                              kind: "invoice",
-                            })
-                          }
-                        />
-                      )}
+                    <SupplierActivityRowActions
+                      row={row}
+                      onCorrectPayment={onCorrectPayment}
+                      onEditInvoice={onEditInvoice}
+                      onVoid={setVoidTarget}
+                    />
                     {row.invoice_draft_id &&
                       row.movement_kind === "unposted_invoice" && (
                         <Button
@@ -383,9 +324,7 @@ export function SupplierActivityPanel({
             description={voidTarget?.description}
             voidPath={
               entityId && voidTarget
-                ? voidTarget.kind === "invoice"
-                  ? `/entities/${entityId}/suppliers/${supplierId}/invoices/${voidTarget.journal_entry_id}/void`
-                  : `/entities/${entityId}/suppliers/${supplierId}/payments/${voidTarget.journal_entry_id}/void`
+                ? entityPath(entityId, voidTarget.void_path)
                 : null
             }
             onClose={() => setVoidTarget(null)}

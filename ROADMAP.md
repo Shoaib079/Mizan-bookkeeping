@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of scope:export enforce)* |
-| **Next up**              | **S4** supplier payment Edit/Void via capabilities (after sign-off) |
-| **Last completed slice** | Enforce `scope:export` (`v0.scope-export-enforced`) |
-| **Last commit/tag**      | `v0.scope-export-enforced` |
+| **Active slice**         | *(none — await owner review of S4)* |
+| **Next up**              | **S6** P&L / BS export `view` (live vs sealed) |
+| **Last completed slice** | S4 supplier payment Edit/Void via capabilities (`v0.s4-supplier-payment-capabilities`) |
+| **Last commit/tag**      | `v0.s4-supplier-payment-capabilities` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1910,7 +1910,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S1** | Staff money-figure correctness | high | **DONE** `v0.staff-sticker-ledger-net` — sticker hero + heading from ledger net; residual ≠ Settled; hub colour TRY-only; mobile sticker width |
 | **S2** | Ledger freshness funnel | high | **DONE** `v0.ledger-freshness-funnel` — `completeSubmit` emits `mizan:ledger-changed`; partner/staff/supplier detail + activity + directory balance maps on React Query (absorbs former S5) |
 | **S3** | Detail write chrome grant-gated | high | **DONE** `v0.s3-write-chrome-gates` — Partner/Staff/Supplier/Customer + directories/delivery/banking write controls use `shouldShowWriteChrome` / `canUseRecordAction` |
-| **S4** | Supplier payment Edit/Void via capabilities | high | Activity payments through `useEntryActions` / backend `can_edit` (no always-on Edit) |
+| **S4** | Supplier payment Edit/Void via capabilities | high | **DONE** `v0.s4-supplier-payment-capabilities` — activity rows stamp `can_edit`/`can_void`/`void_path` from entry_actions; FE offers buttons only from that verdict (no always-on callbacks) |
 | **S5** | Ledger-changed freshness (directories + detail) | high | **DONE via S2** — emit + query-backed fetchers shipped in `v0.ledger-freshness-funnel` |
 | **S6** | P&L / BS export `view` (live vs sealed) | high | Download + export API pass `view`; stamp sealed/live in file + filename |
 | **S7** | Balance sheet Excel `finish_data_table` | high | Real header row + `money_cols` (accounting red negatives) |
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S4 supplier payment Edit/Void via capabilities | `v0.s4-supplier-payment-capabilities`                  | Activity payload stamps entry_actions can_edit/can_void/void_path for payments+invoices; FE drops always-on callback Edit; mutation-checked |
 | 2026-08-21 | Enforce scope:export on generated downloads  | `v0.scope-export-enforced`                             | Shared `export_scope_guard` after read guard; presets owner+partner; migration 096 add+strip view-only; FE Download chrome gated |
 | 2026-08-21 | S3 write chrome grant-gated (expanded)       | `v0.s3-write-chrome-gates`                             | Hide detail/directory/delivery/banking write controls without ops or daily grants; FE-only; mutation-checked vitest |
 | 2026-08-20 | Money-safety sweep guards                    | `v0.money-safety-sweep-guards`                         | Guard 1 every-leg void/correct; Guard 2 voided rows never move totals; Guard 3 subledger sources refuse generic void; mutation-checked |

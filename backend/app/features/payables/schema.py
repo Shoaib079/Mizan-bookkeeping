@@ -150,7 +150,10 @@ class SupplierActivityRow(BaseModel):
     invoice_draft_id: uuid.UUID | None = None
     journal_entry_id: uuid.UUID | None = None
     has_document: bool = False
+    # Edit/void offer — stamped from entry_actions (one source of truth).
     can_edit: bool = False
+    can_void: bool = False
+    void_path: str | None = None
     expense_account_id: uuid.UUID | None = None
     # GL account a payment was paid from — restores the edit form's picker.
     payment_account_id: uuid.UUID | None = None

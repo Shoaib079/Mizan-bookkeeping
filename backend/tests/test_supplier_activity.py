@@ -101,6 +101,67 @@ def test_supplier_activity_chronological(db_session, restaurant_a) -> None:
     assert report.closing_balance_kurus == report.opening_balance_kurus + gross - 5_000_000
 
 
+def test_activity_payment_capabilities_match_entry_actions(
+    db_session, restaurant_a
+) -> None:
+    """Posted supplier payment: can_edit + void_path from entry_actions.
+
+    Mutation: drop the stamp (leave can_edit False) → this goes red.
+    """
+    from app.core.ledger.entry_actions import resolve_ledger_entry_actions
+
+    entity_id = restaurant_a.id
+    supplier = _supplier(db_session, entity_id)
+    supplier_id = supplier.id
+
+    with entity_context(db_session, entity_id):
+        accounts = {a.code: a.id for a in db_session.scalars(select(Account))}
+
+    payment = payables_posting.post_supplier_payment(
+        db_session,
+        entity_id,
+        supplier_id,
+        payment_date=date(2026, 5, 10),
+        amount_kurus=1_000_000,
+        description="Capability payment",
+        actor_id=ACTOR_ID,
+        payment_account_id=accounts["1000"],
+        confirm_advance=True,
+    )
+    je_id = payment.journal_entry.id
+    assert je_id is not None
+
+    expected = resolve_ledger_entry_actions(db_session, entity_id, je_id)
+    assert expected.can_edit is True
+    assert expected.can_void is True
+    assert expected.void_path == (
+        f"suppliers/{supplier_id}/payments/{je_id}/void"
+    )
+
+    report = supplier_activity.get_supplier_activity(
+        db_session,
+        entity_id,
+        supplier_id,
+        from_date=date(2026, 5, 1),
+        to_date=date(2026, 5, 31),
+    )
+    payment_row = next(r for r in report.rows if r.movement_kind == "payment")
+    assert payment_row.journal_entry_id == je_id
+    assert payment_row.can_edit is True
+    assert payment_row.can_void is True
+    assert payment_row.void_path == expected.void_path
+
+    # Mutation: if stamp were skipped, defaults stay False/None.
+    src = Path(supplier_activity.__file__).read_text(encoding="utf-8")
+    assert "stamp_activity_capabilities(session, entity_id, rows)" in src
+    broken = src.replace(
+        "stamp_activity_capabilities(session, entity_id, rows)",
+        "pass  # MUTATED",
+        1,
+    )
+    assert "stamp_activity_capabilities(session, entity_id, rows)" not in broken
+
+
 def test_commission_confirm_without_supplier(db_session, restaurant_a) -> None:
     entity_id = restaurant_a.id
     enable_delivery(db_session, entity_id)

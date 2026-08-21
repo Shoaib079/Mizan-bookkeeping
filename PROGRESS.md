@@ -17,15 +17,15 @@
 
 ## Current
 
-- **Enforce `scope:export`:** generated Excel/PDF downloads require the grant; attachments stay member-read. Tag `v0.scope-export-enforced`. Do not push until owner says.
+- **S4 supplier payment capabilities:** activity Edit/Void follow entry_actions. Tag `v0.s4-supplier-payment-capabilities`. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of scope:export)* |
-| **Last completed slice** | Enforce `scope:export` (`v0.scope-export-enforced`) |
-| **Last tag** | `v0.scope-export-enforced` |
+| **Active slice** | *(none — await owner review of S4)* |
+| **Last completed slice** | S4 supplier payment Edit/Void via capabilities (`v0.s4-supplier-payment-capabilities`) |
+| **Last tag** | `v0.s4-supplier-payment-capabilities` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S4 supplier payment Edit/Void via capabilities (after sign-off) |
+| **Next up** | S6 P&L / BS export `view` (live vs sealed) |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)
