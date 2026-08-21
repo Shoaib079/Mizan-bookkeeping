@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import date
 
+from app.core.dates import format_period
 from app.core.excel.workbook import (
     bold_row,
     create_workbook,
@@ -13,13 +13,14 @@ from app.core.excel.workbook import (
     save_workbook_to_bytes,
     write_header_row,
     write_money,
+    write_sheet_title,
 )
 from app.features.delivery.schema import DeliveryReportRead, DeliverySettlementRead
 
 
 def build_delivery_activity_xlsx(
     *,
-    entity_id: uuid.UUID,
+    entity_name: str,
     from_date: date,
     to_date: date,
     platform_label: str,
@@ -27,13 +28,15 @@ def build_delivery_activity_xlsx(
     settlements: list[DeliverySettlementRead],
 ) -> bytes:
     wb, ws_sales = create_workbook("Sales")
-    header_row = _write_header(
+    header_row = write_sheet_title(
         ws_sales,
-        title="Delivery sales",
-        entity_id=entity_id,
-        from_date=from_date,
-        to_date=to_date,
-        platform_label=platform_label,
+        "Delivery sales",
+        subtitles=[
+            f"Entity: {entity_name}",
+            f"Period: {format_period(from_date, to_date)}",
+            f"Platform: {platform_label}",
+        ],
+        end_col=6,
     )
 
     sales_headers = [
@@ -71,13 +74,15 @@ def build_delivery_activity_xlsx(
     )
 
     ws_settle = wb.create_sheet("Settlements")
-    header_row = _write_header(
+    header_row = write_sheet_title(
         ws_settle,
-        title="Delivery settlements",
-        entity_id=entity_id,
-        from_date=from_date,
-        to_date=to_date,
-        platform_label=platform_label,
+        "Delivery settlements",
+        subtitles=[
+            f"Entity: {entity_name}",
+            f"Period: {format_period(from_date, to_date)}",
+            f"Platform: {platform_label}",
+        ],
+        end_col=4,
     )
 
     settle_headers = [
@@ -110,19 +115,3 @@ def build_delivery_activity_xlsx(
     )
 
     return save_workbook_to_bytes(wb)
-
-
-def _write_header(
-    ws,
-    *,
-    title: str,
-    entity_id: uuid.UUID,
-    from_date: date,
-    to_date: date,
-    platform_label: str,
-) -> int:
-    ws.cell(row=1, column=1, value=title)
-    ws.cell(row=2, column=1, value=f"Entity: {entity_id}")
-    ws.cell(row=2, column=2, value=f"Period: {from_date} to {to_date}")
-    ws.cell(row=3, column=1, value=f"Platform: {platform_label}")
-    return 5

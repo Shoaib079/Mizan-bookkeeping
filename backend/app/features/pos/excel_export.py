@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import date
 
+from app.core.dates import format_period
 from app.core.excel.workbook import (
     bold_row,
     create_workbook,
@@ -13,25 +13,31 @@ from app.core.excel.workbook import (
     save_workbook_to_bytes,
     write_header_row,
     write_money,
+    write_sheet_title,
 )
 from app.features.pos.schema import PosDailySummaryRead
 
 
 def build_pos_daily_summaries_xlsx(
     *,
-    entity_id: uuid.UUID,
+    entity_name: str,
     from_date: date,
     to_date: date,
     review_label: str,
     summaries: list[PosDailySummaryRead],
 ) -> bytes:
     wb, ws = create_workbook("POS Sales")
-    ws.cell(row=1, column=1, value="POS daily sales")
-    ws.cell(row=2, column=1, value=f"Entity: {entity_id}")
-    ws.cell(row=2, column=2, value=f"Period: {from_date} to {to_date}")
-    ws.cell(row=3, column=1, value=f"Filter: {review_label}")
+    header_row = write_sheet_title(
+        ws,
+        "POS daily sales",
+        subtitles=[
+            f"Entity: {entity_name}",
+            f"Period: {format_period(from_date, to_date)}",
+            f"Filter: {review_label}",
+        ],
+        end_col=8,
+    )
 
-    header_row = 5
     headers = [
         "Date",
         "Status",

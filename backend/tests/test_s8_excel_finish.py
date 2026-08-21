@@ -114,7 +114,8 @@ def test_supplier_activity_xlsx_uses_shared_table_finish() -> None:
                     balance_kurus=120_000,
                 )
             ],
-        )
+        ),
+        entity_name="Restaurant A",
     )
     ws = _sheet(data)
     headers = [
@@ -135,7 +136,7 @@ def test_supplier_activity_xlsx_uses_shared_table_finish() -> None:
 
 def test_pos_daily_summaries_xlsx_uses_shared_table_finish() -> None:
     data = build_pos_daily_summaries_xlsx(
-        entity_id=uuid.uuid4(),
+        entity_name="Restaurant A",
         from_date=date(2026, 3, 1),
         to_date=date(2026, 3, 31),
         review_label="pending",
@@ -168,9 +169,8 @@ def test_pos_daily_summaries_xlsx_uses_shared_table_finish() -> None:
 
 
 def test_delivery_activity_xlsx_uses_shared_table_finish() -> None:
-    eid = uuid.uuid4()
     data = build_delivery_activity_xlsx(
-        entity_id=eid,
+        entity_name="Restaurant A",
         from_date=date(2026, 11, 1),
         to_date=date(2026, 11, 30),
         platform_label="All",

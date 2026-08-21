@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.core.dates import format_period
 from app.core.excel.workbook import (
     create_workbook,
     finish_data_table,
@@ -9,25 +10,31 @@ from app.core.excel.workbook import (
     save_workbook_to_bytes,
     write_header_row,
     write_money,
+    write_sheet_title,
 )
 from app.features.payables.schema import SupplierActivityRead
 
 
-def build_supplier_activity_xlsx(report: SupplierActivityRead) -> bytes:
+def build_supplier_activity_xlsx(
+    report: SupplierActivityRead, *, entity_name: str
+) -> bytes:
     wb, ws = create_workbook("Hareketler")
-    ws.cell(row=1, column=1, value=report.supplier_name)
-    ws.cell(row=2, column=1, value=f"VKN {report.supplier_vkn}")
-    ws.cell(
-        row=3,
-        column=1,
-        value=f"Period: {report.from_date} – {report.to_date}",
+    content_row = write_sheet_title(
+        ws,
+        "Supplier activity",
+        subtitles=[
+            f"Entity: {entity_name}",
+            f"Period: {format_period(report.from_date, report.to_date)}",
+            f"{report.supplier_name} · VKN {report.supplier_vkn}",
+        ],
+        end_col=10,
     )
-    ws.cell(row=4, column=1, value="Opening balance")
-    write_money(ws, 4, 2, report.opening_balance_kurus)
-    ws.cell(row=5, column=1, value="Closing balance")
-    write_money(ws, 5, 2, report.closing_balance_kurus)
+    ws.cell(row=content_row, column=1, value="Opening balance")
+    write_money(ws, content_row, 2, report.opening_balance_kurus)
+    ws.cell(row=content_row + 1, column=1, value="Closing balance")
+    write_money(ws, content_row + 1, 2, report.closing_balance_kurus)
 
-    header_row = 7
+    header_row = content_row + 3
     amount_label = money_header()
     headers = [
         "Date",

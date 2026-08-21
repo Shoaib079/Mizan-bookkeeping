@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 import uuid
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 
 import pytest
+from openpyxl import load_workbook
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
@@ -543,5 +545,13 @@ def test_export_daily_summaries_xlsx(client, restaurant_a, pos_summary_setup) ->
         export_resp.headers["content-type"]
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    assert "attachment" in export_resp.headers.get("content-disposition", "")
-    assert len(export_resp.content) > 500
+    disposition = export_resp.headers.get("content-disposition", "")
+    assert (
+        f"{summary_date}-{summary_date}.xlsx" in disposition
+    )
+    workbook = load_workbook(BytesIO(export_resp.content))
+    sheet = workbook["POS Sales"]
+    display_date = date.fromisoformat(summary_date).strftime("%d.%m.%Y")
+    assert sheet["A1"].value == "POS daily sales"
+    assert sheet["A2"].value == "Entity: Restaurant A"
+    assert sheet["A3"].value == f"Period: {display_date} – {display_date}"

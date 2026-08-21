@@ -608,19 +608,18 @@ def export_delivery_activity(
         list_delivery_settlements, list_kwargs=list_kwargs
     )
 
-    from app.features.delivery import excel_export
+    from app.features.delivery.activity_export import build_delivery_activity_export
 
-    data = excel_export.build_delivery_activity_xlsx(
+    return build_delivery_activity_export(
+        session,
         entity_id=entity_id,
         from_date=from_date,
         to_date=to_date,
         platform_label=platform_label,
+        delivery_platform_id=delivery_platform_id,
         sales=sales,
         settlements=settlements,
     )
-    slug = platform_label.replace(" ", "-").lower() if delivery_platform_id else "all-platforms"
-    filename = f"delivery-{slug}-{from_date.isoformat()}-{to_date.isoformat()}.xlsx"
-    return data, filename
 
 
 class DeliverySettlementNotVoidableError(Exception):

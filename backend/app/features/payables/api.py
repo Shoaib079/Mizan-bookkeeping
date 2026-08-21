@@ -232,11 +232,11 @@ def export_supplier_activity(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    data = activity_excel.build_supplier_activity_xlsx(report)
-    entity = entity_service.get_entity(session, entity_id)
+    entity_name = getattr(entity_service.get_entity(session, entity_id), "name", None) or "books"
+    data = activity_excel.build_supplier_activity_xlsx(report, entity_name=entity_name)
     filename = export_filename(
         f"supplier-{filename_slug(report.supplier_name)}",
-        entity_name=entity.name if entity is not None else None,
+        entity_name=entity_name,
         from_date=from_date,
         to_date=to_date,
     )

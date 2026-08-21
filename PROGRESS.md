@@ -17,15 +17,15 @@
 
 ## Current
 
-- **Test-only Month Pack range follow-up:** Partial-month filename and cross-month-live API behavior pinned. Tag `v0.month-pack-range-pins`. No product code changed; S13 not started.
+- **S13 complete:** Delivery activity, POS daily sales, and supplier activity exports carry shared entity/TR-period mastheads; delivery filenames use the shared export convention. Tag `v0.s13-export-masthead-filenames`.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — test-only follow-up complete)* |
-| **Last completed slice** | Test-only Month Pack partial/cross-month API pins (not S13; `v0.month-pack-range-pins`) |
-| **Last tag** | `v0.month-pack-range-pins` |
+| **Active slice** | *(none — S13 complete)* |
+| **Last completed slice** | S13 Delivery/POS/activity masthead + delivery filename |
+| **Last tag** | `v0.s13-export-masthead-filenames` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S13 Delivery/POS/activity masthead + delivery filename |
+| **Next up** | S14 Salaries / FX holdings headers + PDF Amount (₺) / sealed banner |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

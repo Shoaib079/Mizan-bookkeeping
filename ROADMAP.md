@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — test-only Month Pack range follow-up complete; S13 not started)* |
-| **Next up**              | **S13** Delivery/POS/activity masthead + delivery filename |
-| **Last completed slice** | Test-only Month Pack partial/cross-month API pins (not S13; `v0.month-pack-range-pins`) |
-| **Last commit/tag**      | `v0.month-pack-range-pins` |
+| **Active slice**         | *(none — S13 complete)* |
+| **Next up**              | **S14** Salaries / FX holdings headers + PDF Amount (₺) / sealed banner |
+| **Last completed slice** | **S13** Delivery/POS/activity masthead + delivery filename |
+| **Last commit/tag**      | `v0.s13-export-masthead-filenames` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1919,7 +1919,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S10** | Export screen==file amount parity tests | high | **DONE** `v0.s10-export-screen-file-parity` + follow-up `v0.s10-export-parity-gaps-closed` (staff/customer/supplier ledger, activity, POS, delivery activity) |
 | **S11** | Excel money_cols gaps (cash flow, KDV, delivery-sales, period-comparison) | med | **DONE** `v0.s11-excel-money-cols` — pass `money_cols` into `finish_data_table` |
 | **S12** | Month pack Summary (+ card-clearing) shared finish | med | **DONE** `v0.s12-month-pack-excel-finish` — accounting format / print / freeze where a header exists |
-| **S13** | Delivery/POS/activity masthead + delivery filename | med | Entity name, TR dates, English sheet title; `export_filename` |
+| **S13** | Delivery/POS/activity masthead + delivery filename | med | **DONE** `v0.s13-export-masthead-filenames` — shared title block with entity + TR period; delivery uses `export_filename` |
 | **S14** | Salaries / FX holdings headers + PDF Amount (₺) / sealed banner | med | `money_header` / `quantity_header`; PDF headers + sealed line |
 | **S15** | Directory / hub direction labels + payables “Total owed” copy | med | **PARTIAL via S9** — hub payables headline = Payables + guard; rest of directory direction labels deferred |
 | **S16** | Supplier sticker vs activity range closing label | med | “Closing in range” or sync when range selected |
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S13 export mastheads + delivery filenames         | `v0.s13-export-masthead-filenames`                     | Delivery/POS/supplier activity entity + TR period mastheads; shared delivery filename; mutation-checked missing delivery entity → red |
 | 2026-08-21 | Test-only Month Pack arbitrary range API pins | `v0.month-pack-range-pins`                             | Partial-month date filename + cross-month live status after August close; mutation-checked wrong period segment → red |
 | 2026-08-21 | S12 month pack Summary + card-clearing finish  | `v0.s12-month-pack-excel-finish`                       | Metric header + finish_data_table money_cols on Summary and Card clearing; mutation-checked wrong header_row / dropped money_cols |
 | 2026-08-21 | S10 follow-up remaining parity gaps            | `v0.s10-export-parity-gaps-closed`                     | Staff/customer/supplier ledger + activity + POS + delivery activity screen==file; mutation-checked doubled activity closing |

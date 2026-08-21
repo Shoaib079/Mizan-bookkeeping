@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 
 import pytest
+from openpyxl import load_workbook
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -207,3 +209,11 @@ def test_activity_export_endpoint(db_session, restaurant_a, client: TestClient) 
     )
     assert resp.status_code == 200, resp.text
     assert "spreadsheetml" in resp.headers["content-type"]
+    assert resp.headers["content-disposition"] == (
+        'attachment; filename="restaurant-a-supplier-metro-tedarik-2026-01.xlsx"'
+    )
+    workbook = load_workbook(BytesIO(resp.content))
+    sheet = workbook["Hareketler"]
+    assert sheet["A1"].value == "Supplier activity"
+    assert sheet["A2"].value == "Entity: Restaurant A"
+    assert sheet["A3"].value == "Period: 01.01.2026 – 31.01.2026"

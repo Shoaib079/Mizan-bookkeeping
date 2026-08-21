@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from io import BytesIO
 
 import pytest
+from openpyxl import load_workbook
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
@@ -369,8 +371,15 @@ def test_delivery_activity_export_xlsx(client: TestClient, db_session, delivery_
         export_resp.headers["content-type"]
         == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    assert "attachment" in export_resp.headers.get("content-disposition", "")
-    assert len(export_resp.content) > 500
+    disposition = export_resp.headers.get("content-disposition", "")
+    assert disposition == (
+        'attachment; filename="restaurant-a-delivery-all-platforms-2026-11.xlsx"'
+    )
+    workbook = load_workbook(BytesIO(export_resp.content))
+    sales = workbook["Sales"]
+    assert sales["A1"].value == "Delivery sales"
+    assert sales["A2"].value == "Entity: Restaurant A"
+    assert sales["A3"].value == "Period: 01.11.2026 – 30.11.2026"
 
     platform_export = client.get(
         f"/entities/{entity_id}/delivery/activity/export",

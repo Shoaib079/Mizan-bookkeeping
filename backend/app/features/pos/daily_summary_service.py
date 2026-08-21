@@ -336,18 +336,18 @@ def export_pos_daily_summaries(
     from app.features.pos import excel_export
     from app.features.reports.excel_export import export_filename
 
+    entity_name = getattr(entity_service.get_entity(session, entity_id), "name", None) or "books"
     reads = [_to_read(summary) for summary in summaries]
     data = excel_export.build_pos_daily_summaries_xlsx(
-        entity_id=entity_id,
+        entity_name=entity_name,
         from_date=from_date,
         to_date=to_date,
         review_label=review_label,
         summaries=reads,
     )
-    entity = entity_service.get_entity(session, entity_id)
     filename = export_filename(
         "pos-sales",
-        entity_name=entity.name if entity is not None else None,
+        entity_name=entity_name,
         from_date=from_date,
         to_date=to_date,
     )
