@@ -2,6 +2,8 @@
 
 Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULES.md §8).
 
+**2026-08-21 — S7 BS Excel finish:** `test_balance_sheet_export` loads workbook — freeze on real header, `MONEY_FORMAT_ACCOUNTING` on amount cells, header content; `test_profit_and_loss_export_keeps_shared_table_finish` regression. Mutation: wrong `header_row` / dropped `money_cols` → red.
+
 **2026-08-21 — S6 P&L/BS export view:** `test_statement_export_view.py` (sealed default + `-as-closed` + “As closed”; live after F3 amend + `-live` + “Live”; open month no suffix; HTTP forwards view); FE `report-download-query.test.ts` (URL carries view; mutation strip → red).
 
 **2026-08-21 — Partner capital + loans correctable:** `test_partner_capital_loan_correction.py` (amount correct → void+repost, GL 3300/2200 + subledger ties, chain linked; generic refuse; wrong-partner 404; loan repayment bound); replaced `test_capital_contribution_is_still_refused` → `test_capital_contribution_moved_to_dedicated_correctable` (deliberate behaviour flip); FE `subledger-actions` + match-backend + gl-edit-kinds.

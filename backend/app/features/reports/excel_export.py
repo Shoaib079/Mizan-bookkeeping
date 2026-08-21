@@ -137,93 +137,67 @@ def build_profit_and_loss_xlsx(report: ProfitAndLossRead, *, figures_label: str 
 
 
 def _write_balance_sheet_section(
-    ws,
-    row: int,
-    section_name: str,
-    accounts,
-    subtotal_kurus: int,
-    *,
-    extra_label: str | None = None,
-    extra_kurus: int | None = None,
-) -> int:
+    ws, row, section_name, accounts, subtotal_kurus, *,
+    extra_label=None, extra_kurus=None, column_header_row=None,
+) -> tuple[int, int | None]:
     ws.cell(row=row, column=1, value=section_name)
     bold_row(ws, row, end_col=4)
     row += 1
-
-    amount_label = money_header("Balance")
-    row = write_header_row(ws, row, ["Code", "Name", "Type", amount_label])
-
+    header_at = row
+    row = write_header_row(ws, row, ["Code", "Name", "Type", money_header("Balance")])
+    if column_header_row is None:
+        column_header_row = header_at
     for account in accounts:
         ws.cell(row=row, column=1, value=account.code)
         ws.cell(row=row, column=2, value=account.name_en)
         ws.cell(row=row, column=3, value=account.account_type.value)
         write_money(ws, row, 4, account.balance_kurus)
         row += 1
-
     if extra_label is not None and extra_kurus is not None:
         ws.cell(row=row, column=1, value=extra_label)
         write_money(ws, row, 4, extra_kurus)
         row += 1
-
     ws.cell(row=row, column=1, value=f"{section_name} subtotal")
     write_money(ws, row, 4, subtotal_kurus)
     bold_row(ws, row, end_col=4)
-    return row + 2
+    return row + 2, column_header_row
 
 
 def build_balance_sheet_xlsx(report: BalanceSheetRead, *, figures_label: str | None = None) -> bytes:
     wb, ws = create_workbook("Balance Sheet")
     row = _write_metadata(
-        ws,
-        title="Balance Sheet",
-        entity_id=report.entity_id,
-        date_label="As of",
-        date_value=format_date(report.as_of),
-        end_col=4,
-        figures_label=figures_label,
+        ws, title="Balance Sheet", entity_id=report.entity_id,
+        date_label="As of", date_value=format_date(report.as_of),
+        end_col=4, figures_label=figures_label,
     )
-
-    row = _write_balance_sheet_section(
-        ws,
-        row,
-        "Assets",
-        report.assets.accounts,
-        report.assets.subtotal_kurus,
+    hdr = None
+    row, hdr = _write_balance_sheet_section(
+        ws, row, "Assets", report.assets.accounts, report.assets.subtotal_kurus,
+        column_header_row=hdr,
     )
-    row = _write_balance_sheet_section(
-        ws,
-        row,
-        "Liabilities",
-        report.liabilities.accounts,
-        report.liabilities.subtotal_kurus,
+    row, hdr = _write_balance_sheet_section(
+        ws, row, "Liabilities", report.liabilities.accounts,
+        report.liabilities.subtotal_kurus, column_header_row=hdr,
     )
-    row = _write_balance_sheet_section(
-        ws,
-        row,
-        "Equity",
-        report.equity.accounts,
-        report.equity.subtotal_kurus,
+    row, hdr = _write_balance_sheet_section(
+        ws, row, "Equity", report.equity.accounts, report.equity.subtotal_kurus,
         extra_label="Unclosed net income",
         extra_kurus=report.equity.unclosed_net_income_kurus,
+        column_header_row=hdr,
     )
-
     ws.cell(row=row, column=1, value="Total assets")
     write_money(ws, row, 4, report.total_assets_kurus)
     row += 1
     ws.cell(row=row, column=1, value="Total liabilities and equity")
     write_money(ws, row, 4, report.total_liabilities_and_equity_kurus)
     row += 1
-    ws.cell(
-        row=row,
-        column=1,
-        value="Accounting equation balanced",
-    )
+    ws.cell(row=row, column=1, value="Accounting equation balanced")
     ws.cell(row=row, column=2, value=report.accounting_equation_balanced)
     bold_row(ws, row - 2, end_col=4)
     bold_row(ws, row - 1, end_col=4)
-
+    assert hdr is not None
     finish_data_table(
-        ws, header_row=row, last_data_row=row, end_col=4, autofilter=False
+        ws, header_row=hdr, last_data_row=row, end_col=4, money_cols=(4,),
     )
     return save_workbook_to_bytes(wb)
 

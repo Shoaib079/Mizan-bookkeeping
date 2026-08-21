@@ -20,6 +20,7 @@ from app.features.banking import service as banking_service
 from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.cash.models import CashMovementDirection
+from app.core.excel.workbook import MONEY_FORMAT_ACCOUNTING, money_header
 from app.features.reports import excel_export
 from app.features.reports import financial_statements
 from tests.delivery_helpers import ACTOR_ID
@@ -140,6 +141,63 @@ def test_balance_sheet_export(
 
     disposition = response.headers.get("content-disposition", "")
     assert 'filename="restaurant-a-balance-sheet-2026-01-31.xlsx"' in disposition
+
+    ws = _load_sheet(response.content)
+    balance_header = money_header("Balance")
+    header_row = None
+    for r in range(1, ws.max_row + 1):
+        vals = _cell_values(ws, r)
+        if vals[:4] == ["Code", "Name", "Type", balance_header]:
+            header_row = r
+            break
+    assert header_row is not None, "column header row not found"
+    assert ws.freeze_panes == f"A{header_row + 1}"
+    assert ws.auto_filter.ref is not None
+    assert ws.auto_filter.ref.startswith(f"A{header_row}:")
+
+    money_seen = False
+    for r in range(header_row + 1, ws.max_row + 1):
+        cell = ws.cell(row=r, column=4)
+        if isinstance(cell.value, (int, float)):
+            money_seen = True
+            assert cell.number_format == MONEY_FORMAT_ACCOUNTING
+            # Still a number Excel can SUM — lira, not a text kuruş string.
+            assert not isinstance(cell.value, str)
+    assert money_seen
+
+
+def test_profit_and_loss_export_keeps_shared_table_finish(
+    db_session, client: TestClient, export_setup
+) -> None:
+    """Regression: P&L already finished correctly — freeze + money_cols stay."""
+    setup = export_setup
+    _post_period_sales(db_session, setup)
+    _post_rent_expense(
+        db_session, setup, amount_kurus=20_000, expense_date=date(2026, 1, 16)
+    )
+
+    response = client.get(
+        f"/entities/{setup['entity_id']}/reports/profit-and-loss/export",
+        params={"from": str(PERIOD_START), "to": str(PERIOD_END)},
+    )
+    assert response.status_code == 200
+    ws = _load_sheet(response.content)
+    amount_header = money_header()
+    header_row = None
+    for r in range(1, ws.max_row + 1):
+        vals = _cell_values(ws, r)
+        if vals[:4] == ["Code", "Name", "Type", amount_header]:
+            header_row = r
+            break
+    assert header_row is not None
+    assert ws.freeze_panes == f"A{header_row + 1}"
+    money_seen = False
+    for r in range(header_row + 1, ws.max_row + 1):
+        cell = ws.cell(row=r, column=4)
+        if isinstance(cell.value, (int, float)):
+            money_seen = True
+            assert cell.number_format == MONEY_FORMAT_ACCOUNTING
+    assert money_seen
 
 
 def test_kdv_input_export(

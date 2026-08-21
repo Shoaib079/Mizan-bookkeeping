@@ -17,15 +17,15 @@
 
 ## Current
 
-- **S6 statement export view:** P&L/BS Excel+PDF honour on-screen live/sealed. Tag `v0.s6-statement-export-view`. Do not push until owner says. Financial-statement-adjacent — independent review + owner sign-off before push.
+- **S7 BS Excel finish:** shared `finish_data_table` with real header + money_cols. Tag `v0.s7-balance-sheet-excel-finish`. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S6)* |
-| **Last completed slice** | S6 P&L / BS export `view` (`v0.s6-statement-export-view`) |
-| **Last tag** | `v0.s6-statement-export-view` |
+| **Active slice** | *(none — await owner review of S7)* |
+| **Last completed slice** | S7 Balance sheet Excel finish (`v0.s7-balance-sheet-excel-finish`) |
+| **Last tag** | `v0.s7-balance-sheet-excel-finish` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S7 Balance sheet Excel `finish_data_table` |
+| **Next up** | S8 Shared Excel finish for subledger / activity / delivery / POS |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)
