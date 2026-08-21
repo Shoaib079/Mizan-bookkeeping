@@ -23,7 +23,9 @@ import { formatFxNative } from "@/lib/fx-money";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import { canExportFiles } from "@/lib/entity-access";
 import { useToast } from "@/lib/toast";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { useEntityList } from "@/lib/use-entity-list";
 
 /** "$15.00 +KDV", or "$27.00 + $2.00" for the catering menus. */
@@ -44,6 +46,8 @@ function categoryLabel(menu: GroupMenuRow): string {
 
 export function GroupMenusPanel() {
   const { entityId } = useEntity();
+  const { grants } = useEntityAccess();
+  const showExport = canExportFiles(grants);
   const router = useRouter();
   const { items, total, loading, error, reload, offset, setOffset, pageSize } =
     useEntityList<GroupMenuRow>(
@@ -102,14 +106,16 @@ export function GroupMenusPanel() {
           {/* PDF alone — no Excel, no Word. An agency that receives an
               editable file can change a price and pass it on, and nothing in
               the file says it was altered (MENU_PLAN.md §5). */}
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={downloading || items.length === 0}
-            onClick={() => void onDownload()}
-          >
-            {downloading ? "Preparing…" : "Download menu (PDF)"}
-          </Button>
+          {showExport && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={downloading || items.length === 0}
+              onClick={() => void onDownload()}
+            >
+              {downloading ? "Preparing…" : "Download menu (PDF)"}
+            </Button>
+          )}
           {/* The logo, address and terms the menu prints live in Settings,
               with the rest of the restaurant record. Nobody building a menu
               would think to look there, so the way there is on this page. */}

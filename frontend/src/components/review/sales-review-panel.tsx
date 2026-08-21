@@ -31,7 +31,9 @@ import {
   triggerBlobDownload,
 } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import { canExportFiles } from "@/lib/entity-access";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
 import {
@@ -58,6 +60,8 @@ export function SalesReviewPanel({
   title = "Daily sales",
 }: Props) {
   const { entityId } = useEntity();
+  const { grants } = useEntityAccess();
+  const showExport = canExportFiles(grants);
   const {
     from,
     to,
@@ -175,16 +179,18 @@ export function SalesReviewPanel({
               </Button>
             </Link>
           )}
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={loading || exporting || total === 0}
-          className="gap-1.5"
-          onClick={() => void onExport()}
-        >
-          <Download className="size-4" />
-          {exporting ? "Downloading…" : "Download Excel"}
-        </Button>
+        {showExport && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={loading || exporting || total === 0}
+            className="gap-1.5"
+            onClick={() => void onExport()}
+          >
+            <Download className="size-4" />
+            {exporting ? "Downloading…" : "Download Excel"}
+          </Button>
+        )}
         </>
       }
       toolbar={

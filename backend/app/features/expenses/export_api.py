@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.auth.deps import member_read_guard
+from app.core.auth.deps import member_read_guard, export_scope_guard
 from app.db.session import get_session
 from app.features.expenses.models import ExpenseEntryStatus
 
@@ -26,6 +26,7 @@ def export_hand_recorded_expenses(
     to_date: date | None = Query(default=None, alias="to"),
     q: str | None = Query(default=None, max_length=256),
     expense_item_id: uuid.UUID | None = Query(default=None),
+    _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     """Excel of hand-recorded expenses matching the /expenses list filters."""
     from app.features.expenses import hand_recorded_export

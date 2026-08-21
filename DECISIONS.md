@@ -606,6 +606,16 @@ The `card_sales_batch.gross_amount_kurus` is stored as the full **Z** total (the
 
 **Invariant:** Run `alembic upgrade head` (`088`) before deploying code that reads `grants` — otherwise members API 500s.
 
+## 2026-08-21 — Enforce `scope:export` on generated downloads
+
+**Choice:** Make the previously dead `scope:export` grant real. **View** a report = existing read grant alone; **download** a generated Excel/PDF = that read grant **and** `scope:export`. Raw uploaded-file `FileResponse`s (invoice documents, expense photos, restaurant logo) stay on `member_read_guard` only — inline preview must keep working for view-only.
+
+**How:** One shared FastAPI dependency `export_scope_guard`, layered **after** each route’s existing read guard on every generated-export route (reports, month pack, S9 book exports, subledgers, supplier activity, delivery/POS exports, group-menu PDF). No per-route copies of the check. Frontend hides Download/Export chrome (`DownloadMenu` funnel + standalone buttons) when the grant is missing.
+
+**Presets:** owner + partner include `scope:export`; cashier and `partner_view_only` do not. Migration `096` **adds** the grant where the new preset includes it and it is missing, and **strips** it from existing `partner_view_only` stored grants (088 had seeded it). Per-member override in Settings remains available afterwards.
+
+**Why:** Exporting books is a privileged action distinct from on-screen viewing; a dead grant in Settings was misleading and left downloads open to anyone who could read.
+
 ## 2026-06-22 — Daily expenses + spelling tolerance (Phase 6 Slice 6)
 
 **Choice:** Daily handwritten and manual typed expenses are first-class `expense_entries` — post Dr expense / Cr bank or cash via `post_expense_entry()` (`JournalEntrySource.EXPENSE_ENTRY`). `has_source_document=false` when no receipt attached. Item descriptions use canonical `expense_items` + `expense_item_aliases` with Turkish-aware normalization (`normalize_expense_item_text`) and fuzzy match (≥0.85 → `needs_review` until owner confirms; confirm remembers alias). Only `posted` expenses hit GL.

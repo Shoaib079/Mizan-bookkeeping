@@ -124,7 +124,7 @@ _VIEW_ONLY_GRANTS: frozenset[Grant] = frozenset(
         Grant.FINANCIAL_REPORTS_READ,
         Grant.REPORTS_READ,
         Grant.SCOPE_FINANCIAL_DASHBOARD_KPIS,
-        Grant.SCOPE_EXPORT,
+        # scope:export deliberately omitted — view-only may read, not download
     }
 )
 

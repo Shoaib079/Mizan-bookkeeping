@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.auth.deps import financial_reports_guard, member_read_guard
+from app.core.auth.deps import financial_reports_guard, member_read_guard, export_scope_guard
 from app.core.ledger.models import JournalEntrySource, JournalEntryStatus
 from app.db.session import get_session
 from app.features.reports import excel_export
@@ -25,7 +25,7 @@ def export_cash_bank_book(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     """One .xlsx with a sheet per active cash/bank account (month-pack writers)."""
     from app.features.reports import cash_bank_book_export
@@ -52,6 +52,7 @@ def export_general_ledger(
     entry_date_to: date | None = Query(default=None, alias="to"),
     q: str | None = Query(default=None, max_length=256),
     effective_only: bool = Query(default=True),
+    _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     """Excel: By account summary + All entries detail for the on-screen filters."""
     from app.features.reports import general_ledger_export

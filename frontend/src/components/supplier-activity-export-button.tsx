@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import { canExportFiles } from "@/lib/entity-access";
+import { useEntityAccess } from "@/lib/use-entity-access";
 
 /** Supplier activity Excel export control — split from supplier-activity-panel (S9). */
 export function SupplierActivityExportButton({
@@ -19,8 +21,11 @@ export function SupplierActivityExportButton({
   to: string;
   disabled: boolean;
 }) {
+  const { grants } = useEntityAccess();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+
+  if (!canExportFiles(grants)) return null;
 
   async function onExport() {
     if (!entityId) return;

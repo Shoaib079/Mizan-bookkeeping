@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S3 write chrome gates:** detail + directory + delivery + banking write controls grant-gated on the frontend; vitest 1133 + build green. Tag `v0.s3-write-chrome-gates`. Do not push until owner says.
+- **Enforce `scope:export`:** generated Excel/PDF downloads require the grant; attachments stay member-read. Tag `v0.scope-export-enforced`. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of S3)* |
-| **Last completed slice** | S3 write chrome grant-gated expanded (`v0.s3-write-chrome-gates`) |
-| **Last tag** | `v0.s3-write-chrome-gates` |
+| **Active slice** | *(none — await owner review of scope:export)* |
+| **Last completed slice** | Enforce `scope:export` (`v0.scope-export-enforced`) |
+| **Last tag** | `v0.scope-export-enforced` |
 | **Unpushed** | yes — do not push until owner says |
 | **Next up** | S4 supplier payment Edit/Void via capabilities (after sign-off) |
 

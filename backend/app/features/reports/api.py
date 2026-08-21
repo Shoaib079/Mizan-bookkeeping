@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.auth.deps import financial_reports_guard, reports_read_guard
+from app.core.auth.deps import financial_reports_guard, reports_read_guard, export_scope_guard
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
@@ -90,7 +90,7 @@ def export_delivery_sales(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(reports_read_guard),
+    _: None = Depends(reports_read_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         report = reports_service.get_delivery_sales_report(
@@ -201,7 +201,7 @@ def export_profit_and_loss(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         report = financial_statements.get_profit_and_loss(
@@ -227,7 +227,7 @@ def export_profit_and_loss_pdf(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         entity_name = _entity_name_for_export(session, entity_id)
@@ -254,7 +254,7 @@ def download_month_pack(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     """Every book for the period in one workbook — the file you send partners."""
     if to_date < from_date:
@@ -274,7 +274,7 @@ def download_month_pack_pdf(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     """Every book for the period as a readable PDF — partner copy."""
     if to_date < from_date:
@@ -311,7 +311,7 @@ def export_balance_sheet(
     entity_id: uuid.UUID,
     as_of: date = Query(...),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         report = financial_statements.get_balance_sheet(session, entity_id, as_of)
@@ -331,7 +331,7 @@ def export_balance_sheet_pdf(
     entity_id: uuid.UUID,
     as_of: date = Query(...),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         entity_name = _entity_name_for_export(session, entity_id)
@@ -369,7 +369,7 @@ def export_cash_flow(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         report = cash_flow.get_cash_flow(session, entity_id, from_date, to_date)
@@ -393,7 +393,7 @@ def export_cash_flow_pdf(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         entity_name = _entity_name_for_export(session, entity_id)
@@ -434,7 +434,7 @@ def export_kdv_input(
     from_date: date = Query(..., alias="from"),
     to_date: date = Query(..., alias="to"),
     session: Session = Depends(get_session),
-    _: None = Depends(reports_read_guard),
+    _: None = Depends(reports_read_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         report = kdv_input.get_kdv_input_report(
@@ -487,7 +487,7 @@ def export_period_comparison(
     prior_from: date | None = Query(None),
     prior_to: date | None = Query(None),
     session: Session = Depends(get_session),
-    _: None = Depends(financial_reports_guard),
+    _: None = Depends(financial_reports_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         report = period_comparison.get_period_comparison(

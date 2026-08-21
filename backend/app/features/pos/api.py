@@ -20,7 +20,7 @@ from app.core.pos.posting import (
 from app.core.ledger.posting import PostingError
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.db.session import get_session
-from app.core.auth.deps import daily_transactions_write_guard, member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import daily_transactions_write_guard, member_read_guard, operations_write_guard, resolve_actor_id, export_scope_guard
 from app.features.auth.models import User
 from app.features.pos import daily_summary_service
 from app.features.pos import service as pos_service
@@ -323,7 +323,7 @@ def export_pos_daily_summaries(
     to_date: date = Query(..., alias="to"),
     review: str | None = Query(default="all", pattern="^(all|pending|posted)$"),
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     from app.features.reports.excel_export import xlsx_response
 

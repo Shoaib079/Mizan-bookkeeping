@@ -7,8 +7,10 @@ import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import { canExportFiles } from "@/lib/entity-access";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -23,12 +25,15 @@ type Props = {
 type Format = "xlsx" | "pdf";
 
 export function MonthPackButton({ entityId, queryString, disabled, compact }: Props) {
+  const { grants } = useEntityAccess();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<Format | null>(null);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismissOnOutsideClick(menuRef, open, close);
+
+  if (!canExportFiles(grants)) return null;
 
   async function download(format: Format) {
     if (!entityId) return;

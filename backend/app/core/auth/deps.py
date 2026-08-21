@@ -155,6 +155,41 @@ def financial_reports_guard(
     require_permission(session, entity_id, user, Permission.FINANCIAL_REPORTS_READ)
 
 
+def export_scope_guard(
+    entity_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    authorization: str | None = Header(None),
+) -> None:
+    """Generated Excel/PDF downloads — layered AFTER the route's read guard.
+
+    View = read grant alone; download = that read grant AND scope:export.
+    Raw uploaded-file FileResponses must NOT use this guard.
+    """
+    if not settings.auth_enforcement:
+        return
+    from app.core.auth.grants import Grant, effective_grants, has_grant
+
+    user = resolve_current_user(session, authorization)
+    membership = require_entity_membership(session, entity_id, user)
+    grants = effective_grants(
+        membership.role,
+        membership.grants,
+        is_active=membership.user.is_active,
+    )
+    if not has_grant(grants, Grant.SCOPE_EXPORT):
+        record_auth_event(
+            session,
+            AuthAuditAction.PERMISSION_DENIED,
+            user_id=user.id,
+            entity_id=entity_id,
+            detail="Permission denied: scope:export",
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Permission denied: scope:export",
+        )
+
+
 def reports_read_guard(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),

@@ -13,7 +13,7 @@ from app.core.ledger.posting import InvalidAccountError, PostingError
 from app.core.staff.ledger import OverpaymentError, ZeroMovementError
 from app.core.staff.posting import InvalidStaffPostingError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id, export_scope_guard
 from app.features.auth.models import User
 from app.features.staff import service
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
@@ -127,7 +127,7 @@ def export_staff_ledger(
     entity_id: uuid.UUID,
     employee_id: uuid.UUID,
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ):
     from app.features.entities import service as entity_service
     from app.features.reports.excel_export import xlsx_response
@@ -158,7 +158,7 @@ def export_staff_ledger_pdf(
     entity_id: uuid.UUID,
     employee_id: uuid.UUID,
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ):
     from app.features.entities import service as entity_service
     from app.features.reports.pdf_export import PdfExportDependencyError, pdf_response

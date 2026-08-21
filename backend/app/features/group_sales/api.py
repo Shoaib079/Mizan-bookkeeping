@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.core.receivables.ledger import OverpaymentError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id, export_scope_guard
 from app.features.auth.models import User
 from app.features.group_sales import service
 from app.features.group_sales.schema import (
@@ -121,7 +121,7 @@ def list_group_menus(
 def export_menu_pdf(
     entity_id: uuid.UUID,
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ):
     """The menu document, as a PDF and only as a PDF.
 

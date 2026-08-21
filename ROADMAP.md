@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of S3 write-chrome gates)* |
+| **Active slice**         | *(none — await owner review of scope:export enforce)* |
 | **Next up**              | **S4** supplier payment Edit/Void via capabilities (after sign-off) |
-| **Last completed slice** | S3 write chrome grant-gated expanded (`v0.s3-write-chrome-gates`) |
-| **Last commit/tag**      | `v0.s3-write-chrome-gates` |
+| **Last completed slice** | Enforce `scope:export` (`v0.scope-export-enforced`) |
+| **Last commit/tag**      | `v0.scope-export-enforced` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Enforce scope:export on generated downloads  | `v0.scope-export-enforced`                             | Shared `export_scope_guard` after read guard; presets owner+partner; migration 096 add+strip view-only; FE Download chrome gated |
 | 2026-08-21 | S3 write chrome grant-gated (expanded)       | `v0.s3-write-chrome-gates`                             | Hide detail/directory/delivery/banking write controls without ops or daily grants; FE-only; mutation-checked vitest |
 | 2026-08-20 | Money-safety sweep guards                    | `v0.money-safety-sweep-guards`                         | Guard 1 every-leg void/correct; Guard 2 voided rows never move totals; Guard 3 subledger sources refuse generic void; mutation-checked |
 | 2026-08-20 | S9 Cash / expenses / GL standalone Excel         | `v0.standalone-book-exports`                           | Multi-sheet cash-bank book; hand-recorded expenses xlsx; GL By account + All entries; hub Payables headline guard |

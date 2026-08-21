@@ -43,6 +43,11 @@ export function canWriteDailyTransactions(grants: readonly string[]): boolean {
   );
 }
 
+/** Generated Excel/PDF downloads — mirrors backend export_scope_guard. */
+export function canExportFiles(grants: readonly string[]): boolean {
+  return hasGrant(grants, "scope:export");
+}
+
 export function canReadReports(grants: readonly string[]): boolean {
   return hasGrant(grants, "reports:read");
 }

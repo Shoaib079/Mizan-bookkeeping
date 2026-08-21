@@ -18,7 +18,7 @@ from app.core.partners.ledger import (
 )
 from app.core.partners.posting import InvalidPartnerPostingError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id, export_scope_guard
 from app.features.auth.models import User
 from app.features.partners import service
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
@@ -238,7 +238,7 @@ def export_partner_ledger(
     entity_id: uuid.UUID,
     partner_id: uuid.UUID,
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ):
     from datetime import date as date_cls
 
@@ -276,7 +276,7 @@ def export_partner_ledger_pdf(
     entity_id: uuid.UUID,
     partner_id: uuid.UUID,
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ):
     from datetime import date as date_cls
 

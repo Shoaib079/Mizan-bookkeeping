@@ -153,7 +153,6 @@ const VIEW_ONLY_GRANTS: ReadonlySet<Grant> = new Set([
   "financial_reports:read",
   "reports:read",
   "scope:financial_dashboard_kpis",
-  "scope:export",
   "nav:dashboard",
   "nav:record",
   "nav:review",

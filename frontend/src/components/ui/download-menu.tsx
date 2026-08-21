@@ -28,7 +28,9 @@ import { ChevronDown, Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { canExportFiles } from "@/lib/entity-access";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 export type DownloadMenuItem = {
@@ -40,6 +42,21 @@ export type DownloadMenuItem = {
 };
 
 export function DownloadMenu({
+  items,
+  disabled,
+}: {
+  items: DownloadMenuItem[];
+  disabled?: boolean;
+}) {
+  const { grants } = useEntityAccess();
+  if (!canExportFiles(grants)) return null;
+
+  return (
+    <DownloadMenuInner items={items} disabled={disabled} />
+  );
+}
+
+function DownloadMenuInner({
   items,
   disabled,
 }: {

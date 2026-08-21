@@ -14,7 +14,7 @@ from app.core.ledger.posting import PostingError
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.core.listing import ListParams, PaginatedListOut, list_params_dependency, paginated_list
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id, export_scope_guard
 from app.features.auth.models import User
 from app.features.delivery import platform_service
 from app.features.delivery import service as delivery_service
@@ -333,7 +333,7 @@ def export_delivery_activity(
     to_date: date = Query(..., alias="to"),
     delivery_platform_id: uuid.UUID | None = Query(default=None),
     session: Session = Depends(get_session),
-    _: None = Depends(member_read_guard),
+    _: None = Depends(member_read_guard), _export: None = Depends(export_scope_guard),
 ) -> StreamingResponse:
     try:
         data, filename = delivery_service.export_delivery_activity(
