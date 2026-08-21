@@ -75,7 +75,6 @@ from app.features.reports import expense_register as expense_register_report
 from app.features.reports import financial_statements
 from app.features.reports import time_series as time_series_report
 from app.features.reports.excel_export import write_profit_and_loss_sheet
-from app.features.staff import service as staff_service
 
 __all__ = [
     "CashBridge",
@@ -631,85 +630,6 @@ def _write_expenses(ws, register, ctx: MonthPackContext) -> None:
     )
 
 
-def _write_salaries(
-    session: Session,
-    ws,
-    entity_id: uuid.UUID,
-    from_date: date,
-    to_date: date,
-    ctx: MonthPackContext,
-) -> None:
-    """Staff movements — TRY and FX amounts must not share a ₺ column."""
-    write_sheet_title(
-        ws,
-        "Staff — accruals, payments and advances",
-        subtitles=[
-            f"{ctx.entity_name} · {format_period(from_date, to_date)}",
-            "FX staff amounts are in their pay currency; TRY cost is the lira booked.",
-        ],
-        end_col=7,
-    )
-    header_row = 5
-    data_start = write_header_row(
-        ws,
-        header_row,
-        [
-            "Date",
-            "Employee",
-            "Movement",
-            "Description",
-            "Currency",
-            "Amount",
-            money_header("TRY cost"),
-        ],
-    )
-    row = data_start
-
-    employees, _ = staff_service.list_employees(
-        session, entity_id, include_inactive=True, list_params=ListParams(limit=500)
-    )
-    for employee in employees:
-        ledger = staff_service.get_staff_ledger(session, entity_id, employee.id)
-        raw_currency = employee.pay_currency
-        currency = (
-            raw_currency.value if hasattr(raw_currency, "value") else str(raw_currency)
-        )
-        for entry in ledger.entries:
-            if not (from_date <= entry.movement_date <= to_date):
-                continue
-            if entry.display_kind != SubledgerDisplayKind.EFFECTIVE:
-                continue
-            write_date(ws, row, 1, entry.movement_date)
-            ws.cell(row=row, column=2, value=employee.name)
-            ws.cell(row=row, column=3, value=format_staff_movement(entry.movement_type))
-            ws.cell(row=row, column=4, value=entry.description)
-            ws.cell(row=row, column=5, value=currency)
-            if currency == "TRY":
-                write_money(ws, row, 6, entry.amount_minor)
-            else:
-                write_quantity(ws, row, 6, entry.amount_minor)
-                if entry.try_cost_kurus is not None:
-                    write_money(ws, row, 7, entry.try_cost_kurus)
-            row += 1
-    finish_data_table(
-        ws,
-        header_row=header_row,
-        last_data_row=max(row - 1, data_start),
-        end_col=7,
-        money_cols=(6, 7),
-        print_footer=_print_footer(ctx, "Month Pack — Salaries"),
-    )
-    fit_columns_from_content(
-        ws,
-        first_row=header_row,
-        last_row=max(row - 1, data_start),
-        last_col=7,
-        min_widths={1: 12, 2: 20, 3: 18, 4: 28, 5: 10, 6: 14, 7: 14},
-        max_widths={1: 14, 2: 32, 3: 24, 4: 70, 5: 12, 6: 16, 7: 16},
-        wrap_cols=(4,),
-    )
-
-
 def _write_account_book(ws, book, *, heading: str, ctx: MonthPackContext) -> None:
     write_sheet_title(
         ws,
@@ -761,94 +681,6 @@ def _write_account_book(ws, book, *, heading: str, ctx: MonthPackContext) -> Non
         min_widths={1: 12, 2: 30, 3: 20, 4: 14, 5: 14, 6: 14},
         max_widths={1: 14, 2: 90, 3: 32, 4: 16, 5: 16, 6: 16},
         wrap_cols=(2,),
-    )
-
-
-def _write_fx_holdings(ws, fx_balances, ctx: MonthPackContext) -> None:
-    """Foreign currency held, by wallet.
-
-    Two different numbers, and conflating them is the usual mistake: the
-    quantity is what's actually in the wallet, the TRY cost is what was paid
-    for it. The gain or loss between them isn't realised until it's converted,
-    so no rate is applied here — that would invent a figure the books don't
-    hold.
-    """
-    write_sheet_title(
-        ws,
-        "Foreign currency held",
-        subtitles=[
-            f"{ctx.entity_name} · {format_as_of(ctx.to_date)}",
-            "Amount held is the currency itself; TRY cost is what was paid for it.",
-        ],
-        end_col=4,
-    )
-
-    if not fx_balances:
-        ws.cell(row=4, column=1, value="No foreign currency wallets.")
-        finish_data_table(
-            ws,
-            header_row=4,
-            last_data_row=4,
-            end_col=4,
-            autofilter=False,
-            print_footer=_print_footer(ctx, "Month Pack — Foreign currency"),
-        )
-        return
-
-    header_row = 4
-    data_start = write_header_row(
-        ws,
-        header_row,
-        ["Wallet", "Currency", "Amount held", money_header("TRY cost")],
-    )
-    row = data_start
-    by_currency: dict[str, int] = defaultdict(int)
-    for fx in fx_balances:
-        ws.cell(row=row, column=1, value=fx.name)
-        ws.cell(row=row, column=2, value=fx.currency)
-        write_quantity(ws, row, 3, fx.native_quantity)
-        write_money(ws, row, 4, fx.try_cost_kurus)
-        by_currency[fx.currency] += fx.native_quantity
-        row += 1
-
-    row += 1
-    ws.cell(row=row, column=1, value="By currency (native)")
-    bold_row(ws, row, end_col=1)
-    row += 1
-    for currency, native in sorted(by_currency.items()):
-        ws.cell(row=row, column=1, value=quantity_header(currency, "Total held"))
-        write_quantity(ws, row, 3, native)
-        row += 1
-
-    ws.cell(row=row, column=1, value="TOTAL TRY COST")
-    write_money(ws, row, 4, sum(fx.try_cost_kurus for fx in fx_balances))
-    bold_row(ws, row, end_col=4)
-
-    row += 2
-    ws.cell(
-        row=row,
-        column=1,
-        value=(
-            "Any gain or loss between amount held and TRY cost is realised "
-            "only on conversion — this file does not invent a market rate."
-        ),
-    )
-    finish_data_table(
-        ws,
-        header_row=header_row,
-        last_data_row=data_start + len(fx_balances) - 1,
-        end_col=4,
-        money_cols=(3, 4),
-        print_footer=_print_footer(ctx, "Month Pack — Foreign currency"),
-    )
-    fit_columns_from_content(
-        ws,
-        first_row=header_row,
-        last_row=row,
-        last_col=4,
-        min_widths={1: 18, 2: 10, 3: 14, 4: 14},
-        max_widths={1: 40, 2: 12, 3: 18, 4: 18},
-        wrap_cols=(1,),
     )
 
 
@@ -1098,8 +930,19 @@ def build_month_pack_xlsx(
     )
     _write_sales(add_sheet(wb, "Sales"), series, dashboard, ctx)
     _write_expenses(add_sheet(wb, "Expenses"), register, ctx)
-    _write_salaries(
-        session, add_sheet(wb, "Salaries"), entity_id, from_date, to_date, ctx
+    from app.features.reports.month_pack_staff_fx import (
+        write_fx_holdings as _write_fx_holdings_sheet,
+        write_salaries as _write_salaries_sheet,
+    )
+
+    _write_salaries_sheet(
+        session,
+        add_sheet(wb, "Salaries"),
+        entity_id,
+        from_date,
+        to_date,
+        entity_name=ctx.entity_name,
+        print_footer=_print_footer(ctx, "Month Pack — Salaries"),
     )
 
     for account_id, name in drawer_ids:
@@ -1118,7 +961,13 @@ def build_month_pack_xlsx(
             add_sheet(wb, f"Bank — {name}"), book, heading="Bank book", ctx=ctx
         )
 
-    _write_fx_holdings(add_sheet(wb, "Foreign currency"), dashboard.fx_balances, ctx)
+    _write_fx_holdings_sheet(
+        add_sheet(wb, "Foreign currency"),
+        dashboard.fx_balances,
+        entity_name=ctx.entity_name,
+        as_of=ctx.to_date,
+        print_footer=_print_footer(ctx, "Month Pack — Foreign currency"),
+    )
     for wallet in fx_wallet_rows:
         _write_fx_book(
             session,

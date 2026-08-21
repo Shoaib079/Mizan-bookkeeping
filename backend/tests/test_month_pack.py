@@ -19,7 +19,7 @@ from app.core.chart_of_accounts.default_chart import SALES_REVENUE_CODE
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.seed import seed_default_chart
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.excel.workbook import MONEY_FORMAT_ACCOUNTING, money_header
+from app.core.excel.workbook import MONEY_FORMAT_ACCOUNTING, money_header, quantity_header
 from app.core.fx import posting as fx_posting
 from app.core.ledger.models import JournalEntrySource
 from app.core.ledger.posting import PostingLine, post_journal_entry
@@ -285,6 +285,9 @@ def test_foreign_currency_sheet_shows_native_quantity_and_try_cost(db_session, b
     ]
     assert 100.0 in natives  # $100.00, not 10000 kuruş-style cents left raw
     assert 3500.0 in try_costs  # ₺3.500,00 book cost
+    headers = [fx.cell(row=4, column=c).value for c in range(1, 5)]
+    assert headers[2] == quantity_header("USD")
+    assert headers[3] == money_header("TRY cost")
 
 
 def test_each_fx_wallet_gets_a_movement_book(db_session, books):
@@ -336,7 +339,7 @@ def test_fx_staff_salary_is_not_labelled_as_lira(db_session, books):
         salaries.cell(row=5, column=c).value for c in range(1, 8)
     ]
     assert headers[4] == "Currency"
-    assert headers[5] == "Amount"
+    assert headers[5] == quantity_header("USD", "Amount")
     assert headers[5] != money_header()
     assert headers[6] == money_header("TRY cost")
 

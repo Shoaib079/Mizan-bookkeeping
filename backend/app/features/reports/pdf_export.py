@@ -17,6 +17,7 @@ from app.core.pdf.fonts import (
     assert_text_renderable,
     register_bundled_fonts,
 )
+from app.core.excel.workbook import money_header
 from app.features.reports.excel_export import export_filename
 from app.features.reports.schema import (
     BalanceSheetRead,
@@ -37,20 +38,16 @@ _NEGATIVE = "#A32D2D"
 _fmt_date = format_date
 _period_text = format_period
 
-
 def _money(amount_kurus: int) -> str:
     if amount_kurus < 0:
         return f"({format_try(abs(amount_kurus))})"
     return format_try(amount_kurus)
 
-
 def _is_negative(amount_kurus: int) -> bool:
     return amount_kurus < 0
 
-
 class PdfExportDependencyError(RuntimeError):
     """reportlab is required for PDF export but is not installed."""
-
 
 def _require_reportlab():
     try:
@@ -77,7 +74,6 @@ def _require_reportlab():
         TableStyle,
     )
 
-
 def pdf_response(data: bytes, filename: str) -> StreamingResponse:
     return StreamingResponse(
         BytesIO(data),
@@ -85,11 +81,9 @@ def pdf_response(data: bytes, filename: str) -> StreamingResponse:
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
-
 def _cell(value: str) -> str:
     assert_text_renderable(value)
     return value
-
 
 def _build_pdf(
     elements: list,
@@ -130,13 +124,13 @@ def _build_pdf(
     doc.build(elements, onFirstPage=_draw_footer, onLaterPages=_draw_footer)
     return buffer.getvalue()
 
-
 def header_elements(
     *,
     title: str,
     entity_name: str,
     period_label: str,
     period_value: str,
+    figures_label: str | None = None,
 ) -> list:
     register_bundled_fonts()
     (
@@ -175,10 +169,6 @@ def header_elements(
         parent=sub_style,
         alignment=2,  # right
     )
-    # Whose books these are is the first thing to establish on a printed
-    # report, and it used to sit in the muted grey subline at the same weight
-    # as the period — easy to miss, and easy to mistake one restaurant's
-    # balance sheet for another's. Given its own line, dark and bold.
     entity_style = ParagraphStyle(
         "PdfEntity",
         parent=styles["Normal"],
@@ -188,25 +178,30 @@ def header_elements(
         textColor=colors.HexColor(_INK),
     )
 
-    # Local time, not UTC — these are read by people in the restaurant's timezone.
     generated = datetime.now().strftime("%d.%m.%Y %H:%M")
-    masthead = Table(
+    masthead_rows = [
         [
-            [
-                Paragraph(_cell(title), title_style),
-                Paragraph(_cell("Mizan"), stamp_style),
-            ],
-            [
-                Paragraph(_cell(entity_name), entity_style),
-                Paragraph(_cell(f"Generated {generated}"), stamp_style),
-            ],
-            [
-                Paragraph(_cell(f"{period_label}: {period_value}"), sub_style),
-                Paragraph("", stamp_style),
-            ],
+            Paragraph(_cell(title), title_style),
+            Paragraph(_cell("Mizan"), stamp_style),
         ],
-        colWidths=["70%", "30%"],
-    )
+        [
+            Paragraph(_cell(entity_name), entity_style),
+            Paragraph(_cell(f"Generated {generated}"), stamp_style),
+        ],
+        [
+            Paragraph(_cell(f"{period_label}: {period_value}"), sub_style),
+            Paragraph("", stamp_style),
+        ],
+    ]
+    if figures_label:
+        masthead_rows.append(
+            [
+                Paragraph(_cell(figures_label), sub_style),
+                Paragraph("", stamp_style),
+            ]
+        )
+    masthead = Table(masthead_rows, colWidths=["70%", "30%"])
+    rule_row = len(masthead_rows) - 1
     masthead.setStyle(
         TableStyle(
             [
@@ -216,13 +211,12 @@ def header_elements(
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                 ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
                 ("BOTTOMPADDING", (0, 1), (-1, 1), 1),
-                ("BOTTOMPADDING", (0, 2), (-1, 2), 6),
-                ("LINEBELOW", (0, 2), (-1, 2), 2, colors.HexColor(_BRAND_BLUE)),
+                ("BOTTOMPADDING", (0, rule_row), (-1, rule_row), 6),
+                ("LINEBELOW", (0, rule_row), (-1, rule_row), 2, colors.HexColor(_BRAND_BLUE)),
             ]
         )
     )
     return [masthead, Spacer(1, 0.45 * cm)]
-
 
 def summary_band(pairs: list[tuple[str, int]]) -> list:
     (
@@ -278,7 +272,6 @@ def summary_band(pairs: list[tuple[str, int]]) -> list:
             [
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(_BAND)),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                # Labels and values share the left edge of each box.
                 ("ALIGN", (0, 0), (-1, -1), "LEFT"),
                 ("TOPPADDING", (0, 0), (-1, 0), 7),
                 ("BOTTOMPADDING", (0, 1), (-1, 1), 7),
@@ -290,7 +283,6 @@ def summary_band(pairs: list[tuple[str, int]]) -> list:
         )
     )
     return [band, Spacer(1, 0.45 * cm)]
-
 
 def _table_style(
     *,
@@ -363,7 +355,6 @@ def _table_style(
         )
     return TableStyle(commands)
 
-
 def build_profit_and_loss_pdf(
     report: ProfitAndLossRead, entity_name: str, *, figures_label: str | None = None,
 ) -> bytes:
@@ -374,7 +365,8 @@ def build_profit_and_loss_pdf(
         title="Profit and Loss",
         entity_name=entity_name,
         period_label="Period",
-        period_value=f"{period} · {figures_label}" if figures_label else period,
+        period_value=period,
+        figures_label=figures_label,
     )
     elements.extend(
         summary_band(
@@ -394,8 +386,7 @@ def build_profit_and_loss_pdf(
         if a.account_type not in (AccountType.REVENUE, AccountType.EXPENSE)
     ]
 
-    # Account type lives in the section band, so the per-row Type column goes.
-    rows: list[list[str]] = [[_cell("Account"), _cell("Name"), _cell("Amount")]]
+    rows: list[list[str]] = [[_cell("Account"), _cell("Name"), _cell(money_header())]]
     section_rows: list[int] = []
     bold_rows: list[int] = []
 
@@ -438,7 +429,6 @@ def build_profit_and_loss_pdf(
         footer_left=f"{entity_name} · Profit and Loss · {period}",
     )
 
-
 def build_balance_sheet_pdf(
     report: BalanceSheetRead, entity_name: str, *, figures_label: str | None = None,
 ) -> bytes:
@@ -449,7 +439,8 @@ def build_balance_sheet_pdf(
         title="Balance Sheet",
         entity_name=entity_name,
         period_label="As of",
-        period_value=f"{as_of} · {figures_label}" if figures_label else as_of,
+        period_value=as_of,
+        figures_label=figures_label,
     )
     elements.extend(
         summary_band(
@@ -461,7 +452,7 @@ def build_balance_sheet_pdf(
         )
     )
 
-    rows: list[list[str]] = [[_cell("Account"), _cell("Name"), _cell("Balance")]]
+    rows: list[list[str]] = [[_cell("Account"), _cell("Name"), _cell(money_header("Balance"))]]
     section_rows: list[int] = []
     bold_rows: list[int] = []
 
@@ -533,7 +524,6 @@ def build_balance_sheet_pdf(
         footer_left=f"{entity_name} · Balance Sheet · as of {as_of}",
     )
 
-
 def build_cash_flow_pdf(report: CashFlowRead, entity_name: str) -> bytes:
     (
         _colors,
@@ -566,7 +556,12 @@ def build_cash_flow_pdf(report: CashFlowRead, entity_name: str) -> bytes:
         )
     )
 
-    rows: list[list[str]] = [[_cell("Movement"), _cell("Inflows"), _cell("Outflows"), _cell("Net")]]
+    rows: list[list[str]] = [[
+        _cell("Movement"),
+        _cell(money_header("Inflows")),
+        _cell(money_header("Outflows")),
+        _cell(money_header("Net")),
+    ]]
     section_rows: list[int] = []
     bold_rows: list[int] = []
 
@@ -628,7 +623,6 @@ def build_cash_flow_pdf(report: CashFlowRead, entity_name: str) -> bytes:
         elements,
         footer_left=f"{entity_name} · Cash Flow · {period}",
     )
-
 
 def pdf_export_filename(
     report_slug: str,
