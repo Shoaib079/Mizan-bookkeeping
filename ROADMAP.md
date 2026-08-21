@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — await owner review of capital/loan Edit)* |
-| **Next up**              | **S6** P&L / BS export `view` (live vs sealed) |
-| **Last completed slice** | Partner capital + loans correctable (`v0.partner-capital-loan-correctable`) |
-| **Last commit/tag**      | `v0.partner-capital-loan-correctable` |
+| **Active slice**         | *(none — await owner review of S6)* |
+| **Next up**              | **S7** Balance sheet Excel `finish_data_table` |
+| **Last completed slice** | S6 P&L / BS export `view` live vs sealed (`v0.s6-statement-export-view`) |
+| **Last commit/tag**      | `v0.s6-statement-export-view` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1912,7 +1912,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | **S3** | Detail write chrome grant-gated | high | **DONE** `v0.s3-write-chrome-gates` — Partner/Staff/Supplier/Customer + directories/delivery/banking write controls use `shouldShowWriteChrome` / `canUseRecordAction` |
 | **S4** | Supplier payment Edit/Void via capabilities | high | **DONE** `v0.s4-supplier-payment-capabilities` — activity rows stamp `can_edit`/`can_void`/`void_path` from entry_actions; FE offers buttons only from that verdict (no always-on callbacks) |
 | **S5** | Ledger-changed freshness (directories + detail) | high | **DONE via S2** — emit + query-backed fetchers shipped in `v0.ledger-freshness-funnel` |
-| **S6** | P&L / BS export `view` (live vs sealed) | high | Download + export API pass `view`; stamp sealed/live in file + filename |
+| **S6** | P&L / BS export `view` (live vs sealed) | high | **DONE** `v0.s6-statement-export-view` — export API + Download pass `view`; stamp As closed/Live in file + `-as-closed`/`-live` filename; open month unchanged |
 | **S7** | Balance sheet Excel `finish_data_table` | high | Real header row + `money_cols` (accounting red negatives) |
 | **S8** | Shared Excel finish for subledger / activity / delivery / POS | high | `write_header_row` + `finish_data_table` (no autosize-only bypass) |
 | **S9** | Cash book / expense register / GL standalone export | high | **DONE** `v0.standalone-book-exports` — cash-bank multi-sheet xlsx; hand-recorded expenses xlsx; GL By account + All entries; payables hub headline lock (S15 partial) |
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | S6 P&L / BS export view (live vs sealed)       | `v0.s6-statement-export-view`                          | Export routes + Download pass page `view`; same get_* service; file stamp + filename suffix; open month unchanged; mutation-checked |
 | 2026-08-21 | Partner capital + loans correctable            | `v0.partner-capital-loan-correctable`                  | Capital + loan received/repaid: void-only → dedicated partner correct; generic still refuses; flipped refusal test; mutation-checked |
 | 2026-08-21 | S4 supplier payment Edit/Void via capabilities | `v0.s4-supplier-payment-capabilities`                  | Activity payload stamps entry_actions can_edit/can_void/void_path for payments+invoices; FE drops always-on callback Edit; mutation-checked |
 | 2026-08-21 | Enforce scope:export on generated downloads  | `v0.scope-export-enforced`                             | Shared `export_scope_guard` after read guard; presets owner+partner; migration 096 add+strip view-only; FE Download chrome gated |

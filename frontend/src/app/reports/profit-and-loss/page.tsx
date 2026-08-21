@@ -22,6 +22,7 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import type { ProfitAndLossRead, ReportSource } from "@/lib/report-types";
+import { reportDownloadQuery } from "@/lib/report-download-query";
 import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
@@ -89,7 +90,7 @@ function ProfitAndLossContent() {
           <ReportDownloadMenu
             entityId={entityId}
             reportSlug="profit-and-loss"
-            queryString={queryString}
+            queryString={reportDownloadQuery(queryString, view)}
             pdf
             disabled={forbidden || !report}
           />

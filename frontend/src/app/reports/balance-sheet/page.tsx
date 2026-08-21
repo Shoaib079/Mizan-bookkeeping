@@ -28,6 +28,7 @@ import { formatTry } from "@/lib/money";
 /** Chart code for retained earnings — mirrors the backend default chart. */
 import { RETAINED_EARNINGS_CODE } from "@/lib/account-codes";
 import type { BalanceSheetRead, ReportSource } from "@/lib/report-types";
+import { reportDownloadQuery } from "@/lib/report-download-query";
 import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
 import { useReportAsOfFromUrl } from "@/lib/use-report-url";
 
@@ -119,7 +120,7 @@ function BalanceSheetContent() {
           <ReportDownloadMenu
             entityId={entityId}
             reportSlug="balance-sheet"
-            queryString={queryString}
+            queryString={reportDownloadQuery(queryString, view)}
             pdf
             disabled={forbidden || !report}
           />

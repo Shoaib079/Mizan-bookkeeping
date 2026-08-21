@@ -17,15 +17,15 @@
 
 ## Current
 
-- **Partner capital + loans correctable:** Edit via dedicated partner route. Tag `v0.partner-capital-loan-correctable`. Do not push until owner says. Money-critical — independent review + owner sign-off before push.
+- **S6 statement export view:** P&L/BS Excel+PDF honour on-screen live/sealed. Tag `v0.s6-statement-export-view`. Do not push until owner says. Financial-statement-adjacent — independent review + owner sign-off before push.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — await owner review of capital/loan Edit)* |
-| **Last completed slice** | Partner capital + loans correctable (`v0.partner-capital-loan-correctable`) |
-| **Last tag** | `v0.partner-capital-loan-correctable` |
+| **Active slice** | *(none — await owner review of S6)* |
+| **Last completed slice** | S6 P&L / BS export `view` (`v0.s6-statement-export-view`) |
+| **Last tag** | `v0.s6-statement-export-view` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S6 P&L / BS export `view` (live vs sealed) |
+| **Next up** | S7 Balance sheet Excel `finish_data_table` |
 
 
 ## FINANCIAL_AUDIT status (2026-07-27)

@@ -53,28 +53,28 @@ def _write_metadata(
     date_value: str,
     end_col: int = 4,
     entity_label: str | None = None,
+    figures_label: str | None = None,
 ) -> int:
     """Title block; returns the header row index (caller writes headers there)."""
+    subtitles = [
+        f"Entity: {entity_label if entity_label is not None else entity_id}",
+        f"{date_label}: {date_value}",
+    ]
+    if figures_label:
+        subtitles.append(figures_label)
     next_row = write_sheet_title(
         ws,
         title,
-        subtitles=[
-            f"Entity: {entity_label if entity_label is not None else entity_id}",
-            f"{date_label}: {date_value}",
-        ],
+        subtitles=subtitles,
         end_col=end_col,
     )
     return next_row
 
 
 def write_profit_and_loss_sheet(
-    ws, report: ProfitAndLossRead, *, entity_label: str | None = None
+    ws, report: ProfitAndLossRead, *, entity_label: str | None = None,
+    figures_label: str | None = None,
 ) -> None:
-    """Lay out a P&L on the given worksheet.
-
-    Shared by the standalone export and the month pack so the two can never
-    drift into showing the same period differently.
-    """
     label = entity_label if entity_label is not None else str(report.entity_id)
     header_row = _write_metadata(
         ws,
@@ -84,6 +84,7 @@ def write_profit_and_loss_sheet(
         date_value=format_period(report.from_date, report.to_date),
         end_col=4,
         entity_label=label,
+        figures_label=figures_label,
     )
     amount_label = money_header()
     data_start = write_header_row(
@@ -129,9 +130,9 @@ def write_profit_and_loss_sheet(
     )
 
 
-def build_profit_and_loss_xlsx(report: ProfitAndLossRead) -> bytes:
+def build_profit_and_loss_xlsx(report: ProfitAndLossRead, *, figures_label: str | None = None) -> bytes:
     wb, ws = create_workbook("Profit and Loss")
-    write_profit_and_loss_sheet(ws, report)
+    write_profit_and_loss_sheet(ws, report, figures_label=figures_label)
     return save_workbook_to_bytes(wb)
 
 
@@ -170,7 +171,7 @@ def _write_balance_sheet_section(
     return row + 2
 
 
-def build_balance_sheet_xlsx(report: BalanceSheetRead) -> bytes:
+def build_balance_sheet_xlsx(report: BalanceSheetRead, *, figures_label: str | None = None) -> bytes:
     wb, ws = create_workbook("Balance Sheet")
     row = _write_metadata(
         ws,
@@ -179,6 +180,7 @@ def build_balance_sheet_xlsx(report: BalanceSheetRead) -> bytes:
         date_label="As of",
         date_value=format_date(report.as_of),
         end_col=4,
+        figures_label=figures_label,
     )
 
     row = _write_balance_sheet_section(
@@ -459,12 +461,7 @@ def filename_slug(value: str, *, max_length: int = 24) -> str:
 
 
 def period_segment(from_date: date, to_date: date) -> str:
-    """`2026-06` for a whole calendar month, both dates otherwise.
-
-    A full month written as 2026-06-01-2026-06-30 spends fourteen characters
-    saying what seven say, and most exports are whole months. Partial ranges
-    keep both dates because there is no shorter way to state them.
-    """
+    """`2026-06` for a whole calendar month, both dates otherwise."""
     whole_month = (
         from_date.day == 1
         and (from_date.year, from_date.month) == (to_date.year, to_date.month)
@@ -482,21 +479,17 @@ def export_filename(
     from_date: date | None = None,
     to_date: date | None = None,
     as_of: date | None = None,
+    figures_suffix: str | None = None,
     extension: str = ".xlsx",
 ) -> str:
-    """`india-gate-balance-sheet-2026-06-30.xlsx`.
-
-    The restaurant leads: it is what someone scans for in a Downloads folder,
-    and it makes files from the same books sort together. There is no "mizan-"
-    prefix — it was on every file, so it distinguished nothing while occupying
-    the position that does the most work.
-
-    Dates stay ISO on purpose. Filenames sort chronologically that way, which
-    dd.mm.yyyy does not.
-    """
+    """`india-gate-balance-sheet-2026-06-30.xlsx` (+ optional `-live` / `-as-closed`)."""
     slug = filename_slug(entity_name) if entity_name else ""
     stem = f"{slug}-{report_slug}" if slug else report_slug
     if as_of is not None:
-        return f"{stem}-{as_of}{extension}"
-    assert from_date is not None and to_date is not None
-    return f"{stem}-{period_segment(from_date, to_date)}{extension}"
+        period = f"{as_of}"
+    else:
+        assert from_date is not None and to_date is not None
+        period = period_segment(from_date, to_date)
+    if figures_suffix:
+        return f"{stem}-{period}-{figures_suffix}{extension}"
+    return f"{stem}-{period}{extension}"

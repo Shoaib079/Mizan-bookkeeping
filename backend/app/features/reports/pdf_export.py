@@ -26,7 +26,6 @@ from app.features.reports.schema import (
 
 PDF_CONTENT_TYPE = "application/pdf"
 
-# Brand palette — mirrors the app's design tokens (DESIGN_SYSTEM.md §2).
 _BRAND_BLUE = "#2563EB"
 _INK = "#0F172A"
 _SLATE = "#334155"
@@ -35,17 +34,11 @@ _HAIRLINE = "#E2E8F0"
 _BAND = "#F8FAFC"
 _NEGATIVE = "#A32D2D"
 
-# Exports are English-only (owner decision 2026-07-13) — figures stay Turkish
-# formatted (1.234,56 ₺) because they are lira amounts, not language.
-
-
-# Shared with the Excel exports so both halves of a download agree.
 _fmt_date = format_date
 _period_text = format_period
 
 
 def _money(amount_kurus: int) -> str:
-    """Accounting presentation: negatives in parentheses, never a bare minus."""
     if amount_kurus < 0:
         return f"({format_try(abs(amount_kurus))})"
     return format_try(amount_kurus)
@@ -104,7 +97,6 @@ def _build_pdf(
     landscape_mode: bool = False,
     footer_left: str = "",
 ) -> bytes:
-    """Render the document; every page gets a hairline footer with page x of y."""
     colors, A4, landscape, _, _, cm, _, SimpleDocTemplate, _, _, _ = _require_reportlab()
 
     buffer = BytesIO()
@@ -146,7 +138,6 @@ def header_elements(
     period_label: str,
     period_value: str,
 ) -> list:
-    """Branded masthead: report title + entity, period, and generation stamp."""
     register_bundled_fonts()
     (
         colors,
@@ -223,8 +214,6 @@ def header_elements(
                 ("LEFTPADDING", (0, 0), (-1, -1), 0),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
-                # Three rows now — title, entity, period — so the brand rule
-                # sits under the last one rather than under row 1.
                 ("BOTTOMPADDING", (0, 0), (-1, 0), 2),
                 ("BOTTOMPADDING", (0, 1), (-1, 1), 1),
                 ("BOTTOMPADDING", (0, 2), (-1, 2), 6),
@@ -236,7 +225,6 @@ def header_elements(
 
 
 def summary_band(pairs: list[tuple[str, int]]) -> list:
-    """KPI strip — the answer before the detail. Pairs of (label, kuruş)."""
     (
         colors,
         _A4,
@@ -374,7 +362,9 @@ def _table_style(
     return TableStyle(commands)
 
 
-def build_profit_and_loss_pdf(report: ProfitAndLossRead, entity_name: str) -> bytes:
+def build_profit_and_loss_pdf(
+    report: ProfitAndLossRead, entity_name: str, *, figures_label: str | None = None,
+) -> bytes:
     _, _, _, _, _, cm, _, _, _, Table, _ = _require_reportlab()
 
     period = _period_text(report.from_date, report.to_date)
@@ -382,7 +372,7 @@ def build_profit_and_loss_pdf(report: ProfitAndLossRead, entity_name: str) -> by
         title="Profit and Loss",
         entity_name=entity_name,
         period_label="Period",
-        period_value=period,
+        period_value=f"{period} · {figures_label}" if figures_label else period,
     )
     elements.extend(
         summary_band(
@@ -447,7 +437,9 @@ def build_profit_and_loss_pdf(report: ProfitAndLossRead, entity_name: str) -> by
     )
 
 
-def build_balance_sheet_pdf(report: BalanceSheetRead, entity_name: str) -> bytes:
+def build_balance_sheet_pdf(
+    report: BalanceSheetRead, entity_name: str, *, figures_label: str | None = None,
+) -> bytes:
     _, _, _, _, _, cm, _, _, _, Table, _ = _require_reportlab()
 
     as_of = _fmt_date(report.as_of)
@@ -455,7 +447,7 @@ def build_balance_sheet_pdf(report: BalanceSheetRead, entity_name: str) -> bytes
         title="Balance Sheet",
         entity_name=entity_name,
         period_label="As of",
-        period_value=as_of,
+        period_value=f"{as_of} · {figures_label}" if figures_label else as_of,
     )
     elements.extend(
         summary_band(
