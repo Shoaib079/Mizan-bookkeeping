@@ -8,6 +8,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-21
 
+- **S3 follow-up — cashier middle-case write-chrome guard.** Vitest: `daily_transactions:write` without `operations:write` still sees count cash / close day / Record daily actions; master-record Add·Pay·Edit chrome stays ops-gated. Mutation-checked (Count cash behind `showOpsWrite` → red). No product gate change — cash movement remains ops-backed per backend.
 - **S3 — Write chrome grant-gated (expanded class) (`v0.s3-write-chrome-gates`).** Partner / Staff / Supplier / Customer detail Record·Pay·Edit, group-sale Record payment, directory Add buttons, delivery report/settle, and banking transfers / cash movement / count / close hide when the member lacks the grant that backs the API (`shouldShowWriteChrome` / `canUseRecordAction`). Backend 403 unchanged. Mutation-checked vitest in `write-chrome-gates.test.ts` + partner detail render cases.
 
 ## 2026-08-20

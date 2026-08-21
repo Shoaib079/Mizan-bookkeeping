@@ -82,6 +82,7 @@ const OPS_WRITE_SURFACES: { symbol: string; markers: string[] }[] = [
 
 describe("S3 write chrome helpers (role grants)", () => {
   const owner = grantsForRole("owner");
+  const cashier = grantsForRole("cashier");
   const viewOnly = grantsForRole("partner_view_only");
   const noOps: string[] = viewOnly.filter((g) => g !== "operations:write");
 
@@ -98,6 +99,22 @@ describe("S3 write chrome helpers (role grants)", () => {
     expect(canUseRecordAction(viewOnly, "closeDay")).toBe(false);
     expect(shouldShowNewMenu(viewOnly)).toBe(false);
     expect(canWriteDailyTransactions(viewOnly)).toBe(false);
+  });
+
+  it("cashier (daily without ops) sees daily-entry controls, not master-record chrome", () => {
+    // Backend: close-day → daily_transactions_write_guard; cash movement /
+    // session close / partner·staff·supplier·customer writes → operations_write.
+    expect(cashier).toContain("daily_transactions:write");
+    expect(cashier).not.toContain("operations:write");
+
+    expect(canWriteDailyTransactions(cashier)).toBe(true);
+    expect(shouldShowNewMenu(cashier)).toBe(true);
+    expect(canUseRecordAction(cashier, "countCash")).toBe(true);
+    expect(canUseRecordAction(cashier, "closeDay")).toBe(true);
+    expect(canUseRecordAction(cashier, "sales")).toBe(true);
+    expect(canUseRecordAction(cashier, "expense")).toBe(true);
+
+    expect(shouldShowWriteChrome(cashier)).toBe(false);
   });
 });
 
@@ -117,5 +134,42 @@ describe("S3 write chrome surfaces are gated (source)", () => {
     const broken = source.replaceAll("shouldShowWriteChrome", "NEVER_GATE");
     expect(broken).not.toContain("shouldShowWriteChrome");
     expect(source).toContain("shouldShowWriteChrome");
+  });
+
+  it("cash count/close stay on daily flags (not ops) — cashier middle case", () => {
+    // Backend: POST …/cash/movements → operations_write; POST …/close-day →
+    // daily_transactions_write. Count cash drafts into close-day.
+    const header = sourceDeclaring("cashPageWriteHeader");
+    const hook = sourceDeclaring("useWriteChrome");
+
+    expect(hook).toContain('canUseRecordAction(grants, "countCash")');
+    expect(hook).toContain('canUseRecordAction(grants, "closeDay")');
+    expect(header).toMatch(/actions:\s*showCountCash\s*\?/);
+    expect(header).toMatch(/showCloseDay/);
+    expect(header).toMatch(/primaryAction:\s*showOpsWrite\s*\?/);
+
+    // Mutation: put Count cash behind ops → cashier would lose a daily control.
+    const broken = header.replace(
+      /actions:\s*showCountCash\s*\?/,
+      "actions: showOpsWrite ?",
+    );
+    expect(broken).not.toMatch(/actions:\s*showCountCash\s*\?/);
+    expect(header).toMatch(/actions:\s*showCountCash\s*\?/);
+  });
+
+  it("master-record surfaces stay on showWrite (ops), not daily alone", () => {
+    for (const symbol of [
+      "PartnersPage",
+      "StaffPage",
+      "SuppliersPage",
+      "CustomersPage",
+      "StaffDetailPage",
+      "PartnerDetailPage",
+    ] as const) {
+      const source = sourceDeclaring(symbol);
+      expect(source, symbol).toContain("useWriteChrome");
+      expect(source, symbol).toContain("showWrite");
+      expect(source, symbol).not.toContain("canWriteDailyTransactions");
+    }
   });
 });
