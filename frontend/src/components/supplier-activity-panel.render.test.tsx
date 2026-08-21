@@ -143,6 +143,8 @@ async function paymentRow(): Promise<HTMLElement> {
   return screen.getByText("Capability payment").closest("tr") as HTMLElement;
 }
 
+const MAY_RANGE = { from: "2026-05-01", to: "2026-05-31" };
+
 describe("supplier activity payment Edit/Void from backend verdict", () => {
   it("shows Edit and Void when the payload allows both", async () => {
     apiFetch.mockResolvedValue(
@@ -155,6 +157,8 @@ describe("supplier activity payment Edit/Void from backend verdict", () => {
     renderWithQuery(
       <SupplierActivityPanel
         supplierId="sup-1"
+        range={MAY_RANGE}
+        onRangeChange={() => undefined}
         onCorrectPayment={() => undefined}
         onEditInvoice={() => undefined}
       />,
@@ -175,6 +179,8 @@ describe("supplier activity payment Edit/Void from backend verdict", () => {
     renderWithQuery(
       <SupplierActivityPanel
         supplierId="sup-1"
+        range={MAY_RANGE}
+        onRangeChange={() => undefined}
         onCorrectPayment={() => undefined}
         onEditInvoice={() => undefined}
       />,
@@ -182,6 +188,26 @@ describe("supplier activity payment Edit/Void from backend verdict", () => {
     const row = await paymentRow();
     expect(row.textContent).not.toContain("Edit");
     expect(row.textContent).not.toContain("Void");
+  });
+
+  it("labels closing as Closing in range when the period ends before today", async () => {
+    apiFetch.mockResolvedValue(
+      activityPayload({
+        can_edit: false,
+        can_void: false,
+        void_path: null,
+      }),
+    );
+    renderWithQuery(
+      <SupplierActivityPanel
+        supplierId="sup-1"
+        range={MAY_RANGE}
+        onRangeChange={() => undefined}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByText(/Closing in range/)).toBeTruthy();
+    });
   });
 
   it("mutation: always-on payment callbacks without can_edit/can_void goes red", () => {

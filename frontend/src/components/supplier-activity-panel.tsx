@@ -29,10 +29,10 @@ import {
 } from "@/components/ui/data-table";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch, entityPath } from "@/lib/api";
-import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { formatSupplierPayableBalance } from "@/lib/supplier-balance";
+import { rangedBalanceLabel } from "@/lib/ranged-balance-label";
 import { subledgerRowClassName } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
@@ -54,6 +54,9 @@ type SupplierActivity = {
 
 type Props = {
   supplierId: string;
+  /** Controlled activity period — owned by the detail page for the sticker label. */
+  range: { from: string; to: string };
+  onRangeChange: (from: string, to: string) => void;
   onCorrectPayment?: (row: CorrectableSupplierPaymentRow) => void;
   onEditInvoice?: (row: {
     journal_entry_id: string;
@@ -66,11 +69,12 @@ type Props = {
 
 export function SupplierActivityPanel({
   supplierId,
+  range,
+  onRangeChange,
   onCorrectPayment,
   onEditInvoice,
 }: Props) {
   const { entityId } = useEntity();
-  const [range, setRange] = useState(currentMonthRange);
   const [previewDraftId, setPreviewDraftId] = useState<string | null>(null);
   const [reviewDraftId, setReviewDraftId] = useState<string | null>(null);
   const [voidTarget, setVoidTarget] = useState<{
@@ -131,7 +135,7 @@ export function SupplierActivityPanel({
           from={range.from}
           to={range.to}
           disabled={!entityId || loading}
-          onChange={(from, to) => setRange({ from, to })}
+          onChange={(from, to) => onRangeChange(from, to)}
         />
         <SupplierActivityExportButton
           entityId={entityId}
@@ -167,7 +171,12 @@ export function SupplierActivityPanel({
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Closing (posted)</dt>
+              <dt className="text-muted-foreground">
+                {rangedBalanceLabel({
+                  rangeTo: range.to,
+                  currentLabel: "Closing (posted)",
+                })}
+              </dt>
               <dd className="tabular-nums font-medium">
                 {formatTry(data.closing_balance_kurus)}
               </dd>

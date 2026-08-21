@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S15 done:** Part A directory direction labels (`directoryBalanceDirection` + `DirectoryBalanceCell`); Part B customer ledger `running_balance_kurus` on screen + Excel/PDF. Tag `v0.s15-subledger-display-honesty`. Do not start S16. Do not push until owner says.
+- **S16 done:** Supplier sticker + activity Closing use `rangedBalanceLabel` (past to-date → Closing in range · as of [to]; MTD/today → current heading). Tag `v0.s16-supplier-closing-in-range`. Do not start GS-FX. Do not push until owner says.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — S15 done; awaiting review / push)* |
-| **Last completed slice** | S15 Subledger display honesty |
-| **Last tag** | `v0.s15-subledger-display-honesty` |
+| **Active slice** | *(none — S16 done; awaiting review / push)* |
+| **Last completed slice** | S16 Supplier sticker closing-in-range label |
+| **Last tag** | `v0.s16-supplier-closing-in-range` |
 | **Unpushed** | yes — do not push until owner says |
-| **Next up** | S16 — wait for owner |
+| **Next up** | GS-FX — wait for owner |
 

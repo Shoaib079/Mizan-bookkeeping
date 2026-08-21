@@ -29,9 +29,11 @@ import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-me
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch } from "@/lib/api";
+import { currentMonthRange } from "@/lib/date-range";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { rangedBalanceLabel } from "@/lib/ranged-balance-label";
 import {
   supplierBalanceHeading,
 } from "@/lib/supplier-balance";
@@ -83,6 +85,8 @@ export default function SupplierDetailPage() {
   const [expandedDraftId, setExpandedDraftId] = useState<string | null>(
     highlightDraftId,
   );
+  /** Activity from/to — drives the sticker's current vs closing-in-range label. */
+  const [activityRange, setActivityRange] = useState(currentMonthRange);
 
   const detailEnabled = Boolean(entityId && supplierId);
 
@@ -226,7 +230,10 @@ export default function SupplierDetailPage() {
       balance={
         ledger && (
           <EntityBalanceSticker
-            label={supplierBalanceHeading(ledger.balance_kurus)}
+            label={rangedBalanceLabel({
+              rangeTo: activityRange.to,
+              currentLabel: supplierBalanceHeading(ledger.balance_kurus),
+            })}
             signedBalanceMinor={ledger.balance_kurus}
             details={
               invoiceCountParts.length > 0 ? (
@@ -253,6 +260,8 @@ export default function SupplierDetailPage() {
           <DetailSection title="Activity">
             <SupplierActivityPanel
               supplierId={supplierId}
+              range={activityRange}
+              onRangeChange={(from, to) => setActivityRange({ from, to })}
               onCorrectPayment={(row) => setCorrectPayment(row)}
               onEditInvoice={(row) => setCorrectInvoice(row)}
             />

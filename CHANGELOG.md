@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-22
+
+- **S16 — Supplier sticker closing-in-range label (`v0.s16-supplier-closing-in-range`).** Shared `rangedBalanceLabel`: no range / to-date on or after today → current-balance wording (`supplierBalanceHeading`); past to-date → `Closing in range · as of [to]`. Supplier detail owns the activity from/to and passes it to the sticker and the activity Closing KPI. Figure unchanged. Partner/staff/customer have no activity range on the sticker — listed for a later consistency pass. Mutation: hardcode the no-range label for past ranges → red; restored → green.
+
 ## 2026-08-21
 
 - **S15 — Subledger display honesty (`v0.s15-subledger-display-honesty`).** **Part A** (`ab57650`): Staff / Partners / Customers / Suppliers directories show amount + direction via shared `directoryBalanceDirection` (`balanceHeading`) and `DirectoryBalanceCell` — flip sign → flip label. **Part B**: customer ledger API accumulates `running_balance_kurus` once in `get_customer_ledger` (screen + export source of truth); Excel/PDF pass it through instead of `None`. Group/credit-sale rows accumulate like any credit sale. Mutation-checked (flip label wording → red; blank export running → red; restored → green). Display/copy only — figures unchanged. Do not start S16.
