@@ -326,6 +326,49 @@ def test_loan_repayment_cannot_exceed_outstanding(db_session, restaurant_a):
         )
 
 
+def test_loan_repayment_same_amount_correction_passes(db_session, restaurant_a):
+    """Guard the add-back: re-saving an unchanged repayment must not trip the bound."""
+    entity_id = restaurant_a.id
+    partner = _partner(db_session, entity_id)
+    accounts = _accounts(db_session, entity_id)
+    cash = accounts["1000"]
+
+    partner_posting.post_partner_loan_receipt(
+        db_session,
+        entity_id,
+        partner.id,
+        receipt_date=date(2026, 8, 10),
+        amount_kurus=LOAN,
+        description="Loan in",
+        actor_id=ACTOR_ID,
+        payment_account_id=cash,
+    )
+    repaid = partner_posting.post_partner_loan_payment(
+        db_session,
+        entity_id,
+        partner.id,
+        payment_date=date(2026, 8, 12),
+        amount_kurus=300_000,
+        description="Partial repay",
+        actor_id=ACTOR_ID,
+        payment_account_id=cash,
+    )
+
+    out = _correct(
+        db_session,
+        entity_id,
+        partner.id,
+        repaid.journal_entry.id,
+        cash,
+        300_000,
+        entry_date=date(2026, 8, 12),
+    )
+    assert out.partner_ledger_entry.amount_kurus == -300_000
+    assert partner_ledger.loan_balance_kurus(db_session, entity_id, partner.id) == (
+        LOAN - 300_000
+    )
+
+
 def test_wrong_partner_correct_is_not_found(db_session, restaurant_a):
     entity_id = restaurant_a.id
     partner_a = _partner(db_session, entity_id)
