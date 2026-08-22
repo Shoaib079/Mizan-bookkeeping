@@ -5,6 +5,8 @@
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { type CorrectableSupplierPaymentRow } from "@/components/forms/correct-supplier-payment-form";
 import { type SupplierActivityRow } from "@/components/supplier-activity-types";
+import { formatTrDate, formatTry } from "@/lib/money";
+import { formatVoidConfirmDetail } from "@/lib/void-confirm-summary";
 
 type VoidTarget = {
   description: string;
@@ -34,10 +36,18 @@ export function SupplierActivityRowActions({
   if (!offer) return null;
 
   if (row.movement_kind === "payment") {
+    const voidDetail = formatVoidConfirmDetail({
+      date: formatTrDate(row.movement_date),
+      type: "Payment",
+      amount:
+        row.amount_kurus != null ? formatTry(row.amount_kurus) : undefined,
+      description: row.detail,
+    });
     return (
       <SubledgerRowActions
         row={row}
         showEdit={Boolean(row.can_edit && onCorrectPayment)}
+        voidConfirmDetail={voidDetail}
         onEdit={() =>
           onCorrectPayment?.({
             journal_entry_id: row.journal_entry_id!,
@@ -60,10 +70,18 @@ export function SupplierActivityRowActions({
   }
 
   if (row.movement_kind === "invoice") {
+    const voidDetail = formatVoidConfirmDetail({
+      date: formatTrDate(row.movement_date),
+      type: "Invoice",
+      amount:
+        row.amount_kurus != null ? formatTry(row.amount_kurus) : undefined,
+      description: row.detail,
+    });
     return (
       <SubledgerRowActions
         row={row}
         showEdit={Boolean(row.can_edit && onEditInvoice)}
+        voidConfirmDetail={voidDetail}
         onEdit={() =>
           onEditInvoice?.({
             journal_entry_id: row.journal_entry_id!,

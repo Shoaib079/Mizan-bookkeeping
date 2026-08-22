@@ -138,9 +138,19 @@ export function VoidManualJournalDialog({
             />
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <Button type="submit" disabled={submitting || !journal}>
-            {submitting ? "Voiding…" : "Void journal"}
-          </Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
+              disabled={submitting || !journal}
+            >
+              {submitting ? "Voiding…" : "Void journal"}
+            </Button>
+          </div>
         </form>
       </Dialog>
       <PeriodUnlockDialog />

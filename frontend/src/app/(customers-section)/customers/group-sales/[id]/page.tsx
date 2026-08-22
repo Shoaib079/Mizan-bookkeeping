@@ -16,6 +16,7 @@ import type { CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
 import { GroupSaleDiscountDialog } from "@/components/forms/group-sale-discount-dialog";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,15 +28,14 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch } from "@/lib/api";
-import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
+import { apiFetch, entityPath } from "@/lib/api";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative } from "@/lib/fx-money";
 import { canApplyGroupSaleDiscount } from "@/lib/group-sale-discount";
 import type { GroupSaleRead } from "@/lib/group-sales-types";
 import { formatTrDate, formatTry } from "@/lib/money";
-import { useToast } from "@/lib/toast";
+import { formatVoidConfirmDetail } from "@/lib/void-confirm-summary";
 
 function discountAmountLabel(sale: GroupSaleRead, minor: number): string {
   if (sale.forex_currency) {
@@ -63,7 +63,6 @@ export default function GroupSaleDetailPage() {
   const saleId = params.id;
   const { entityId } = useEntity();
   const { showWrite } = useWriteChrome();
-  const { toast } = useToast();
 
   const [sale, setSale] = useState<GroupSaleRead | null>(null);
   const [customer, setCustomer] = useState<CustomerRow | null>(null);
@@ -72,7 +71,7 @@ export default function GroupSaleDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [discountOpen, setDiscountOpen] = useState(false);
-  const [voiding, setVoiding] = useState(false);
+  const [voidOpen, setVoidOpen] = useState(false);
 
   const reload = useCallback(async () => {
     if (!entityId || !saleId) return;
@@ -105,24 +104,17 @@ export default function GroupSaleDetailPage() {
 
   const canMutate = sale?.status === "posted" && !paymentBlocked;
 
-  async function onVoid() {
-    if (!entityId || !sale) return;
-    setVoiding(true);
-    try {
-      await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/void`, {
-        method: "POST",
-        idempotencyKey: newIdempotencyKey(),
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      toast("Group sale voided");
-      await reload();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Void failed", "error");
-    } finally {
-      setVoiding(false);
-    }
-  }
+  const voidConfirmDetail = sale
+    ? formatVoidConfirmDetail({
+        date: formatTrDate(sale.sale_date),
+        type: "Group sale",
+        amount:
+          sale.forex_currency && sale.total_forex_minor != null
+            ? formatFxNative(sale.total_forex_minor, sale.forex_currency)
+            : formatTry(sale.total_kurus),
+        description: sale.description,
+      })
+    : "";
 
   if (!entityId) {
     return (
@@ -187,15 +179,8 @@ export default function GroupSaleDetailPage() {
         canMutate && (
           <VoidTriggerButton
             className="h-9 border border-destructive/40 px-4 hover:bg-destructive/10"
-            confirmTitle="Void this group sale?"
-            confirmDetail={
-              customer
-                ? `${customer.name} · ${formatTry(sale.total_kurus)}`
-                : formatTry(sale.total_kurus)
-            }
-            confirmLabel="Void group sale"
-            confirming={voiding}
-            onContinue={() => void onVoid()}
+            confirmDetail={voidConfirmDetail}
+            onContinue={() => setVoidOpen(true)}
           />
         )
       }
@@ -326,6 +311,16 @@ export default function GroupSaleDetailPage() {
         open={discountOpen}
         sale={sale}
         onClose={() => setDiscountOpen(false)}
+        onSaved={() => void reload()}
+      />
+      <VoidSubledgerDialog
+        open={voidOpen}
+        title="Void group sale"
+        description={voidConfirmDetail}
+        voidPath={
+          entityId ? entityPath(entityId, `group-sales/${sale.id}/void`) : null
+        }
+        onClose={() => setVoidOpen(false)}
         onSaved={() => void reload()}
       />
     </EntityDetailPage>

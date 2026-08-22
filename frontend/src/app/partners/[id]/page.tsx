@@ -3,23 +3,17 @@
 /** Partner detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import { useParams } from "next/navigation";
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
-  DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
-import { FilterChips } from "@/components/page/filter-chips";
-import { LedgerTable } from "@/components/page/ledger-table";
 import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { PartnerRecordForm } from "@/components/forms/partner-record-form";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
-import { EditedBadge } from "@/components/ledger/corrected-badge";
-import { ActionsUnavailableNotice } from "@/components/ledger/actions-unavailable-notice";
-import { LedgerBandHeading } from "@/components/ledger/ledger-band-heading";
-import { SubledgerActionsCell } from "@/components/ledger/subledger-actions-cell";
+import { PartnerDetailLedger } from "@/components/partners/partner-detail-ledger";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
   GlEditDialogs,
@@ -28,29 +22,21 @@ import {
 import { PartnerForm, type PartnerRow } from "@/components/forms/partner-form";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import { DataTableCell, DataTableRow } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch, entityPath } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
 import {
   partnerBalance,
   partnerBalanceHeading,
   partnerHeadlineCaption,
-  formatPartnerNetBalance,
 } from "@/lib/partner-balance";
-import { partnerMovementLabels } from "@/lib/subledger-labels";
-import { subledgerRowClassName } from "@/lib/ledger-display";
 import {
-  PARTNER_LEDGER_FILTERS,
-  allocationRowLabel,
   groupPartnerLedgerRows,
   partnerLedgerFilterMatches,
   type PartnerLedgerFilter,
   type PartnerLedgerResponse,
 } from "@/lib/partner-ledger-view";
-import { editTargetFor } from "@/lib/gl-edit-target";
 import { useEntryActions } from "@/lib/use-entry-actions";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 
@@ -230,123 +216,24 @@ export default function PartnerDetailPage() {
           )
         }
         activity={
-          ledger && (
-            <DetailSection title="Ledger">
-              <LedgerTable
-                columns={[
-                  { key: "date", label: "Date" },
-                  { key: "type", label: "Type" },
-                  { key: "description", label: "Description" },
-                  { key: "amount", label: "Amount", align: "right" },
-                  { key: "balance", label: "Balance", align: "right" },
-                ]}
-                hasActions
-                isEmpty={ledger.entries.length === 0}
-                isFiltered={visibleRows.length === 0}
-                history={{ hiddenCount, showHistory, onToggle: setShowHistory }}
-                notice={
-                  actionsFailed && (
-                    <ActionsUnavailableNotice onRetry={retryActions} />
-                  )
-                }
-                controls={
-                  <FilterChips
-                    chips={PARTNER_LEDGER_FILTERS}
-                    value={ledgerFilter}
-                    onChange={setLedgerFilter}
-                    ariaLabel="Filter ledger by movement"
-                  />
-                }
-              >
-                {bands.map((band) => (
-                  <Fragment key={band.key}>
-                    {band.title && (
-                      <LedgerBandHeading
-                        title={band.title}
-                        grossKurus={band.grossKurus}
-                        hasParts={band.rows.length > 1}
-                        leadingColumns={3}
-                        trailingColumns={2}
-                      />
-                    )}
-                    {band.rows.map((entry) => {
-                      // Asked, not decided here. The page used to key on
-                      // movement type, which does not always describe the
-                      // entry: a personal expense split writes a `drawing`
-                      // whose other leg this page knows nothing about.
-                      const asked = rowActions(entry.journal_entry_id);
-                      return (
-                        <DataTableRow
-                          key={entry.id}
-                          className={subledgerRowClassName(entry.display_kind)}
-                        >
-                          <DataTableCell>
-                            {formatTrDate(entry.movement_date)}
-                          </DataTableCell>
-                          <DataTableCell
-                            className={band.title ? "pl-8" : undefined}
-                          >
-                            {(band.title &&
-                              allocationRowLabel(entry.movement_type)) ??
-                              partnerMovementLabels[entry.movement_type] ??
-                              entry.movement_type}
-                          </DataTableCell>
-                          <DataTableCell>
-                            <span>{entry.description}</span>
-                            {/* Who or what it was for. The row has always
-                             * recorded the reference; three salaries fronted
-                             * in one week read alike until it was shown. */}
-                            {entry.subject_name && (
-                              <span className="ml-2 text-muted-foreground">
-                                · {entry.subject_name}
-                              </span>
-                            )}
-                            {entry.was_corrected && (
-                              <span className="ml-2">
-                                <EditedBadge />
-                              </span>
-                            )}
-                          </DataTableCell>
-                          <DataTableCell align="right">
-                            {formatTry(entry.amount_kurus)}
-                          </DataTableCell>
-                          <DataTableCell align="right">
-                            {entry.running_balance_kurus != null
-                              ? formatPartnerNetBalance(
-                                  entry.running_balance_kurus,
-                                )
-                              : "—"}
-                          </DataTableCell>
-                          <DataTableCell>
-                            <SubledgerActionsCell
-                              row={entry}
-                              actions={asked}
-                              opensEditKinds={PAGE_EDIT_KINDS}
-                              ownerNoun="partners"
-                              onEdit={(edit) =>
-                                setEditTarget(
-                                  editTargetFor(
-                                    edit.kind,
-                                    edit.context,
-                                    entry.journal_entry_id!,
-                                  ),
-                                )
-                              }
-                              onVoid={(voidPath) =>
-                                setVoidTarget({
-                                  path: entityPath(entityId, voidPath),
-                                  description: entry.description,
-                                })
-                              }
-                            />
-                          </DataTableCell>
-                        </DataTableRow>
-                      );
-                    })}
-                  </Fragment>
-                ))}
-              </LedgerTable>
-            </DetailSection>
+          ledger && entityId && (
+            <PartnerDetailLedger
+              bands={bands}
+              hiddenCount={hiddenCount}
+              showHistory={showHistory}
+              onToggleHistory={setShowHistory}
+              ledgerFilter={ledgerFilter}
+              onLedgerFilterChange={setLedgerFilter}
+              actionsFailed={actionsFailed}
+              onRetryActions={retryActions}
+              isEmpty={ledger.entries.length === 0}
+              isFiltered={visibleRows.length === 0}
+              entityId={entityId}
+              opensEditKinds={PAGE_EDIT_KINDS}
+              rowActions={rowActions}
+              onEditTarget={setEditTarget}
+              onVoidTarget={setVoidTarget}
+            />
           )
         }
       >

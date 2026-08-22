@@ -237,8 +237,8 @@ function voidButton(row: HTMLElement): HTMLElement {
  */
 async function pressVoid(row: HTMLElement): Promise<void> {
   fireEvent.click(voidButton(row));
-  const confirm = await screen.findByRole("button", { name: /continue to void/i });
-  fireEvent.click(confirm);
+  const voidButtons = await screen.findAllByRole("button", { name: "Void" });
+  fireEvent.click(voidButtons[voidButtons.length - 1]!);
 }
 
 describe("a row this page can correct", () => {

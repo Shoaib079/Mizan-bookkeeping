@@ -24,9 +24,9 @@ import type { GroupSaleRead } from "@/lib/group-sales-types";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { useEntityList } from "@/lib/use-entity-list";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
-import { apiFetch } from "@/lib/api";
-import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
-import { useToast } from "@/lib/toast";
+import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
+import { entityPath } from "@/lib/api";
+import { formatVoidConfirmDetail } from "@/lib/void-confirm-summary";
 
 /** A group sale is posted, voided or amended — nothing else.
  *
@@ -66,27 +66,7 @@ export default function GroupSalesPage() {
   const agencyNameById = new Map(customers.map((c) => [c.id, c.name]));
   const [formOpen, setFormOpen] = useState(false);
   const [editSale, setEditSale] = useState<GroupSaleRead | null>(null);
-  const [voidingId, setVoidingId] = useState<string | null>(null);
-  const { toast } = useToast();
-
-  async function onVoid(sale: GroupSaleRead) {
-    if (!entityId) return;
-    setVoidingId(sale.id);
-    try {
-      await apiFetch(`/entities/${entityId}/group-sales/${sale.id}/void`, {
-        method: "POST",
-        idempotencyKey: newIdempotencyKey(),
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      toast("Group sale voided");
-      await reload();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : "Void failed", "error");
-    } finally {
-      setVoidingId(null);
-    }
-  }
+  const [voidSale, setVoidSale] = useState<GroupSaleRead | null>(null);
 
   if (!entityId) {
     return (
@@ -197,11 +177,13 @@ export default function GroupSalesPage() {
                           </Button>
                           <VoidTriggerButton
                             className="h-9 border border-destructive/40 px-3 hover:bg-destructive/10"
-                            confirmTitle="Void this group sale?"
-                            confirmDetail={`${sale.description} · ${formatTry(sale.total_kurus)}`}
-                            confirmLabel="Void group sale"
-                            confirming={voidingId === sale.id}
-                            onContinue={() => void onVoid(sale)}
+                            confirmDetail={formatVoidConfirmDetail({
+                              date: formatTrDate(sale.sale_date),
+                              type: "Group sale",
+                              amount: formatSaleTotal(sale),
+                              description: sale.description,
+                            })}
+                            onContinue={() => setVoidSale(sale)}
                           />
                         </>
                       ))}
@@ -225,6 +207,30 @@ export default function GroupSalesPage() {
         correcting={editSale ?? undefined}
         onClose={() => setEditSale(null)}
         onSaved={() => void reload()}
+      />
+      <VoidSubledgerDialog
+        open={voidSale !== null}
+        title="Void group sale"
+        description={
+          voidSale
+            ? formatVoidConfirmDetail({
+                date: formatTrDate(voidSale.sale_date),
+                type: "Group sale",
+                amount: formatSaleTotal(voidSale),
+                description: voidSale.description,
+              })
+            : null
+        }
+        voidPath={
+          entityId && voidSale
+            ? entityPath(entityId, `group-sales/${voidSale.id}/void`)
+            : null
+        }
+        onClose={() => setVoidSale(null)}
+        onSaved={() => {
+          setVoidSale(null);
+          void reload();
+        }}
       />
     </ListPage>
   );

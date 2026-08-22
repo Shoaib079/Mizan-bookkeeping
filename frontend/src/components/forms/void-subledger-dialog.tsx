@@ -132,7 +132,12 @@ export function VoidSubledgerDialog({
             <Button type="button" variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="secondary" disabled={submitting || !voidPath}>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
+              disabled={submitting || !voidPath}
+            >
               {submitting ? "Voiding…" : "Void"}
             </Button>
           </div>

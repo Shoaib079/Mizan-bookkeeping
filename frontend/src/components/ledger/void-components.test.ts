@@ -15,6 +15,9 @@ describe("void confirmation UX", () => {
     expect(groupSale).toContain("VoidTriggerButton");
     expect(sourceDeclaring("VoidConfirmDialog")).toContain("VoidWarningBanner");
     expect(sourceDeclaring("VoidConfirmDialog")).toContain(
+      'title = "Are you sure?"',
+    );
+    expect(sourceDeclaring("VoidConfirmDialog")).toContain(
       'mobilePresentation="sheet"',
     );
     expect(voidForm).toContain('mobilePresentation="sheet"');

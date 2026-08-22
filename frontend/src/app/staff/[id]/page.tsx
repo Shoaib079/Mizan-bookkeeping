@@ -17,31 +17,22 @@ import {
   GlEditDialogs,
   type GlEditTarget,
 } from "@/components/ledger/gl-edit-dialogs";
+import { StaffDetailLedger } from "@/components/staff/staff-detail-ledger";
 import { SubledgerDownloadMenu } from "@/components/ledger/subledger-download-menu";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { ActionsUnavailableNotice } from "@/components/ledger/actions-unavailable-notice";
-import { SubledgerActionsCell } from "@/components/ledger/subledger-actions-cell";
-import { editTargetFor } from "@/lib/gl-edit-target";
 import { useEntryActions, type EntryActions } from "@/lib/use-entry-actions";
-import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { AppShell } from "@/components/layout/app-shell";
 import {
-  DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
-import { LedgerTable } from "@/components/page/ledger-table";
 import { EditTitleButton, MetaFacts } from "@/components/page/page-header";
 import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { Button } from "@/components/ui/button";
-import {
-  DataTableCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch, entityPath } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useWriteChrome } from "@/lib/use-write-chrome";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
+import { formatTry } from "@/lib/money";
 import {
   netPositionCaption,
   netPositionReconciles,
@@ -49,13 +40,8 @@ import {
   staffBalanceHeading,
   staffNetPosition,
 } from "@/lib/staff-net-position";
-import { staffMovementLabels } from "@/lib/subledger-labels";
-import {
-  subledgerRowClassName,
-  type SubledgerDisplayKind,
-} from "@/lib/ledger-display";
+import { type SubledgerDisplayKind } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
-import { extraDaysLabel, salaryPeriodLabel } from "@/lib/staff-ledger-labels";
 
 type StaffLedgerEntry = {
   id: string;
@@ -302,112 +288,22 @@ export default function StaffDetailPage() {
         activity={
           ledger &&
           employee && (
-            <DetailSection title="Ledger">
-              <LedgerTable
-                columns={[
-                  { key: "date", label: "Date" },
-                  { key: "type", label: "Type" },
-                  { key: "description", label: "Description" },
-                  { key: "amount", label: "Amount", align: "right" },
-                  { key: "balance", label: "Balance", align: "right" },
-                ]}
-                hasActions
-                isEmpty={ledger.entries.length === 0}
-                isFiltered={visibleRows.length === 0}
-                notice={
-                  actionsFailed && (
-                    <ActionsUnavailableNotice onRetry={retryActions} />
-                  )
-                }
-                history={{ hiddenCount, showHistory, onToggle: setShowHistory }}
-                filteredMessage="No current entries in this period — show correction history to see voided rows."
-              >
-                {displayRows.map((group) => {
-                  const entry = group.primary;
-                  const asked = rowActions(entry.journal_entry_id);
-                  return (
-                    <DataTableRow
-                      key={entry.id}
-                      className={subledgerRowClassName(entry.display_kind)}
-                    >
-                      <DataTableCell>
-                        {formatTrDate(entry.movement_date)}
-                      </DataTableCell>
-                      <DataTableCell>
-                        {group.isAdvanceOffset
-                          ? "Advance applied"
-                          : (staffMovementLabels[entry.movement_type] ??
-                            entry.movement_type)}
-                        {!group.isAdvanceOffset && salaryPeriodLabel(entry) && (
-                          <span className="ml-1 text-muted-foreground">
-                            ({salaryPeriodLabel(entry)})
-                          </span>
-                        )}
-                        {extraDaysLabel(entry) && (
-                          <span className="ml-1 text-muted-foreground">
-                            ({extraDaysLabel(entry)})
-                          </span>
-                        )}
-                      </DataTableCell>
-                      <DataTableCell>
-                        {group.isAdvanceOffset
-                          ? "Advance applied to salary"
-                          : entry.description}
-                        {group.advanceAppliedMinor > 0 && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {group.isAdvanceOffset
-                              ? `${formatMinorAmount(group.advanceAppliedMinor)} from advance — no cash`
-                              : `incl. ${formatMinorAmount(group.advanceAppliedMinor)} from advance`}
-                          </span>
-                        )}
-                        {group.advanceCreatedMinor > 0 && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            incl. {formatMinorAmount(group.advanceCreatedMinor)}{" "}
-                            held as advance
-                          </span>
-                        )}
-                        {entry.was_corrected && (
-                          <span className="ml-2">
-                            <EditedBadge />
-                          </span>
-                        )}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {formatMinorAmount(group.netMinor)}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums text-muted-foreground">
-                        {group.balanceMinor === null
-                          ? "—"
-                          : formatMinorAmount(group.balanceMinor)}
-                      </DataTableCell>
-                      <DataTableCell>
-                        <SubledgerActionsCell
-                          row={entry}
-                          actions={asked}
-                          opensEditKinds={PAGE_EDIT_KINDS}
-                          ownerNoun="employees"
-                          onEdit={(edit) =>
-                            setEditTarget(
-                              editTargetFor(
-                                edit.kind,
-                                edit.context,
-                                entry.journal_entry_id!,
-                              ),
-                            )
-                          }
-                          onVoid={(voidPath) =>
-                            setVoidTarget({
-                              path: entityPath(entityId, voidPath),
-                              description: entry.description,
-                            })
-                          }
-                        />
-                      </DataTableCell>
-                    </DataTableRow>
-                  );
-                })}
-              </LedgerTable>
-            </DetailSection>
+            <StaffDetailLedger
+              displayRows={displayRows}
+              isEmpty={ledger.entries.length === 0}
+              isFiltered={visibleRows.length === 0}
+              hiddenCount={hiddenCount}
+              showHistory={showHistory}
+              onToggleHistory={setShowHistory}
+              actionsFailed={actionsFailed}
+              onRetryActions={retryActions}
+              entityId={entityId}
+              formatMinorAmount={formatMinorAmount}
+              opensEditKinds={PAGE_EDIT_KINDS}
+              rowActions={rowActions}
+              onEditTarget={setEditTarget}
+              onVoidTarget={setVoidTarget}
+            />
           )
         }
       >

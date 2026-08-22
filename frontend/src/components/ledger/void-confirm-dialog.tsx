@@ -17,10 +17,10 @@ type Props = {
 
 export function VoidConfirmDialog({
   open,
-  title = "Void this record?",
+  title = "Are you sure?",
   detail,
   confirming = false,
-  confirmLabel = "Continue to void",
+  confirmLabel = "Void",
   onClose,
   onConfirm,
 }: Props) {
@@ -32,23 +32,35 @@ export function VoidConfirmDialog({
       size="compact"
       mobilePresentation="sheet"
     >
-      <VoidWarningBanner />
-      {detail && (
-        <p className="mt-3 text-sm text-muted-foreground">{detail}</p>
-      )}
-      <div className="mt-4 flex justify-end gap-2">
-        <Button type="button" variant="ghost" onClick={onClose} disabled={confirming}>
-          Cancel
-        </Button>
-        <Button
+      <div
+        onKeyDown={(event) => {
+          if (event.key === "Enter") event.preventDefault();
+        }}
+      >
+        <VoidWarningBanner />
+        {detail && (
+          <p className="mt-3 text-sm text-foreground">{detail}</p>
+        )}
+        <div className="mt-4 flex justify-end gap-2">
+          <Button
+          autoFocus
           type="button"
-          variant="secondary"
-          className="border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
+          variant="ghost"
+          onClick={onClose}
           disabled={confirming}
-          onClick={onConfirm}
         >
-          {confirming ? "Voiding…" : confirmLabel}
-        </Button>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            className="border-destructive/40 bg-destructive/5 text-destructive hover:bg-destructive/10"
+            disabled={confirming}
+            onClick={onConfirm}
+          >
+            {confirming ? "Voiding…" : confirmLabel}
+          </Button>
+        </div>
       </div>
     </Dialog>
   );

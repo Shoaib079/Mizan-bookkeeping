@@ -176,9 +176,8 @@ describe("a payment that consumed an advance", () => {
         (b) => (b.textContent ?? "").trim() === "Void",
       )!,
     );
-    fireEvent.click(
-      await screen.findByRole("button", { name: /continue to void/i }),
-    );
+    const voidButtons = await screen.findAllByRole("button", { name: "Void" });
+    fireEvent.click(voidButtons[voidButtons.length - 1]!);
 
     await waitFor(() => expect(screen.getByTestId("void-dialog")).toBeTruthy());
     expect(screen.getByTestId("void-dialog").dataset.value).toBe(

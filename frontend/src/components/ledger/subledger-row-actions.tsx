@@ -25,6 +25,9 @@ type Props = {
   row: SubledgerDisplayRow & { journal_entry_id?: string | null };
   onEdit: () => void;
   onVoid: () => void;
+  /** Shown in the confirm sheet before the void form opens. */
+  voidConfirmDetail?: string | null;
+  voidConfirmTitle?: string;
   /** When false, only Void is shown (e.g. advance_applied companion rows). */
   showEdit?: boolean;
 };
@@ -33,6 +36,8 @@ export function SubledgerRowActions({
   row,
   onEdit,
   onVoid,
+  voidConfirmDetail,
+  voidConfirmTitle,
   showEdit = true,
 }: Props) {
   if (!canEditSubledgerRow(row)) return null;
@@ -48,7 +53,11 @@ export function SubledgerRowActions({
           Edit
         </Button>
       )}
-      <VoidTriggerButton onContinue={onVoid} />
+      <VoidTriggerButton
+        confirmTitle={voidConfirmTitle}
+        confirmDetail={voidConfirmDetail}
+        onContinue={onVoid}
+      />
     </div>
   );
 }

@@ -41,6 +41,8 @@ type Props = {
   onEdit: (edit: NonNullable<EntryActions["edit"]>) => void;
   /** Given the backend's own `void_path`, relative to the entity. */
   onVoid: (voidPath: string) => void;
+  /** Date · type · amount line for the void confirm sheet. */
+  voidConfirmDetail?: string | null;
 };
 
 export function SubledgerActionsCell({
@@ -50,6 +52,7 @@ export function SubledgerActionsCell({
   ownerNoun = "people",
   onEdit,
   onVoid,
+  voidConfirmDetail,
 }: Props) {
   const allowed = actionsForOneOwnersRow(actions);
   const canEdit =
@@ -61,6 +64,7 @@ export function SubledgerActionsCell({
       <SubledgerRowActions
         row={row}
         showEdit={canEdit}
+        voidConfirmDetail={voidConfirmDetail}
         onEdit={() => allowed.edit && onEdit(allowed.edit)}
         onVoid={() => allowed.void_path && onVoid(allowed.void_path)}
       />

@@ -394,11 +394,15 @@ describe("pressing Void in the General ledger", () => {
     renderRow("invoice");
 
     // Void is two steps. `VoidTriggerButton` opens a confirm dialog, and only
-    // its Continue button calls back — deliberately, since voiding writes a
+    // its red Void button calls back — deliberately, since voiding writes a
     // reversal into the ledger. Clicking once and expecting the dialog would
     // have been a test that passed while the confirmation was removed.
     fireEvent.click(screen.getByRole("button", { name: "Void" }));
-    fireEvent.click(screen.getByRole("button", { name: "Continue to void" }));
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "Void" }).length).toBeGreaterThan(1),
+    );
+    const voidButtons = screen.getAllByRole("button", { name: "Void" });
+    fireEvent.click(voidButtons[voidButtons.length - 1]!);
 
     await waitFor(() => expect(screen.getByTestId("void")).toBeTruthy());
     expect(propsOf("void").voidPath).toBe(

@@ -3,6 +3,9 @@
 import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { type SubledgerDisplayKind } from "@/lib/ledger-display";
 import { customerLedgerRowActions } from "@/lib/subledger-actions";
+import { customerMovementLabels } from "@/lib/subledger-labels";
+import { formatTrDate, formatTry } from "@/lib/money";
+import { formatVoidConfirmDetail } from "@/lib/void-confirm-summary";
 
 /** Void wording paired with the API path it posts to.
  *
@@ -187,10 +190,17 @@ export function CustomerLedgerRowActions({
   });
   if (!actions.canEdit && !actions.canVoid) return null;
   const editTarget = customerLedgerEditTarget(row);
+  const voidDetail = formatVoidConfirmDetail({
+    date: formatTrDate(row.movement_date),
+    type: customerMovementLabels[row.movement_type] ?? row.movement_type,
+    amount: formatTry(row.amount_kurus),
+    description: row.description,
+  });
   return (
     <SubledgerRowActions
       row={row}
       showEdit={actions.canEdit && editTarget !== null}
+      voidConfirmDetail={voidDetail}
       onEdit={() => {
         if (editTarget) onEdit(editTarget);
       }}

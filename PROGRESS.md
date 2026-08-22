@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Group-sale form polish done:** Optional Note field, rate/footer/menu copy verified; tag `v0.group-sale-form-polish-note`. **Awaiting owner review — do not push.**
+- **Void safety done:** Two-step void confirm on desktop + mobile; tag `v0.void-safety-confirm`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — form polish done; awaiting review)* |
-| **Last completed slice** | Group-sale form polish + optional Note |
-| **Last tag** | `v0.group-sale-form-polish-note` |
+| **Active slice** | *(none — void safety done; awaiting review)* |
+| **Last completed slice** | Void safety — two-step confirm on every void path |
+| **Last tag** | `v0.void-safety-confirm` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
+| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN (not sticker slice) |
 
