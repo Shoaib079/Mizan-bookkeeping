@@ -126,7 +126,7 @@ export function SupplierActivityPanel({
 
   const reload = useCallback(async () => {
     await activityQuery.refetch();
-  }, [activityQuery.refetch]);
+  }, [activityQuery]);
 
   return (
     <section className="space-y-4">

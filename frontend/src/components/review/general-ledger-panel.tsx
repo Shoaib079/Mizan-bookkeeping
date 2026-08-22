@@ -36,7 +36,6 @@ import {
   DataTableCell,
   DataTableHead,
   DataTableHeaderCell,
-  DataTableRow,
 } from "@/components/ui/data-table";
 import { Input, Label, Select } from "@/components/ui/input";
 import { AfterFirstLoad, PageSkeleton } from "@/components/ui/skeleton";

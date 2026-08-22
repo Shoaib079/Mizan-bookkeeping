@@ -5,7 +5,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fxRateHelperText, GROUP_SALE_DEFAULT_DESCRIPTION } from "@/lib/group-sale-form-copy";
+import { fxRateHelperText } from "@/lib/group-sale-form-copy";
 import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 const apiFetch = vi.fn();
@@ -50,10 +50,6 @@ async function selectComboboxById(id: string, query: string, optionLabel: string
   fireEvent.change(input, { target: { value: query } });
   const option = await screen.findByRole("option", { name: optionLabel });
   fireEvent.click(option);
-}
-
-function moneyInputs() {
-  return Array.from(document.querySelectorAll("input[inputmode='decimal']"));
 }
 
 beforeEach(() => {

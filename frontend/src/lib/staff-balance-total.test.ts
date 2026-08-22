@@ -89,10 +89,9 @@ describe("sumFxStaffBalancesByCurrency + formatStaffHubAmount", () => {
 });
 
 describe("staffHubNetSign", () => {
-  it("colours from the TRY total only — never adds FX minor units", () => {
-    // USD 50.00 as 5000 cents must not pull a −100 ₺ TRY debt into positive.
-    expect(staffHubNetSign(-100_000, new Map([["USD", 50_00]]))).toBe(-100_000);
-    expect(staffHubNetSign(100_000, new Map([["USD", 50_00]]))).toBe(100_000);
-    expect(staffHubNetSign(0, new Map([["USD", 50_00]]))).toBe(0);
+  it("returns the TRY total — FX is shown separately on the card", () => {
+    expect(staffHubNetSign(-100_000)).toBe(-100_000);
+    expect(staffHubNetSign(100_000)).toBe(100_000);
+    expect(staffHubNetSign(0)).toBe(0);
   });
 });

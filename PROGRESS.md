@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Void confirm detail done:** Every void confirm shows date · type · amount; tag `v0.void-confirm-detail`. **Awaiting owner review — do not push.**
+- **Lint hygiene done:** Frontend eslint 0 errors / 0 warnings; tag `v0.lint-hygiene`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — void confirm detail done; awaiting review)* |
-| **Last completed slice** | Void confirm detail line — every surface |
-| **Last tag** | `v0.void-confirm-detail` |
+| **Active slice** | *(none — lint hygiene done; awaiting review)* |
+| **Last completed slice** | Lint hygiene — frontend eslint 0/0 |
+| **Last tag** | `v0.lint-hygiene` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN (not lint-hygiene) |
+| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
 

@@ -100,8 +100,8 @@ export function useStaffBalanceTotal(entityId: string | null): StaffSubledgerTot
     [totalKurus, fxByCurrency],
   );
   const netSign = useMemo(
-    () => staffHubNetSign(totalKurus, fxByCurrency),
-    [totalKurus, fxByCurrency],
+    () => staffHubNetSign(totalKurus),
+    [totalKurus],
   );
   const loading = listLoading || balancesLoading;
   const loadFailed =

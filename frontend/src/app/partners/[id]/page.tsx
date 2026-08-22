@@ -102,7 +102,7 @@ export default function PartnerDetailPage() {
 
   const reload = useCallback(async () => {
     await Promise.all([partnerQuery.refetch(), ledgerQuery.refetch()]);
-  }, [partnerQuery.refetch, ledgerQuery.refetch]);
+  }, [partnerQuery, ledgerQuery]);
 
   const { showHistory, setShowHistory, hiddenCount, visibleRows } =
     useLedgerHistoryView(ledger?.entries ?? []);

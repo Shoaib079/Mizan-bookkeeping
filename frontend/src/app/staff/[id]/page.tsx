@@ -124,7 +124,7 @@ export default function StaffDetailPage() {
 
   const reload = useCallback(async () => {
     await Promise.all([employeeQuery.refetch(), ledgerQuery.refetch()]);
-  }, [employeeQuery.refetch, ledgerQuery.refetch]);
+  }, [employeeQuery, ledgerQuery]);
 
   const {
     showHistory,

@@ -138,7 +138,7 @@ export default function SupplierDetailPage() {
       ledgerQuery.refetch(),
       draftsQuery.refetch(),
     ]);
-  }, [supplierQuery.refetch, ledgerQuery.refetch, draftsQuery.refetch]);
+  }, [supplierQuery, ledgerQuery, draftsQuery]);
 
   useEffect(() => {
     setCorrectPayment(null);

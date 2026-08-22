@@ -74,9 +74,6 @@ export function formatStaffHubAmount(
  * FX balances are shown on the same card as separate figures, but their
  * minor units must never be added into the TRY sign (cents ≠ kuruş).
  */
-export function staffHubNetSign(
-  tryTotalKurus: number,
-  _fxByCurrency?: Map<string, number>,
-): number {
+export function staffHubNetSign(tryTotalKurus: number): number {
   return tryTotalKurus;
 }
