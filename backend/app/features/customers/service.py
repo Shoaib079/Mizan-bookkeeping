@@ -34,6 +34,9 @@ from app.features.customers.group_sale import (
 )
 from app.features.customers.models import Customer
 from app.features.customers.running_balance import stamp_running_balances
+from app.features.group_sales.ledger_display_description import (
+    apply_group_sale_ledger_descriptions,
+)
 from app.features.customers.schema import (
     CreditSaleCreate,
     CreditSaleResponse,
@@ -82,6 +85,7 @@ def _customer_entry_reads(
         for r in reads:
             if r.journal_entry_id in account_by_je:
                 r.payment_account_id = account_by_je[r.journal_entry_id]
+    apply_group_sale_ledger_descriptions(session, entries, reads)
     return reads
 
 

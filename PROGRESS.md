@@ -17,13 +17,13 @@
 
 ## Current
 
-- **GS-FX done:** Rateless forex group sales per DECISIONS 2026-07-13 — subledger-only receivable, zero-cost wallet receipt, TRY at conversion, void/correct subledger-only, discounts blocked. Tag `v0.gs-fx-forex-only-group-sales`. **Awaiting owner review — do not push.**
+- **Customer ledger group-sale rich description done:** Display-only menu · pax × rate on screen/PDF/Excel from stored lines; tag `v0.customer-ledger-group-sale-rich-description`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — GS-FX done; awaiting review / push)* |
-| **Last completed slice** | GS-FX forex-only group sales |
-| **Last tag** | `v0.gs-fx-forex-only-group-sales` |
+| **Active slice** | *(none — rich description done; awaiting review / push)* |
+| **Last completed slice** | Customer ledger group-sale rich description |
+| **Last tag** | `v0.customer-ledger-group-sale-rich-description` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
 
