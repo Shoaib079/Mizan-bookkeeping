@@ -17,7 +17,7 @@ import {
   MoreActionButton,
   morePillLabel,
 } from "@/components/record/record-desk-buttons";
-import { RecordedTodayCard } from "@/components/record/recorded-today-card";
+import { RecentlyRecordedCard } from "@/components/record/recently-recorded-card";
 import { FxUnifiedDialog } from "@/components/record/fx-unified-dialog";
 import { useQuickActions } from "@/components/quick-actions";
 import { hasCashCountDraft } from "@/lib/cash-count-draft";
@@ -356,7 +356,7 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
         </section>
       </div>
 
-      {entityId && <RecordedTodayCard entityId={entityId} />}
+      {entityId && <RecentlyRecordedCard entityId={entityId} />}
     </div>
   );
 }

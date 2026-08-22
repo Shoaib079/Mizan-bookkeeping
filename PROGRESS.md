@@ -17,13 +17,12 @@
 
 ## Current
 
-- **Theme leak hardening:** accepted-live left bars + IconSquare are intentional v1 baseline; remaining v2 polish gated; DEFAULT_THEME alone cannot flip live. Tag `v0.theme-leak-hardening`. **Awaiting owner review — do not push.**
+- **Record desk — Recently recorded:** last 10 any-date journal entries on Record desk; reuse `GET …/ledger/entries`. Tag `v0.recently-recorded`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — theme leak hardening awaiting review)* |
-| **Last completed slice** | Theme leak hardening |
-| **Last tag** | `v0.theme-leak-hardening` |
+| **Active slice** | *(none — recently recorded awaiting review)* |
+| **Last completed slice** | Record desk — Recently recorded |
+| **Last tag** | `v0.recently-recorded` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |
-

@@ -10,7 +10,7 @@ describe("RecordDesk", () => {
     expect(source()).toContain("primaryRecordActions");
     expect(source()).toContain("ManualExpenseForm");
     expect(source()).toContain("embedded");
-    expect(source()).toContain("RecordedTodayCard");
+    expect(source()).toContain("RecentlyRecordedCard");
   });
 
   it("routes confirmed uploads through openRecordActionWithFile", () => {

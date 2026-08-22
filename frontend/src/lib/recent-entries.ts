@@ -1,14 +1,16 @@
-/** Recent journal entries — Add “Recorded today” and ledger report. */
+/** Recent journal entries — Record desk “Recently recorded” and ledger list. */
 
 import { dateToIsoLocal } from "@/lib/dates";
 import { sourceLabel } from "@/lib/transaction-registry";
 
-const RECENT_ENTRIES_LIMIT = 10;
+export const RECENT_ENTRIES_LIMIT = 10;
 
 export type RecentEntriesListOptions = {
   limit?: number;
   from?: string;
   to?: string;
+  /** When true (default), hide voided originals and void-reversal rows. */
+  effectiveOnly?: boolean;
 };
 
 export type RecentEntryLine = {
@@ -34,6 +36,10 @@ export type RecentEntriesListResponse = {
   total: number;
 };
 
+/**
+ * GET /entities/{id}/ledger/entries — backend orders by entry_date desc,
+ * created_at desc (answers “what did I just record?”).
+ */
 export function recentEntriesListUrl(
   entityId: string,
   options: RecentEntriesListOptions = {},
@@ -41,8 +47,9 @@ export function recentEntriesListUrl(
   const params = new URLSearchParams({
     limit: String(options.limit ?? RECENT_ENTRIES_LIMIT),
     offset: "0",
-    effective_only: "true",
   });
+  const effectiveOnly = options.effectiveOnly ?? true;
+  if (effectiveOnly) params.set("effective_only", "true");
   if (options.from) params.set("from", options.from);
   if (options.to) params.set("to", options.to);
   return `/entities/${entityId}/ledger/entries?${params.toString()}`;
@@ -53,17 +60,18 @@ export function todayIsoDate(reference = new Date()): string {
   return dateToIsoLocal(reference);
 }
 
-export function recordedTodayListUrl(
-  entityId: string,
-  reference = new Date(),
-): string {
-  const iso = todayIsoDate(reference);
-  return recentEntriesListUrl(entityId, { from: iso, to: iso });
+/** Drop void-reversal rows; keep posted (and any voided if history fetched). */
+export function filterRecentEntriesForDisplay(
+  items: RecentEntryRow[],
+  limit: number = RECENT_ENTRIES_LIMIT,
+): RecentEntryRow[] {
+  return items
+    .filter((row) => !row.reverses_entry_id)
+    .slice(0, limit);
 }
 
-export function recordedTodayLedgerHref(reference = new Date()): string {
-  const iso = todayIsoDate(reference);
-  return `/reports/ledger?from=${encodeURIComponent(iso)}&to=${encodeURIComponent(iso)}`;
+export function entryWasCorrected(row: RecentEntryRow): boolean {
+  return Boolean(row.amends_entry_id || row.amended_by_entry_id);
 }
 
 export function journalEntryTotalKurus(lines: RecentEntryLine[]): number {

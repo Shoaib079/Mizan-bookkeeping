@@ -51,7 +51,7 @@ describe("Add page amount-first desk", () => {
     expect(desk).toContain("DeskModeButton");
     expect(desk).toContain('role="tab"');
     expect(desk).toContain("embedded");
-    expect(desk).toContain("<RecordedTodayCard");
+    expect(desk).toContain("<RecentlyRecordedCard");
     expect(desk).not.toContain("RecordCard");
   });
 

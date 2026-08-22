@@ -23,5 +23,13 @@ describe("RecentEntriesCard", () => {
     expect(source()).toContain("{title}");
     expect(source()).toContain("{emptyMessage}");
     expect(source()).toContain("viewAllHref");
+    expect(source()).toContain('title = "Recently recorded"');
+  });
+
+  it("filters void-reversal rows and shows voided / corrected chrome", () => {
+    expect(source()).toContain("filterRecentEntriesForDisplay");
+    expect(source()).toContain("StatusBadge");
+    expect(source()).toContain("EditedBadge");
+    expect(source()).toContain("journalEntryRowClassName");
   });
 });
