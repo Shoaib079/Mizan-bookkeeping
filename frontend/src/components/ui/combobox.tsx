@@ -41,6 +41,9 @@ export type ComboboxProps = {
   className?: string;
   required?: boolean;
   /** Prefer opening above the input when space is tight (e.g. bottom of review panels). */
+  /** When set, accept the typed query when nothing in `options` matches. */
+  onUseUnlisted?: (query: string) => void;
+  unlistedLabel?: (query: string) => string;
   placement?: ComboboxPlacement;
 };
 
@@ -55,6 +58,8 @@ export function Combobox({
   className,
   required,
   placement = "auto",
+  onUseUnlisted,
+  unlistedLabel,
 }: ComboboxProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -171,12 +176,12 @@ export function Combobox({
 
   useEffect(() => {
     setActiveIndex(0);
-    listRef.current?.scrollTo({ top: 0 });
+    listRef.current?.scrollTo?.({ top: 0 });
   }, [query]);
 
   useEffect(() => {
     if (open) {
-      listRef.current?.scrollTo({ top: 0 });
+      listRef.current?.scrollTo?.({ top: 0 });
     }
   }, [open]);
 
@@ -223,9 +228,17 @@ export function Combobox({
       setActiveIndex((index) => Math.max(index - 1, 0));
       return;
     }
-    if (event.key === "Enter" && filtered[activeIndex]) {
+    if (event.key === "Enter") {
       event.preventDefault();
-      select(filtered[activeIndex].value);
+      if (filtered[activeIndex]) {
+        select(filtered[activeIndex].value);
+        return;
+      }
+      const q = query.trim();
+      if (q && onUseUnlisted) {
+        onUseUnlisted(q);
+        close();
+      }
     }
   };
 
@@ -298,9 +311,25 @@ export function Combobox({
             className="z-[200] overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg"
           >
             {filtered.length === 0 ? (
-              <p className="px-3 py-2 text-sm text-muted-foreground">
-                {emptyMessage}
-              </p>
+              query.trim() && onUseUnlisted ? (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={false}
+                  className="flex w-full px-3 py-2 text-left text-sm hover:bg-sidebar-accent"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => {
+                    onUseUnlisted(query.trim());
+                    close();
+                  }}
+                >
+                  {unlistedLabel?.(query.trim()) ?? `Use "${query.trim()}"`}
+                </button>
+              ) : (
+                <p className="px-3 py-2 text-sm text-muted-foreground">
+                  {emptyMessage}
+                </p>
+              )
             ) : (
               filtered.map((option, index) => (
                 <button

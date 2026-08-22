@@ -16,8 +16,16 @@ import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import type { GroupMenuRow, GroupSaleRead } from "@/lib/group-sales-types";
-import { menuPriceNote, menuRatePrefill } from "@/lib/menu-prefill";
+import { menuPriceNote } from "@/lib/menu-prefill";
 import { FOREX_CURRENCIES } from "@/lib/group-sales-types";
+import {
+  bookingTotalLabel,
+  forexFooterSuffix,
+  fxRateFieldLabel,
+  fxRateHelperText,
+  ratePerPersonLabel,
+} from "@/lib/group-sale-form-copy";
+import { GroupSaleMenuPicker } from "@/components/forms/group-sale-menu-picker";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
 import { useToast } from "@/lib/toast";
@@ -188,6 +196,7 @@ export function GroupSaleForm({
 
   const isForex = currency !== "TRY";
   const fxRateKurus = parseTryToKurus(fxRateText);
+  const hasSaleDateRate = fxRateKurus !== null && fxRateKurus > 0;
 
   const parsedLines = useMemo(() => {
     return lines.map((line) => {
@@ -236,11 +245,6 @@ export function GroupSaleForm({
     if (fxRateKurus === null || fxRateKurus <= 0) return null;
     return Math.round((totalMinor * fxRateKurus) / 100);
   }, [totalMinor, isForex, fxRateKurus]);
-
-  const menuOptions = useMemo(
-    () => menus.map((m) => ({ value: m.id, label: m.name })),
-    [menus],
-  );
 
   const currencyOptions = [
     { value: "TRY", label: "TRY (₺)" },
@@ -310,9 +314,7 @@ export function GroupSaleForm({
         lines: apiLines,
         actor_id: actorId,
         fx_rate_used:
-          isForex && fxRateKurus != null && fxRateKurus > 0
-            ? fxRateKurus
-            : undefined,
+          isForex && hasSaleDateRate ? fxRateKurus : undefined,
       };
       const idempotencyKey = submitIdempotency.beginSubmit();
       if (isCorrect && correcting) {
@@ -397,20 +399,15 @@ export function GroupSaleForm({
 
         {isForex && (
           <div>
-            <Label htmlFor="group-sale-fx-rate">
-              Sale-date rate (₺ per 1 {currency})
-            </Label>
+            <Label htmlFor="group-sale-fx-rate">{fxRateFieldLabel(currency)}</Label>
             <MoneyInput
               id="group-sale-fx-rate"
               value={fxRateText}
               onChange={setFxRateText}
               placeholder="e.g. 35,00"
             />
-            {/* An explanation, not a complaint. ValidationHint defaults to
-                the error variant, so this sat in red under a field that was
-                perfectly valid and read as though the rate had been rejected. */}
             <ValidationHint variant="hint">
-              Objective rate for this sale date — revenue is booked in TRY at this rate.
+              {fxRateHelperText(currency, hasSaleDateRate)}
             </ValidationHint>
           </div>
         )}
@@ -429,38 +426,11 @@ export function GroupSaleForm({
             >
               <div className="sm:col-span-4">
                 <Label className="text-xs">Menu</Label>
-                <Combobox
-                  options={[
-                    { value: "", label: "Type or pick…" },
-                    ...menuOptions,
-                  ]}
-                  value={line.group_menu_id ?? ""}
-                  onValueChange={(value) => {
-                    const menu = menus.find((m) => m.id === value);
-                    // The catalogue price fills the box; it does not post.
-                    // Only into an empty line — someone who has already typed
-                    // a negotiated figure must not have it overwritten by
-                    // correcting the menu they picked (MENU_PLAN.md slice 5).
-                    const untouched =
-                      !line.rateText.trim() && !line.totalText.trim();
-                    const prefill =
-                      menu && untouched
-                        ? menuRatePrefill(menu, currency)
-                        : null;
-                    updateLine(line.key, {
-                      group_menu_id: value || null,
-                      menu_name: menu?.name ?? line.menu_name,
-                      ...(prefill !== null ? { rateText: prefill } : {}),
-                    });
-                  }}
-                />
-                <Input
-                  className="mt-1"
-                  value={line.menu_name}
-                  onChange={(e) =>
-                    updateLine(line.key, { menu_name: e.target.value })
-                  }
-                  placeholder="Menu name"
+                <GroupSaleMenuPicker
+                  menus={menus}
+                  currency={currency}
+                  line={line}
+                  onChange={(patch) => updateLine(line.key, patch)}
                 />
               </div>
               <div className="sm:col-span-2">
@@ -479,9 +449,7 @@ export function GroupSaleForm({
                   94,00 for 6 and 94,00 posts, not the 94,02 a rounded 15,67
                   would multiply to. */}
               <div className="sm:col-span-4">
-                <Label className="text-xs">
-                  Rate / person ({isForex ? currency : "TRY"})
-                </Label>
+                <Label className="text-xs">{ratePerPersonLabel(currency)}</Label>
                 <MoneyInput
                   value={
                     parsedLines[index]?.pricedBy === "total"
@@ -489,9 +457,19 @@ export function GroupSaleForm({
                       : line.rateText
                   }
                   disabled={parsedLines[index]?.pricedBy === "total"}
-                  onChange={(text) =>
-                    updateLine(line.key, { rateText: text, totalText: "" })
-                  }
+                  onChange={(text) => {
+                    const typedRate = parseRateMinor(currency, text);
+                    const pax = Number.parseInt(line.paxText.trim(), 10);
+                    const validPax = Number.isFinite(pax) && pax > 0;
+                    const autoTotal =
+                      validPax && typedRate !== null && typedRate > 0
+                        ? minorToText(pax * typedRate, currency)
+                        : "";
+                    updateLine(line.key, {
+                      rateText: text,
+                      totalText: autoTotal,
+                    });
+                  }}
                   placeholder={isForex ? "e.g. 12,00" : "e.g. 350,00"}
                 />
                 {(() => {
@@ -510,7 +488,7 @@ export function GroupSaleForm({
               </div>
               <div className="sm:col-span-4">
                 <Label className="text-xs">
-                  Total for the line ({isForex ? currency : "TRY"})
+                  Total for the line ({isForex ? currency : "₺"})
                 </Label>
                 <MoneyInput
                   value={
@@ -518,7 +496,6 @@ export function GroupSaleForm({
                       ? derivedTotalText(parsedLines[index], currency)
                       : line.totalText
                   }
-                  disabled={parsedLines[index]?.pricedBy === "rate"}
                   onChange={(text) =>
                     updateLine(line.key, { totalText: text, rateText: "" })
                   }
@@ -553,7 +530,7 @@ export function GroupSaleForm({
 
         <div className="rounded-md bg-muted/50 p-3 text-sm">
           <p>
-            Total ({currency}):{" "}
+            {bookingTotalLabel(currency)}:{" "}
             <span className="font-medium tabular-nums">
               {totalMinor != null
                 ? isForex
@@ -561,14 +538,8 @@ export function GroupSaleForm({
                   : formatTry(totalMinor)
                 : "—"}
             </span>
-            {isForex && fxRateKurus != null && fxRateKurus > 0 ? (
-              <> · TRY revenue:{" "}
-                <span className="tabular-nums">
-                  {totalTryPreview != null ? formatTry(totalTryPreview) : "—"}
-                </span>
-              </>
-            ) : isForex ? (
-              <> · TRY at FX conversion</>
+            {isForex ? (
+              <> {forexFooterSuffix(fxRateKurus, totalTryPreview, fxRateText)}</>
             ) : null}
           </p>
         </div>
