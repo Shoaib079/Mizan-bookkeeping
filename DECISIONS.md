@@ -295,6 +295,20 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 
 **Why deferred:** touches the double-entry engine, revenue-recognition timing, and FX cost basis on a **live** app; money-critical FX-engine changes must ship with tests written alongside and run green before touching real books. *(Deferred requirement satisfied 2026-08-22 — see tag above.)*
 
+## 2026-08-22 — Forex-native discount on forex-only group sales (**IMPLEMENTED** `v0.gs-fx-forex-native-discount`)
+
+**Status:** ✅ **IMPLEMENTED** 2026-08-22. Subledger-only — **no GL, no 5800, no TRY** until forex conversion.
+
+**Model:** A discount on a rateless (forex-only) group sale reduces the **native receivable only** ($500 sale − $50 discount → $450 owed). Post `CustomerMovementType.DISCOUNT` with negative `total_forex_minor`, `amount_kurus = 0`, `journal_entry_id = NULL`, linked to the group sale via existing `reference_type="group_sale"` / `reference_id` (same linkage and void-reversal pattern as TRY discounts — not a second linkage).
+
+**Guard:** `discount_native ≤ outstanding native` (sale native − payments native − prior discounts native) → 422.
+
+**Void:** Void the discount → subledger reversal restores native receivable. Void the sale with linked discount → reverse discount rows too (mirror TRY path). Correct (void+repost) on a sale with discount → reverse linked discounts on void (same as TRY).
+
+**TRY / rated-FX discounts unchanged:** Dr 5800 / Cr AR path stays for any sale that booked TRY at sale time.
+
+**Frontend:** Group-sale detail → Apply discount (native amount + note); customer ledger label **Discount**; void via write-off route using customer ledger entry id when no journal exists.
+
 ## 2026-07 — Production stack of record: Neon + Railway + Vercel + R2 (supersedes ALL "Render" references)
 
 **Authoritative stack (verified 2026-07):**

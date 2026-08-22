@@ -33,5 +33,5 @@ export const customerMovementLabels: Record<string, string> = {
   adjustment: "Adjustment",
   credit_sale: "Group sale",
   payment_received: "Payment received",
-  discount: "Discount (write-off)",
+  discount: "Discount",
 };

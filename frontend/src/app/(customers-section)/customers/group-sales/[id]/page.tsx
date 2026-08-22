@@ -14,6 +14,7 @@ import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import type { CustomerRow } from "@/components/forms/customer-form";
 import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
+import { GroupSaleForexDiscountDialog } from "@/components/forms/group-sale-forex-discount-dialog";
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
@@ -36,8 +37,20 @@ import { formatTrDate, formatTry } from "@/lib/money";
 import { useToast } from "@/lib/toast";
 
 function hasLinkedPayment(sale: GroupSaleRead): boolean {
+  if (
+    sale.total_kurus === 0 &&
+    sale.forex_currency &&
+    sale.total_forex_minor != null &&
+    sale.remaining_forex_minor != null
+  ) {
+    return sale.remaining_forex_minor < sale.total_forex_minor;
+  }
   if (sale.remaining_kurus == null) return false;
   return sale.remaining_kurus < sale.total_kurus;
+}
+
+function isForexOnlySale(sale: GroupSaleRead): boolean {
+  return sale.total_kurus === 0 && Boolean(sale.forex_currency);
 }
 
 export default function GroupSaleDetailPage() {
@@ -54,6 +67,7 @@ export default function GroupSaleDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [discountOpen, setDiscountOpen] = useState(false);
   const [voiding, setVoiding] = useState(false);
 
   const reload = useCallback(async () => {
@@ -123,6 +137,12 @@ export default function GroupSaleDetailPage() {
   }
 
   const isForex = Boolean(sale.forex_currency && sale.total_forex_minor != null);
+  const forexOnly = isForexOnlySale(sale);
+  const canDiscount =
+    showWrite &&
+    sale.status === "posted" &&
+    forexOnly &&
+    (sale.remaining_forex_minor ?? 0) > 0;
 
   return (
     <EntityDetailPage
@@ -182,6 +202,11 @@ export default function GroupSaleDetailPage() {
       }
       overflowActions={[
         {
+          label: "Apply discount",
+          show: canDiscount,
+          onSelect: () => setDiscountOpen(true),
+        },
+        {
           label: "Edit group sale",
           show: sale.status === "posted",
           title: canMutate
@@ -218,7 +243,37 @@ export default function GroupSaleDetailPage() {
         />
       }
       activity={
-        <DetailSection title="Menu lines">
+        <>
+          {(sale.discounts?.length ?? 0) > 0 && (
+            <DetailSection title="Discounts">
+              <DataTable>
+                <DataTableHead>
+                  <tr>
+                    <DataTableHeaderCell>Date</DataTableHeaderCell>
+                    <DataTableHeaderCell>Description</DataTableHeaderCell>
+                    <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  </tr>
+                </DataTableHead>
+                <DataTableBody>
+                  {sale.discounts!.map((d) => (
+                    <DataTableRow key={d.customer_ledger_entry_id}>
+                      <DataTableCell>{formatTrDate(d.movement_date)}</DataTableCell>
+                      <DataTableCell>{d.description}</DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums">
+                        {sale.forex_currency
+                          ? formatFxNative(
+                              d.discount_native_minor,
+                              sale.forex_currency,
+                            )
+                          : formatTry(d.discount_native_minor)}
+                      </DataTableCell>
+                    </DataTableRow>
+                  ))}
+                </DataTableBody>
+              </DataTable>
+            </DetailSection>
+          )}
+          <DetailSection title="Menu lines">
       <DataTable>
         <DataTableHead>
           <tr>
@@ -255,6 +310,7 @@ export default function GroupSaleDetailPage() {
         </DataTableBody>
       </DataTable>
         </DetailSection>
+        </>
       }
     >
       <GroupSaleForm
@@ -274,6 +330,16 @@ export default function GroupSaleDetailPage() {
         onClose={() => setPaymentOpen(false)}
         onSaved={() => void reload()}
       />
+      {forexOnly && sale.forex_currency && sale.remaining_forex_minor != null && (
+        <GroupSaleForexDiscountDialog
+          open={discountOpen}
+          groupSaleId={sale.id}
+          forexCurrency={sale.forex_currency}
+          remainingForexMinor={sale.remaining_forex_minor}
+          onClose={() => setDiscountOpen(false)}
+          onSaved={() => void reload()}
+        />
+      )}
     </EntityDetailPage>
   );
 }

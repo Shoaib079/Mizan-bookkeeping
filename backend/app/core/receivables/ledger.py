@@ -144,6 +144,11 @@ def persist_forex_only_customer_ledger_entry(
             raise ZeroMovementError(
                 "forex-only payment requires payment_native_quantity"
             )
+    elif movement_type == CustomerMovementType.DISCOUNT:
+        if total_forex_minor is None or total_forex_minor >= 0:
+            raise ZeroMovementError(
+                "forex-only discount requires negative total_forex_minor"
+            )
     else:
         raise DisallowedMovementTypeError(
             f"forex-only movement type {movement_type.value!r} not supported"

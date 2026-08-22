@@ -83,6 +83,15 @@ describe("subledger-actions", () => {
     });
   });
 
+  it("a forex-only discount is void-only (no journal to correct)", () => {
+    expect(
+      customerLedgerRowActions({
+        movementType: "discount",
+        journalEntryId: null,
+      }),
+    ).toEqual({ canEdit: false, canVoid: true });
+  });
+
   it("GL uses generic endpoints only for the safe allowlist", () => {
     expect(generalLedgerEntryActions("manual").useGenericEndpoints).toBe(true);
     expect(generalLedgerEntryActions("expense_entry").useGenericEndpoints).toBe(

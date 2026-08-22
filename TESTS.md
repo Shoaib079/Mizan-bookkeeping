@@ -4,7 +4,9 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 **2026-08-21 — Partner ledger PDF column alignment:** `test_subledger_pdf_money_columns_share_one_geometry` renders a multi-page partner PDF and asserts (PyMuPDF word positions) Amount/Running header right edges match value right edges on page 1 and the page-2 repeated header, and that a long wrapping description keeps the same money-column x as a short row; summary NET label/value share a left edge. Mutation: left-align money headers → red; restored → green.
 
-**2026-08-22 — GS-FX forex-only group sales (money-critical):** `test_gs_fx.py` — rateless USD sale subledger-only (`amount_kurus=0`, `journal_entry_id=NULL`, no journal/revenue); forex payment zero-cost RECEIPT (`try_cost_kurus=0`, no GL); conversion full proceeds → FX gain 4200; void/correct subledger-only; entity isolation; discount blocked; mutation no-GL posting + zero-cost receipt (source checks on `forex_only_posting.py`). Migration `097`. FE optional FX rate on group-sale form.
+**2026-08-22 — GS-FX forex-native discount (money-critical):** `test_gs_fx_discount.py` — rateless USD $500 + $50 discount → $450 native receivable, discount subledger row, no journal/P&L; pay $450 → receivable clears, zero-cost RECEIPT; over-discount → 422; void discount → receivable restored; void sale with linked discount → subledger nets out; rated-FX discount still posts 5800 (regression); entity isolation; mutation no-GL/5800 on forex discount + ≤-outstanding guard (source checks on `forex_only_posting.py`). FE: group-sale detail discount dialog, ledger Discount label, void by ledger id when no journal.
+
+**2026-08-22 — GS-FX forex-only group sales (money-critical):** `test_gs_fx.py` — rateless USD sale subledger-only (`amount_kurus=0`, `journal_entry_id=NULL`, no journal/revenue); forex payment zero-cost RECEIPT (`try_cost_kurus=0`, no GL); conversion full proceeds → FX gain 4200; void/correct subledger-only; entity isolation; mutation no-GL posting + zero-cost receipt (source checks on `forex_only_posting.py`). Migration `097`. FE optional FX rate on group-sale form.
 
 **2026-08-22 — S16 follow-up direction + Current balance caption:** `ranged-balance-label.test.ts` — sticker uses `supplierBalanceHeading` + `caption="Current balance"`; never Closing in range / rangedBalanceLabel; activity Closing past range unchanged. Mutation: drop direction heading → red; restored → green.
 
@@ -40,7 +42,8 @@ Test register: what is tested, why it matters, pass/fail status (see CURSOR_RULE
 
 | Test file | What it guards | Status |
 |-----------|----------------|--------|
-| `backend/tests/test_gs_fx.py` | **GS-FX money-critical** — rateless forex group sale subledger-only (no GL/revenue); zero-cost wallet receipt; conversion → FX gain; void/correct; entity isolation; discount blocked; mutation no-GL + zero-cost receipt | pass |
+| `backend/tests/test_gs_fx.py` | **GS-FX money-critical** — rateless forex group sale subledger-only (no GL/revenue); zero-cost wallet receipt; conversion → FX gain; void/correct; entity isolation; mutation no-GL + zero-cost receipt | pass |
+| `backend/tests/test_gs_fx_discount.py` | **GS-FX forex-native discount** — native receivable reduction, no GL; pay clears; over-discount 422; void discount/sale; rated-FX 5800 regression; entity isolation; mutation no-GL + outstanding guard | pass |
 | `backend/tests/test_statement_export_view.py` | **S6** — P&L/BS export honour `view`; sealed/live stamps + filenames; open month unchanged; F3 amend diverges | pass |
 | `backend/tests/test_partner_capital_loan_correction.py` | **Money-critical** — capital/loan Edit via dedicated route; generic refuse; 3300/2200 ties; wrong-partner; repayment bound (behaviour flip from void-only) | pass |
 | `backend/tests/test_health.py` | API liveness (`/health`) + readiness (`/health/ready` DB ping, 503 when down) | pass |

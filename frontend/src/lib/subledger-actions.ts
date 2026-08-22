@@ -211,7 +211,7 @@ export type CustomerLedgerActionContext = {
 };
 
 export function customerLedgerRowActions(
-  ctx: CustomerLedgerActionContext,
+  ctx: CustomerLedgerActionContext & { journalEntryId?: string | null },
 ): RowActions {
   if (ctx.movementType === "payment_received") {
     return { canEdit: true, canVoid: true };
@@ -222,12 +222,10 @@ export function customerLedgerRowActions(
     }
     return { canEdit: true, canVoid: true };
   }
-  // A write-off is corrected the same way as everything else here: void and
-  // re-post in one transaction. It had no actions at all until recently, so a
-  // mistaken write-off was permanent — and there was no way to repair the
-  // ones posted before the forex balance was fixed, which recorded no
-  // currency leg.
   if (ctx.movementType === "discount") {
+    if (ctx.journalEntryId === null) {
+      return { canEdit: false, canVoid: true };
+    }
     return { canEdit: true, canVoid: true };
   }
   return { canEdit: false, canVoid: false };

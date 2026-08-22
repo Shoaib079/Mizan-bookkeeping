@@ -21,13 +21,20 @@ from app.db.session import entity_context, require_entity_context
 from app.features.customers.models import Customer
 from app.features.entities import service as entity_service
 from app.features.group_sales.calculations import compute_group_sale
-from app.features.group_sales.fx_receivable import native_balance_for_currency, remaining_on_group_sale
+from app.features.group_sales.fx_receivable import remaining_on_group_sale
+from app.features.group_sales.forex_only_discount import (
+    post_forex_only_group_sale_discount_if_applicable,
+)
 from app.features.group_sales.forex_only_sale_flow import (
     ensure_group_sale_not_duplicate,
     is_forex_only_sale,
     post_forex_only_group_sale_ledger,
 )
 from app.features.group_sales.forex_only_void import reverse_forex_only_group_sale
+from app.features.group_sales.group_sale_read import (
+    customer_forex_balance,
+    to_group_sale_read,
+)
 from app.features.group_sales.linked_payments import has_linked_payments
 from app.features.group_sales.models import (
     GroupMenu,
@@ -42,7 +49,6 @@ from app.features.group_sales.schema import (
     GroupMenuLineInput,
     GroupMenuUpdate,
     GroupSaleCreate,
-    GroupSaleRead,
 )
 
 
@@ -396,12 +402,24 @@ def post_group_sale_discount(
             raise GroupSaleError(
                 f"Cannot discount group sale in status {group_sale.status!r}"
             )
+        if discount_kurus <= 0 and (discount_native is None or discount_native <= 0):
+            raise GroupSaleError("discount must be positive")
+        try:
+            if post_forex_only_group_sale_discount_if_applicable(
+                session,
+                entity_id,
+                group_sale,
+                discount_kurus=discount_kurus,
+                discount_native=discount_native,
+                description=description,
+                actor_id=actor_id,
+                discount_date=discount_date,
+            ):
+                return session.get(GroupSale, group_sale_id)
+        except ValueError as exc:
+            raise GroupSaleError(str(exc)) from exc
         if discount_kurus <= 0:
             raise GroupSaleError("discount must be positive")
-        if group_sale.total_kurus == 0 and group_sale.forex_currency:
-            raise GroupSaleError(
-                "Discounts are not supported on forex-only group sales"
-            )
         remaining_kurus, remaining_native = remaining_on_group_sale(session, group_sale)
         if discount_kurus > remaining_kurus:
             raise GroupSaleError("discount exceeds remaining balance")
@@ -591,22 +609,3 @@ def correct_group_sale(
         amends_group_sale_id=group_sale_id,
     )
     return new_sale
-
-
-def to_group_sale_read(session: Session, group_sale: GroupSale) -> GroupSaleRead:
-    remaining_kurus, remaining_native = remaining_on_group_sale(session, group_sale)
-    data = GroupSaleRead.model_validate(group_sale)
-    return data.model_copy(
-        update={
-            "remaining_kurus": remaining_kurus,
-            "remaining_forex_minor": remaining_native,
-        }
-    )
-
-
-def customer_forex_balance(
-    session: Session, entity_id: uuid.UUID, customer_id: uuid.UUID, currency: str
-) -> int:
-    _require_entity(session, entity_id)
-    with entity_context(session, entity_id):
-        return native_balance_for_currency(session, customer_id, currency)

@@ -147,3 +147,56 @@ def post_forex_only_customer_payment(
             customer_ledger_entry=customer_entry,
             fx_ledger_entry=fx_entry,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class ForexOnlyDiscountPostResult:
+    customer_ledger_entry: CustomerLedgerEntry
+
+
+def post_forex_only_group_sale_discount(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_id: uuid.UUID,
+    *,
+    discount_date: date,
+    description: str,
+    actor_id: uuid.UUID,
+    forex_currency: str,
+    discount_native: int,
+    group_sale_id: uuid.UUID,
+) -> ForexOnlyDiscountPostResult:
+    """Forex-only group sale discount — native receivable reduction; no GL."""
+    if discount_native <= 0:
+        raise ValueError("discount_native must be positive")
+
+    if entity_service.get_entity(session, entity_id) is None:
+        raise LookupError("Entity not found")
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        _get_customer(session, entity_id, customer_id)
+
+        native_out = native_balance_for_currency(session, customer_id, forex_currency)
+        if discount_native > native_out:
+            raise receivables_ledger.OverpaymentError(
+                f"Discount of {discount_native} exceeds forex receivable {native_out}"
+            )
+
+        customer_entry = receivables_ledger.persist_forex_only_customer_ledger_entry(
+            session,
+            customer_id,
+            movement_date=discount_date,
+            movement_type=CustomerMovementType.DISCOUNT,
+            description=description,
+            actor_id=actor_id,
+            forex_currency=forex_currency,
+            total_forex_minor=-discount_native,
+            reference_type="group_sale",
+            reference_id=group_sale_id,
+        )
+
+        session.commit()
+        session.refresh(customer_entry)
+
+        return ForexOnlyDiscountPostResult(customer_ledger_entry=customer_entry)

@@ -80,8 +80,10 @@ class VoidJournalEntryOut(BaseModel):
 
 
 class SubledgerVoidOut(BaseModel):
-    original_journal_entry_id: uuid.UUID
-    reversal_journal_entry_id: uuid.UUID
+    original_journal_entry_id: uuid.UUID | None = None
+    reversal_journal_entry_id: uuid.UUID | None = None
+    original_customer_ledger_entry_id: uuid.UUID | None = None
+    reversal_customer_ledger_entry_id: uuid.UUID | None = None
 
 
 class CorrectJournalEntryOut(BaseModel):

@@ -6,10 +6,13 @@ import uuid
 from collections.abc import Callable
 from datetime import date
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.receivables.models import CustomerLedgerEntry
+from app.core.receivables.types import CustomerMovementType
 from app.features.group_sales.models import GroupSale
+from app.features.group_sales.schema import GROUP_SALE_REFERENCE
 
 
 def append_forex_only_customer_reversal(
@@ -75,5 +78,58 @@ def reverse_forex_only_group_sale(
         actor_id=actor_id,
         void_date=void_date,
     )
+
+    discount_rows = list(
+        session.scalars(
+            select(CustomerLedgerEntry).where(
+                CustomerLedgerEntry.reference_type == GROUP_SALE_REFERENCE,
+                CustomerLedgerEntry.reference_id == group_sale.id,
+                CustomerLedgerEntry.movement_type == CustomerMovementType.DISCOUNT,
+                CustomerLedgerEntry.journal_entry_id.is_(None),
+                CustomerLedgerEntry.total_forex_minor.is_not(None),
+                CustomerLedgerEntry.total_forex_minor < 0,
+            )
+        ).all()
+    )
+    for drow in discount_rows:
+        append_forex_only_customer_reversal(
+            session,
+            drow,
+            actor_id=actor_id,
+            void_date=void_date,
+        )
+
     group_sale.status = final_status
     session.flush()
+
+
+def void_forex_only_discount_entry(
+    session: Session,
+    entity_id: uuid.UUID,
+    customer_ledger_entry_id: uuid.UUID,
+    *,
+    actor_id: uuid.UUID,
+    void_date: date | None = None,
+) -> CustomerLedgerEntry:
+    """Reverse a forex-only discount row — no GL journal exists."""
+    from app.db.session import entity_context, require_entity_context
+
+    with entity_context(session, entity_id):
+        require_entity_context()
+        row = session.get(CustomerLedgerEntry, customer_ledger_entry_id)
+        if row is None:
+            raise LookupError("Customer ledger entry not found")
+        if row.movement_type != CustomerMovementType.DISCOUNT:
+            raise ValueError("entry is not a discount")
+        if row.journal_entry_id is not None:
+            raise ValueError("discount has a journal entry — use GL void")
+
+        reversal = append_forex_only_customer_reversal(
+            session,
+            row,
+            actor_id=actor_id,
+            void_date=void_date,
+        )
+        session.commit()
+        session.refresh(reversal)
+        return reversal

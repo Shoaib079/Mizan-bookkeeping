@@ -563,6 +563,7 @@ def void_customer_write_off_entry(
 ):
     from app.core.ledger.correction import void_customer_write_off
     from app.core.receivables.types import CustomerMovementType
+    from app.features.group_sales.forex_only_void import void_forex_only_discount_entry
     from app.features.ledger.schema import SubledgerVoidOut
 
     with entity_context(session, entity_id):
@@ -571,10 +572,26 @@ def void_customer_write_off_entry(
                 CustomerLedgerEntry.journal_entry_id == journal_entry_id
             )
         )
+        if row is None:
+            row = session.get(CustomerLedgerEntry, journal_entry_id)
         if row is None or row.customer_id != customer_id:
             raise CorrectionNotFoundError("write-off not found")
         if row.movement_type != CustomerMovementType.DISCOUNT:
             raise CorrectionNotFoundError("journal entry is not a receivable write-off")
+
+    if row.journal_entry_id is None:
+        original_ledger_id = row.id
+        reversal = void_forex_only_discount_entry(
+            session,
+            entity_id,
+            original_ledger_id,
+            actor_id=actor_id,
+            void_date=void_date,
+        )
+        return SubledgerVoidOut(
+            original_customer_ledger_entry_id=original_ledger_id,
+            reversal_customer_ledger_entry_id=reversal.id,
+        )
 
     result = void_customer_write_off(
         session,

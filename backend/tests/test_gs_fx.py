@@ -34,7 +34,6 @@ from app.features.customers import service as customers_service
 from app.features.group_sales.models import GroupSale, GroupSaleStatus
 from app.features.group_sales.schema import GroupSaleCreate, GroupSaleLineInput
 from app.features.group_sales import service as group_sales_service
-from app.features.group_sales.service import GroupSaleError
 
 
 ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
@@ -327,18 +326,6 @@ def test_entity_isolation_forex_group_sale(db_session, restaurant_a, restaurant_
         )
         assert b_sales == []
 
-
-def test_discount_blocked_on_forex_only_group_sale(db_session, gs_fx_setup) -> None:
-    entity_id = gs_fx_setup["entity_id"]
-    sale = _rateless_usd_sale(db_session, gs_fx_setup)
-    with pytest.raises(GroupSaleError, match="Discounts are not supported"):
-        group_sales_service.post_group_sale_discount(
-            db_session,
-            entity_id,
-            sale.id,
-            discount_kurus=1,
-            actor_id=ACTOR_ID,
-        )
 
 
 def test_mutation_post_forex_only_must_not_prepare_journal() -> None:

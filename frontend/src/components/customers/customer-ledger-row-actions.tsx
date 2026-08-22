@@ -36,6 +36,7 @@ export type VoidableRowKind = keyof typeof VOIDABLE_ROWS;
 
 /** The minimum a row must tell us to be acted on. */
 export type CustomerLedgerActionRow = {
+  id: string;
   movement_date: string;
   movement_type: string;
   description: string;
@@ -97,9 +98,12 @@ function isGroupSale(row: CustomerLedgerActionRow): boolean {
 
 export function customerLedgerEditTarget(
   row: CustomerLedgerActionRow,
-): CustomerLedgerEditTarget {
+): CustomerLedgerEditTarget | null {
   if (isGroupSale(row)) {
     return { kind: "group_sale", groupSaleId: String(row.reference_id) };
+  }
+  if (row.movement_type === "discount" && !row.journal_entry_id) {
+    return null;
   }
   const journal_entry_id = row.journal_entry_id!;
   if (row.movement_type === "discount") {
@@ -141,8 +145,14 @@ export function customerLedgerVoidTarget(
       kind: "group_sale",
     };
   }
+  const voidId =
+    row.journal_entry_id ??
+    (row.movement_type === "discount" ? row.id : null);
+  if (!voidId) {
+    throw new Error("Row cannot be voided");
+  }
   return {
-    journal_entry_id: row.journal_entry_id!,
+    journal_entry_id: voidId,
     description: row.description,
     kind:
       row.movement_type === "payment_received"
@@ -173,13 +183,17 @@ export function CustomerLedgerRowActions({
   const actions = customerLedgerRowActions({
     movementType: row.movement_type,
     referenceType: row.reference_type,
+    journalEntryId: row.journal_entry_id,
   });
   if (!actions.canEdit && !actions.canVoid) return null;
+  const editTarget = customerLedgerEditTarget(row);
   return (
     <SubledgerRowActions
       row={row}
-      showEdit={actions.canEdit}
-      onEdit={() => onEdit(customerLedgerEditTarget(row))}
+      showEdit={actions.canEdit && editTarget !== null}
+      onEdit={() => {
+        if (editTarget) onEdit(editTarget);
+      }}
       onVoid={() => onVoid(customerLedgerVoidTarget(row))}
     />
   );

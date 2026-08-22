@@ -49,6 +49,13 @@ export type GroupSaleLineRead = {
   line_total_kurus: number;
 };
 
+export type GroupSaleDiscountRead = {
+  customer_ledger_entry_id: string;
+  discount_native_minor: number;
+  description: string;
+  movement_date: string;
+};
+
 export type GroupSaleRead = {
   id: string;
   customer_id: string;
@@ -69,6 +76,7 @@ export type GroupSaleRead = {
   lines: GroupSaleLineRead[];
   remaining_kurus: number | null;
   remaining_forex_minor: number | null;
+  discounts?: GroupSaleDiscountRead[];
 };
 
 export type GroupSaleLineInput = {

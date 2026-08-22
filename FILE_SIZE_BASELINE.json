@@ -30,7 +30,7 @@
   "backend/app/features/expenses/receipt_service.py": 503,
   "backend/app/features/expenses/service.py": 806,
   "backend/app/features/fx/service.py": 451,
-  "backend/app/features/group_sales/service.py": 613,
+  "backend/app/features/group_sales/service.py": 611,
   "backend/app/features/invoices/api.py": 474,
   "backend/app/features/invoices/service.py": 1448,
   "backend/app/features/menu/menu_pdf.py": 432,

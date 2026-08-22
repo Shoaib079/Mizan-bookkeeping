@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator, field_validator, model_validator
 from app.core.schema_types import OptionalActorId, AcknowledgeDuplicateMixin
 from app.features.group_sales.models import MenuCategory
 
@@ -153,6 +153,13 @@ class GroupSaleLineRead(BaseModel):
     line_total_kurus: int
 
 
+class GroupSaleDiscountRead(BaseModel):
+    customer_ledger_entry_id: uuid.UUID
+    discount_native_minor: int
+    description: str
+    movement_date: date
+
+
 class GroupSaleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -175,6 +182,7 @@ class GroupSaleRead(BaseModel):
     lines: list[GroupSaleLineRead] = Field(default_factory=list)
     remaining_kurus: int | None = None
     remaining_forex_minor: int | None = None
+    discounts: list[GroupSaleDiscountRead] = Field(default_factory=list)
 
 
 class GroupSaleCorrect(GroupSaleCreate):
@@ -192,10 +200,16 @@ class GroupSaleVoid(BaseModel):
 
 class GroupSaleDiscountCreate(BaseModel):
     actor_id: OptionalActorId = None
-    discount_kurus: int = Field(gt=0)
+    discount_kurus: int = Field(default=0, ge=0)
     discount_native: int | None = Field(default=None, gt=0)
     description: str | None = Field(default=None, max_length=512)
     discount_date: date | None = None
+
+    @model_validator(mode="after")
+    def require_some_discount(self) -> GroupSaleDiscountCreate:
+        if self.discount_kurus <= 0 and self.discount_native is None:
+            raise ValueError("discount_kurus or discount_native is required")
+        return self
 
 
 class GroupSalePostResponse(BaseModel):
