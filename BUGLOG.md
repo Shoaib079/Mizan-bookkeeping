@@ -2,6 +2,16 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-08-22 — Live showed unapproved v2 chrome (left bars + icon squares)
+
+**Symptom:** After `v0.v2-meaning-bars-everywhere` was pushed, production showed the new meaning-card look (muted left accent bars, tinted Lucide icon squares) even though the standing rule was “production stays v1 until approval” and production was not supposed to have theme env.
+
+**Root cause:** Shared components mounted v2 chrome **unconditionally** (`MeaningCardAccentBar`, `IconSquare` with Tailwind hex fallbacks). Only some paint lived under `[data-theme="v2"]`. Icon squares therefore rendered on every theme. Separately, `layout.tsx` / `envDefaultTheme` could set `data-theme="v2"` from `NEXT_PUBLIC_DEFAULT_THEME=v2` **alone**, so a stray bake-time env would unlock the rest of the scoped CSS (bars included).
+
+**Fix (owner accepted live as-is):** Document accepted-live list in DECISIONS; promote left-bar + tint tokens to `:root` so v1 and v2 intentionally agree; keep non-accepted polish under `[data-theme="v2"]`; require **THEME_TOGGLE=true** with DEFAULT_THEME before baking/applying theme; shared `ThemeV2OnlyMarker` gate for exclusive markers.
+
+**Guarding tests:** `theme-v2-leak-guard.spec.test.tsx` (v1 = accepted chrome + zero `data-theme-v2-only`; v2 wrapper = both; mutation hardcoding v2-only on StatCard → red). Also updated `theme-v2.sandbox.test.tsx` (DEFAULT alone → v1).
+
 ## 2026-08-03 — Deploy migrate crash: No module named 'httpx'
 
 **Symptom:** Railway/container start ran `alembic upgrade head` then died with `ModuleNotFoundError: No module named 'httpx'`. Container started and stopped.

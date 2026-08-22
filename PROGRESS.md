@@ -17,13 +17,13 @@
 
 ## Current
 
-- **v2 meaning bars everywhere:** locked left accent (4px) + tinted Lucide squares on banking hub, cash/bank snapshot, Balances/Right-now, FX/bank headlines, stickers, KPI under `data-theme="v2"`. Tag `v0.v2-meaning-bars-everywhere`. **Awaiting owner review — do not push. Do not roll out to production.**
+- **Theme leak hardening:** accepted-live left bars + IconSquare are intentional v1 baseline; remaining v2 polish gated; DEFAULT_THEME alone cannot flip live. Tag `v0.theme-leak-hardening`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — v2 meaning bars everywhere in sandbox; awaiting review)* |
-| **Last completed slice** | v2 meaning bars everywhere |
-| **Last tag** | `v0.v2-meaning-bars-everywhere` |
+| **Active slice** | *(none — theme leak hardening awaiting review)* |
+| **Last completed slice** | Theme leak hardening |
+| **Last tag** | `v0.theme-leak-hardening` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner A/B on sandbox → approve rollout or iterate |
+| **Next up** | Owner review → push when approved |
 

@@ -2,6 +2,14 @@
 
 Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
 
+## 2026-08-22 — Accepted-live theme chrome + gating rule
+
+**Choice:** After `v0.v2-meaning-bars-everywhere` reached production, the owner **accepted the live look as-is** (muted left accent bars + tinted Lucide `IconSquare` on meaning cards). That chrome is now the **intentional v1 baseline** — shared with v2, not gated behind `data-theme="v2"`. Remaining v2-only polish (sticker white/heading tokens, KPI type sizes, button/segment/tab restyles, full canvas token remap) stays under `[data-theme="v2"]` only.
+
+**Gating rule (permanent):** `data-theme="v2"` on `<html>` requires **both** `NEXT_PUBLIC_DEFAULT_THEME=v2` **and** `NEXT_PUBLIC_THEME_TOGGLE=true` (sandbox A/B). `DEFAULT_THEME=v2` alone must never flip production. Non-accepted exclusive markers use the shared `ThemeV2Only` / `ThemeV2OnlyMarker` gate (`data-theme-v2-only`). Guard: `theme-v2-leak-guard.spec.test.tsx`.
+
+**Why:** Component chrome had been mounted unconditionally while only some tokens were theme-scoped — IconSquare hex fallbacks painted on live; env layout could bake theme from DEFAULT alone. Accepting what shipped avoids a live visual rollback; the gate stops the next unapproved leak.
+
 ## 2026-08-21 — Partner capital + loans: Edit (correctable), not void-only
 
 **Choice:** `partner_capital_contribution`, `partner_loan_received`, and `partner_loan_repaid` are **correctable** through the dedicated partner ledger correct route (void + repost GL + partner subledger). They left `VOID_AND_REENTER_SOURCES`. Generic `.../ledger/entries/{id}/correct` still refuses them.

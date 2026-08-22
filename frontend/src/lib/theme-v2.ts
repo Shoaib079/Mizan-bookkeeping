@@ -1,11 +1,16 @@
 /** Mobile visual refresh v2 — token scope (DESIGN_SYSTEM §8).
  *
- * Preview gallery wraps content with `themeV2Props()`. The live app may set
- * `data-theme="v2"` on `<html>` when `NEXT_PUBLIC_DEFAULT_THEME=v2` (sandbox);
- * production leaves that unset so v1 tokens stay the default.
+ * Preview gallery wraps content with `themeV2Props()`. Sandbox may set
+ * `data-theme="v2"` on `<html>` only when BOTH `NEXT_PUBLIC_DEFAULT_THEME=v2`
+ * AND `NEXT_PUBLIC_THEME_TOGGLE=true` (owner A/B). Production leaves both
+ * unset. Accepted-live chrome (left accent bar + IconSquare) is intentional
+ * v1 baseline — see DECISIONS 2026-08-22.
  */
 
 export const THEME_V2_ATTR = "v2" as const;
+
+/** Marks chrome that must only exist under data-theme=v2 (not accepted-live). */
+export const THEME_V2_ONLY_ATTR = "data-theme-v2-only" as const;
 
 export type ThemeV2Scope = typeof THEME_V2_ATTR;
 
@@ -14,15 +19,30 @@ export type AppVisualTheme = "v1" | "v2";
 /** localStorage key for the sandbox A/B switch (not used when toggle env is off). */
 export const VISUAL_THEME_STORAGE_KEY = "mizan:visual-theme";
 
+/**
+ * Accepted on live (owner 2026-08-22) — intentional v1+v2 shared baseline.
+ * Do not gate these behind data-theme=v2.
+ */
+export const ACCEPTED_LIVE_CHROME = [
+  "MeaningCardAccentBar / [data-accent-bar]",
+  "IconSquare / [data-icon-square]",
+] as const;
+
 /** Wrap preview gallery content under a local data-theme scope. */
 export function themeV2Props(): { "data-theme": ThemeV2Scope } {
   return { "data-theme": THEME_V2_ATTR };
 }
 
+/**
+ * Env default is v2 only in sandbox: DEFAULT_THEME=v2 alone must NOT flip
+ * production. Requires THEME_TOGGLE=true as well.
+ */
 export function envDefaultTheme(
   raw: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_THEME,
+  toggleRaw: string | undefined = process.env.NEXT_PUBLIC_THEME_TOGGLE,
 ): AppVisualTheme {
-  return raw === "v2" ? "v2" : "v1";
+  if (raw === "v2" && isThemeToggleEnabled(toggleRaw)) return "v2";
+  return "v1";
 }
 
 export function isThemeToggleEnabled(

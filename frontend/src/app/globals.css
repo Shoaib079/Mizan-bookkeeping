@@ -122,6 +122,23 @@
   --chip-attention-soft: color-mix(in srgb, var(--warning) 14%, transparent);
   --chip-neutral: var(--primary);
   --chip-neutral-soft: color-mix(in srgb, var(--primary) 10%, transparent);
+  /* Accepted-live chrome (owner 2026-08-22) — intentional v1+v2 shared baseline.
+   * Left accent bars + tinted IconSquare. Do not require data-theme=v2. */
+  --accent-bar-green: #4e9e77;
+  --accent-bar-red: #c05b62;
+  --accent-bar-amber: #be8a3f;
+  --accent-bar-blue: #4c7fc4;
+  --accent-bar-gray: #a7b0bd;
+  --tint-mint: #e7f7ee;
+  --tint-sky: #e4f2fb;
+  --tint-sand: #fbf0e0;
+  --tint-blush: #feecec;
+  --tint-gray: #f1f5f9;
+  --icon-green: #16a34a;
+  --icon-blue: #2563eb;
+  --icon-amber: #d97706;
+  --icon-red: #dc2626;
+  --icon-gray: #64748b;
   /* Component shells — v1 defaults; v2 overrides below */
   --radius-card: var(--radius);
   --radius-pill: 9999px;
@@ -217,21 +234,21 @@
   --shadow-pop: 0 1px 2px rgba(11, 21, 38, 0.04);
   --shadow-elevated: 0 1px 2px rgba(11, 21, 38, 0.04);
 
-  /* Muted left accent bars (never bright) */
+  /* Muted left accent bars — also on :root (accepted-live); kept here so v2 agrees */
   --accent-bar-green: #4e9e77;
   --accent-bar-red: #c05b62;
   --accent-bar-amber: #be8a3f;
   --accent-bar-blue: #4c7fc4;
   --accent-bar-gray: #a7b0bd;
 
-  /* Icon square tints (background only) */
+  /* Icon square tints — also on :root (accepted-live) */
   --tint-mint: #e7f7ee;
   --tint-sky: #e4f2fb;
   --tint-sand: #fbf0e0;
   --tint-blush: #feecec;
   --tint-gray: #f1f5f9;
 
-  /* Icon stroke (full strength) */
+  /* Icon stroke — also on :root (accepted-live) */
   --icon-green: #16a34a;
   --icon-blue: #2563eb;
   --icon-amber: #d97706;
@@ -288,17 +305,13 @@
   display: none;
 }
 
-/* Meaning cards — 4px muted left accent (phone-visible floor) */
-[data-theme="v2"] [data-meaning-card] {
+/* Accepted-live meaning bars — intentional v1+v2 (owner 2026-08-22).
+ * Not gated behind data-theme=v2. */
+[data-meaning-card] {
   position: relative;
   overflow: hidden;
-  background: #ffffff;
-  border: 1px solid #e6eaf2;
-  border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(11, 21, 38, 0.04);
 }
-[data-theme="v2"] [data-meaning-card] > [data-accent-bar] {
-  /* !important beats Tailwind `hidden` if a caller leaves it on the node */
+[data-meaning-card] > [data-accent-bar] {
   display: block !important;
   position: absolute;
   inset-block: 0;
@@ -307,6 +320,14 @@
   border-radius: 16px 0 0 16px;
   background: var(--accent-bar, var(--accent-bar-blue));
   pointer-events: none;
+}
+
+/* Remaining v2-only meaning-card shell polish (white/hairline when theme on) */
+[data-theme="v2"] [data-meaning-card] {
+  background: #ffffff;
+  border: 1px solid #e6eaf2;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(11, 21, 38, 0.04);
 }
 
 /* Sticker under v2: white + ink figure; heading uses muted semantic tone */

@@ -138,16 +138,16 @@ describe("v2 meaning bars on every surface", () => {
 describe("bar width floor + muted tones", () => {
   it("v2 CSS bar width is >= 4px and tones are the muted set", () => {
     const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
-    const v2Start = css.indexOf('[data-theme="v2"]');
-    const v2Block = css.slice(v2Start, v2Start + 5000);
-    expect(v2Block).toMatch(
+    expect(css).toMatch(
       /\[data-meaning-card\]\s*>\s*\[data-accent-bar\][\s\S]*?width:\s*4px/,
     );
-    expect(v2Block).toContain("--accent-bar-green: #4e9e77");
-    expect(v2Block).toContain("--accent-bar-red: #c05b62");
-    expect(v2Block).toContain("--accent-bar-amber: #be8a3f");
-    expect(v2Block).toContain("--accent-bar-blue: #4c7fc4");
-    expect(v2Block).toContain("--accent-bar-gray: #a7b0bd");
+    expect(css).toContain("--accent-bar-green: #4e9e77");
+    expect(css).toContain("--accent-bar-red: #c05b62");
+    expect(css).toContain("--accent-bar-amber: #be8a3f");
+    expect(css).toContain("--accent-bar-blue: #4c7fc4");
+    expect(css).toContain("--accent-bar-gray: #a7b0bd");
+    const v2Start = css.indexOf('[data-theme="v2"]');
+    const v2Block = css.slice(v2Start, v2Start + 5000);
     expect(v2Block).not.toMatch(/linear-gradient\s*\(/i);
   });
 });

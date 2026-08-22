@@ -53,8 +53,10 @@ afterEach(() => {
 });
 
 describe("env default theme helpers", () => {
-  it("envDefaultTheme is v2 when NEXT_PUBLIC_DEFAULT_THEME=v2", () => {
-    expect(envDefaultTheme("v2")).toBe("v2");
+  it("envDefaultTheme is v2 only when DEFAULT_THEME=v2 AND THEME_TOGGLE=true", () => {
+    expect(envDefaultTheme("v2", "true")).toBe("v2");
+    expect(envDefaultTheme("v2", undefined)).toBe("v1");
+    expect(envDefaultTheme("v2", "")).toBe("v1");
     expect(envDefaultTheme(undefined)).toBe("v1");
     expect(envDefaultTheme("")).toBe("v1");
   });
@@ -81,11 +83,18 @@ describe("env default theme helpers", () => {
 });
 
 describe("ThemeRoot applies env default", () => {
-  it("sets data-theme=v2 when env says v2", () => {
+  it("sets data-theme=v2 when sandbox env pair is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v2");
+    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "true");
+    render(<ThemeRoot />);
+    expect(document.documentElement.getAttribute("data-theme")).toBe("v2");
+  });
+
+  it("DEFAULT_THEME=v2 alone does not flip live (no toggle)", () => {
     vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v2");
     vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "");
     render(<ThemeRoot />);
-    expect(document.documentElement.getAttribute("data-theme")).toBe("v2");
+    expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
   it("leaves no data-theme attribute when env is unset (v1)", () => {
@@ -133,7 +142,7 @@ describe("NewLookToggle", () => {
 });
 
 describe("root layout env wiring (source)", () => {
-  it("layout sets data-theme from NEXT_PUBLIC_DEFAULT_THEME", async () => {
+  it("layout requires THEME_TOGGLE + DEFAULT_THEME before baking data-theme", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const src = readFileSync(
@@ -141,6 +150,7 @@ describe("root layout env wiring (source)", () => {
       "utf8",
     );
     expect(src).toContain("NEXT_PUBLIC_DEFAULT_THEME");
+    expect(src).toContain("NEXT_PUBLIC_THEME_TOGGLE");
     expect(src).toContain("data-theme");
     expect(src).toContain("ThemeRoot");
   });

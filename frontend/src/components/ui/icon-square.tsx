@@ -1,6 +1,7 @@
 "use client";
 
-/** Locked icon square — pale tinted bg + Lucide line icon (v2 spec §2–5). */
+/** Tinted Lucide icon square — accepted-live baseline (owner 2026-08-22).
+ * Paints on v1 and v2; tokens live on :root. */
 
 import type { LucideIcon } from "lucide-react";
 
@@ -67,12 +68,24 @@ export function toneToIconLook(
   tone: "default" | "good" | "bad" | undefined,
 ): { tint: IconTint; stroke: IconStroke; accent: string } {
   if (tone === "good") {
-    return { tint: "mint", stroke: "green", accent: "var(--accent-bar-green)" };
+    return {
+      tint: "mint",
+      stroke: "green",
+      accent: "var(--accent-bar-green, #4E9E77)",
+    };
   }
   if (tone === "bad") {
-    return { tint: "blush", stroke: "red", accent: "var(--accent-bar-red)" };
+    return {
+      tint: "blush",
+      stroke: "red",
+      accent: "var(--accent-bar-red, #C05B62)",
+    };
   }
-  return { tint: "sky", stroke: "blue", accent: "var(--accent-bar-blue)" };
+  return {
+    tint: "sky",
+    stroke: "blue",
+    accent: "var(--accent-bar-blue, #4C7FC4)",
+  };
 }
 
 /** Map balance sticker direction → locked icon look. */
@@ -80,10 +93,22 @@ export function stickerDirectionLook(
   direction: "company_owes" | "they_owe" | "settled",
 ): { tint: IconTint; stroke: IconStroke; accent: string } {
   if (direction === "company_owes") {
-    return { tint: "mint", stroke: "green", accent: "var(--accent-bar-green)" };
+    return {
+      tint: "mint",
+      stroke: "green",
+      accent: "var(--accent-bar-green, #4E9E77)",
+    };
   }
   if (direction === "they_owe") {
-    return { tint: "blush", stroke: "red", accent: "var(--accent-bar-red)" };
+    return {
+      tint: "blush",
+      stroke: "red",
+      accent: "var(--accent-bar-red, #C05B62)",
+    };
   }
-  return { tint: "gray", stroke: "gray", accent: "var(--accent-bar-gray)" };
+  return {
+    tint: "gray",
+    stroke: "gray",
+    accent: "var(--accent-bar-gray, #A7B0BD)",
+  };
 }
