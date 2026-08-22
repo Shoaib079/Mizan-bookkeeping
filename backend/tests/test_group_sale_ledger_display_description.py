@@ -227,6 +227,57 @@ def test_rich_description_appends_owner_note(db_session, rich_desc_setup):
     assert expected in pdf
 
 
+def test_rich_description_whitespace_note_treated_as_default():
+    sale = SimpleNamespace(description="   ", currency="USD")
+    line = SimpleNamespace(
+        id=1,
+        menu_name_snapshot="Veg Menu 1",
+        pax=10,
+        rate_per_person_minor=1_200,
+    )
+    assert (
+        build_group_sale_ledger_display_description(sale, [line])
+        == "Veg Menu 1 · 10 pax × $12.00"
+    )
+
+
+def test_rich_description_deposit_paid_note(db_session, rich_desc_setup):
+    entity_id = rich_desc_setup["entity_id"]
+    customer_id = rich_desc_setup["customer_id"]
+    note = "deposit paid"
+    expected = f"Veg Menu 1 · 10 pax × $12.00 — {note}"
+
+    group_sales_service.post_group_sale(
+        db_session,
+        entity_id,
+        GroupSaleCreate(
+            customer_id=customer_id,
+            sale_date=date(2026, 8, 3),
+            description=note,
+            currency="USD",
+            fx_rate_used=3_500,
+            actor_id=ACTOR_ID,
+            lines=[
+                GroupSaleLineInput(
+                    group_menu_id=rich_desc_setup["veg_menu_id"],
+                    pax=10,
+                    rate_per_person_minor=1_200,
+                ),
+            ],
+        ),
+    )
+
+    ledger = customer_service.get_customer_ledger(db_session, entity_id, customer_id)
+    entity = entity_service.get_entity(db_session, entity_id)
+    assert entity is not None
+    api, excel, pdf = _export_surfaces(
+        db_session, rich_desc_setup, ledger, entity.name, "Rich Desc Agency"
+    )
+    assert api == [expected]
+    assert excel == [expected]
+    assert expected in pdf
+
+
 def test_rich_description_no_lines_fallback():
     sale = SimpleNamespace(description="Group sale", currency="USD")
     assert build_group_sale_ledger_display_description(sale, []) == "Group sale"

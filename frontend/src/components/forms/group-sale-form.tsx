@@ -23,6 +23,9 @@ import {
   forexFooterSuffix,
   fxRateFieldLabel,
   fxRateHelperText,
+  groupSaleDescriptionForSubmit,
+  groupSaleNoteFromSaved,
+  GROUP_SALE_NOTE_PLACEHOLDER,
   ratePerPersonLabel,
 } from "@/lib/group-sale-form-copy";
 import { GroupSaleMenuPicker } from "@/components/forms/group-sale-menu-picker";
@@ -119,7 +122,7 @@ export function GroupSaleForm({
   const [dateText, setDateText] = useState("");
   const [currency, setCurrency] = useState("TRY");
   const [fxRateText, setFxRateText] = useState("");
-  const [description, setDescription] = useState("Group sale");
+  const [note, setNote] = useState("");
   const [lines, setLines] = useState<LineDraft[]>([newLine()]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -152,7 +155,7 @@ export function GroupSaleForm({
     if (correcting) {
       setDateText(formatTrDate(correcting.sale_date));
       setCurrency(correcting.currency);
-      setDescription(correcting.description);
+      setNote(groupSaleNoteFromSaved(correcting.description));
       setFxRateText(
         correcting.fx_rate_used != null
           ? (correcting.fx_rate_used / 100).toFixed(2).replace(".", ",")
@@ -188,7 +191,7 @@ export function GroupSaleForm({
       setDateText(todayTrDate());
       setCurrency("TRY");
       setFxRateText("");
-      setDescription("Group sale");
+      setNote("");
       setLines([newLine()]);
     }
     setError(null);
@@ -309,7 +312,7 @@ export function GroupSaleForm({
       const payload = {
         customer_id: resolvedCustomerId,
         sale_date: saleDate,
-        description,
+        description: groupSaleDescriptionForSubmit(note),
         currency,
         lines: apiLines,
         actor_id: actorId,
@@ -545,12 +548,13 @@ export function GroupSaleForm({
         </div>
 
         <div>
-          <Label htmlFor="group-sale-desc">Description</Label>
+          <Label htmlFor="group-sale-note">Note (optional)</Label>
           <Input
-            id="group-sale-desc"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            required
+            id="group-sale-note"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={GROUP_SALE_NOTE_PLACEHOLDER}
+            maxLength={512}
           />
         </div>
 

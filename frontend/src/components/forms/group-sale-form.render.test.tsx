@@ -5,8 +5,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fxRateHelperText } from "@/lib/group-sale-form-copy";
-import { sourceDeclaring } from "@/test-support/source";
+import { fxRateHelperText, GROUP_SALE_DEFAULT_DESCRIPTION } from "@/lib/group-sale-form-copy";
+import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 const apiFetch = vi.fn();
 
@@ -145,6 +145,91 @@ describe("GroupSaleForm menu picker", () => {
       expect((menuInput as HTMLInputElement).value).toBe("Veg Menu 1");
     });
     expect(screen.getAllByPlaceholderText("Type or pick…")).toHaveLength(1);
+  });
+});
+
+const CORRECTING_SALE = {
+  id: "sale-correct-1",
+  customer_id: "cust-1",
+  sale_date: "2026-08-01",
+  description: "Group sale",
+  currency: "TRY",
+  status: "posted",
+  total_kurus: 120_000,
+  forex_currency: null,
+  total_forex_minor: null,
+  fx_rate_used: null,
+  journal_entry_id: "je-1",
+  customer_ledger_entry_id: "cle-1",
+  amends_group_sale_id: null,
+  amended_by_group_sale_id: null,
+  actor_id: null,
+  created_at: "2026-08-01T12:00:00Z",
+  lines: [
+    {
+      id: "line-1",
+      group_menu_id: "menu-veg-1",
+      menu_name_snapshot: "Veg Menu 1",
+      pax: 10,
+      rate_per_person_minor: 12_000,
+      line_total_minor: 120_000,
+      line_total_kurus: 120_000,
+    },
+  ],
+  remaining_kurus: 120_000,
+  remaining_forex_minor: null,
+  discounts: [],
+};
+
+describe("GroupSaleForm note field", () => {
+  it("shows Note (optional), starts empty, and exposes the placeholder", async () => {
+    render(
+      <GroupSaleForm open embedded customerId="cust-1" onClose={() => undefined} />,
+    );
+    await screen.findByLabelText(/Booking currency/);
+
+    const note = screen.getByLabelText("Note (optional)") as HTMLInputElement;
+    expect(note.value).toBe("");
+    expect(note.placeholder).toMatch(/deposit paid/);
+    expect(screen.queryByLabelText(/^Description$/)).toBeNull();
+  });
+
+  it("edit reopen: saved default Group sale → note field empty; real note → shown", async () => {
+    const { rerender } = render(
+      <GroupSaleForm
+        open
+        embedded
+        customerId="cust-1"
+        correcting={CORRECTING_SALE}
+        onClose={() => undefined}
+      />,
+    );
+    await screen.findByLabelText("Note (optional)");
+    expect((screen.getByLabelText("Note (optional)") as HTMLInputElement).value).toBe("");
+
+    rerender(
+      <GroupSaleForm
+        open
+        embedded
+        customerId="cust-1"
+        correcting={{ ...CORRECTING_SALE, description: "deposit paid" }}
+        onClose={() => undefined}
+      />,
+    );
+    await waitFor(() => {
+      expect((screen.getByLabelText("Note (optional)") as HTMLInputElement).value).toBe(
+        "deposit paid",
+      );
+    });
+  });
+
+  it("mutation: pre-filling Group sale in the form source fails the guard", () => {
+    const src = sourceAt("components/forms/group-sale-form.tsx");
+    expect(src).not.toMatch(/useState\("Group sale"\)/);
+    expect(src).not.toMatch(/setDescription\("Group sale"\)/);
+    expect(src).toContain("Note (optional)");
+    const broken = src.replace('useState("")', 'useState("Group sale")');
+    expect(broken).toMatch(/useState\("Group sale"\)/);
   });
 });
 

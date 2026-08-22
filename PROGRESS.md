@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Group-sale discount all types done:** Unified Apply discount on detail for TRY/rated FX/forex-only; tag `v0.group-sale-discount-all-types`. **Awaiting owner review — do not push.**
+- **Group-sale form polish done:** Optional Note field, rate/footer/menu copy verified; tag `v0.group-sale-form-polish-note`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — discount all types done; awaiting review / push)* |
-| **Last completed slice** | Group-sale discount — all sale types |
-| **Last tag** | `v0.group-sale-discount-all-types` |
+| **Active slice** | *(none — form polish done; awaiting review)* |
+| **Last completed slice** | Group-sale form polish + optional Note |
+| **Last tag** | `v0.group-sale-form-polish-note` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
 

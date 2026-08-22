@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — group-sale discount all types done; awaiting owner review / push)* |
+| **Active slice**         | *(none — group-sale form polish done; awaiting owner review)* |
 | **Next up**              | Per POST_LAUNCH_PLAN queue — owner chooses next slice |
-| **Last completed slice** | **Group-sale discount — all sale types** (`v0.group-sale-discount-all-types`) |
-| **Last commit/tag**      | `v0.group-sale-discount-all-types` |
+| **Last completed slice** | **Group-sale form polish + optional Note** (`v0.group-sale-form-polish-note`) |
+| **Last commit/tag**      | `v0.group-sale-form-polish-note` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.

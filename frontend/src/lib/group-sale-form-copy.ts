@@ -2,6 +2,27 @@
 
 import { formatTry } from "@/lib/money";
 
+/** Stored on the sale when the owner leaves Note blank — not shown in the form. */
+export const GROUP_SALE_DEFAULT_DESCRIPTION = "Group sale";
+
+export const GROUP_SALE_NOTE_PLACEHOLDER =
+  "e.g. deposit paid, guide's group…";
+
+/** Reopen for edit/correct: default stored description → empty note field. */
+export function groupSaleNoteFromSaved(description: string): string {
+  const trimmed = description.trim();
+  if (!trimmed || trimmed.toLowerCase() === GROUP_SALE_DEFAULT_DESCRIPTION.toLowerCase()) {
+    return "";
+  }
+  return description;
+}
+
+/** POST unchanged: blank note still stores the default description. */
+export function groupSaleDescriptionForSubmit(note: string): string {
+  const trimmed = note.trim();
+  return trimmed || GROUP_SALE_DEFAULT_DESCRIPTION;
+}
+
 export const FX_RATE_LABEL_SUFFIX = "(optional)";
 
 export function fxRateFieldLabel(currency: string): string {
