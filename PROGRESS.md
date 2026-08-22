@@ -17,13 +17,13 @@
 
 ## Current
 
-- **/preview interactive phone done:** multi-screen local walkthrough (Home · Sales · Balances · Record · More) with sample data only; v1 live theme unchanged; owner-only; cashier 403. Tag `v0.preview-interactive-phone`. **Awaiting owner review — do not push. Do not flip theme.**
+- **Sandbox-wide v2 look:** local `.env.local` sets `NEXT_PUBLIC_DEFAULT_THEME=v2` + `NEXT_PUBLIC_THEME_TOGGLE=true` so the real app renders in the new look for owner A/B; production leaves both unset (v1). Tag `v0.sandbox-wide-v2`. **Awaiting owner review — do not push. Do not roll out to production.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — `/preview` interactive phone done; awaiting review)* |
-| **Last completed slice** | /preview interactive phone walkthrough |
-| **Last tag** | `v0.preview-interactive-phone` |
+| **Active slice** | *(none — sandbox-wide v2 testing; awaiting review)* |
+| **Last completed slice** | Sandbox-wide v2 look |
+| **Last tag** | `v0.sandbox-wide-v2` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner approves `/preview` → rollout slice; else POST_LAUNCH_PLAN queue |
+| **Next up** | Owner A/B on sandbox → approve rollout or iterate |
 
