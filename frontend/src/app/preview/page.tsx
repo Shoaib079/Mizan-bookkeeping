@@ -33,8 +33,8 @@ export default function ThemePreviewPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto w-full max-w-md border-x border-border bg-background shadow-[var(--shadow-elevated)] min-[820px]:my-8 min-[820px]:min-h-[calc(100vh-4rem)] min-[820px]:rounded-[var(--radius-card)] min-[820px]:border">
-        <ThemePreviewGallery className="p-4 pt-6" />
+      <div className="mx-auto flex w-full max-w-md flex-col border-x border-border bg-background shadow-[var(--shadow-elevated)] min-[820px]:my-8 min-[820px]:min-h-[calc(100vh-4rem)] min-[820px]:rounded-[var(--radius-card)] min-[820px]:border">
+        <ThemePreviewGallery className="flex flex-1 flex-col p-4 pt-6" />
       </div>
     </div>
   );

@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Mobile visual v2 preview done:** `[data-theme="v2"]` tokens + shared component upgrades; owner-only `/preview` gallery; live app unchanged. Tag `v0.mobile-visual-v2-preview`. **Awaiting owner review — do not push.**
+- **/preview interactive phone done:** multi-screen local walkthrough (Home · Sales · Balances · Record · More) with sample data only; v1 live theme unchanged; owner-only; cashier 403. Tag `v0.preview-interactive-phone`. **Awaiting owner review — do not push. Do not flip theme.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — mobile visual v2 preview done; awaiting review)* |
-| **Last completed slice** | Mobile visual refresh v2 — preview-only |
-| **Last tag** | `v0.mobile-visual-v2-preview` |
+| **Active slice** | *(none — `/preview` interactive phone done; awaiting review)* |
+| **Last completed slice** | /preview interactive phone walkthrough |
+| **Last tag** | `v0.preview-interactive-phone` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner approves `/preview` → rollout slice; else POST_LAUNCH_PLAN queue |
 
