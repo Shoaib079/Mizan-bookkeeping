@@ -1,7 +1,16 @@
 "use client";
 
-import { Cloud, Flag, Landmark, Settings, Users } from "lucide-react";
+import {
+  Cloud,
+  Flag,
+  Landmark,
+  Settings,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
+
+import { IconSquare } from "@/components/ui/icon-square";
 
 function SettingsSection({
   title,
@@ -15,7 +24,7 @@ function SettingsSection({
       <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
         {title}
       </h2>
-      <div className="overflow-hidden rounded-[var(--radius-list)] bg-card shadow-[var(--shadow-card)]">
+      <div className="overflow-hidden rounded-[var(--radius-list)] border border-border bg-card shadow-[var(--shadow-card)]">
         {children}
       </div>
     </section>
@@ -30,7 +39,7 @@ function SettingsRowButton({
 }: {
   label: string;
   sublabel: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   onClick: () => void;
 }) {
   return (
@@ -39,14 +48,9 @@ function SettingsRowButton({
       onClick={onClick}
       className="flex min-h-[52px] w-full items-center gap-3 border-b border-border px-4 text-left last:border-b-0 active:bg-muted/60"
     >
-      <span
-        className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] text-[var(--settings-icon-fg)]"
-        style={{ background: "var(--settings-icon-bg)" }}
-      >
-        <Icon className="size-4" />
-      </span>
+      <IconSquare icon={Icon} tint="sky" stroke="blue" size="lg" />
       <span className="min-w-0 flex-1">
-        <span className="block text-base leading-snug">{label}</span>
+        <span className="block text-base leading-snug text-foreground">{label}</span>
         <span className="block text-xs text-muted-foreground">{sublabel}</span>
       </span>
     </button>

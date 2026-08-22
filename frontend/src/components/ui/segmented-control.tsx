@@ -62,9 +62,10 @@ export function SegmentedControl<T extends string>({
               "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
               MOBILE_TOUCH_TARGET,
               active
-                ? "bg-[var(--segment-active-bg)] text-[var(--segment-active-fg)] shadow-sm"
+                ? "bg-[var(--segment-active-bg)] text-[var(--segment-active-fg)] font-semibold shadow-sm"
                 : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
             )}
+            data-segment-active={active ? "true" : "false"}
           >
             {option.label}
           </button>

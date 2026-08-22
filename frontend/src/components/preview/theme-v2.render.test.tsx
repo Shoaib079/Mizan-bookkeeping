@@ -62,7 +62,7 @@ vi.mock("@/lib/quick-actions", () => ({
   useQuickActions: () => ({ refreshDeliveryEnabled: vi.fn() }),
 }));
 vi.mock("@/lib/api", () => ({
-  apiFetch: (...args: unknown[]) => apiFetch(...args),
+  apiFetch,
 }));
 vi.mock("@/lib/toast", () => ({
   useToast: () => ({ toast: vi.fn() }),
@@ -93,7 +93,7 @@ function clickTab(label: string) {
 }
 
 describe("theme v2 token scope", () => {
-  it("StatCard icon chip uses v2 gradient when wrapped in data-theme=v2", () => {
+  it("StatCard icon chip uses locked tinted square under data-theme=v2 (no gradient)", () => {
     const { container } = render(
       <div data-theme={THEME_V2_ATTR}>
         <StatCard
@@ -104,9 +104,11 @@ describe("theme v2 token scope", () => {
         />
       </div>,
     );
-    const iconShell = container.querySelector("[style*='kpi-icon-gradient']");
-    expect(iconShell).toBeTruthy();
+    const square = container.querySelector("[data-icon-square]");
+    expect(square).toBeTruthy();
     expect(container.querySelector(`[data-theme="${THEME_V2_ATTR}"]`)).toBeTruthy();
+    expect(container.querySelector("[style*='kpi-icon-gradient']")).toBeNull();
+    expect(container.querySelector("[style*='linear-gradient']")).toBeNull();
   });
 
   it("StatCard renders without v2 theme wrapper on v1", () => {

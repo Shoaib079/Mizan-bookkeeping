@@ -16,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { formatTry } from "@/lib/money";
 import type { AmountFormatter } from "@/components/page/summary-panel";
+import { IconSquare, toneToIconLook } from "@/components/ui/icon-square";
 import { TrendPill } from "@/components/ui/trend-pill";
 import { cn } from "@/lib/utils";
 
@@ -63,28 +64,26 @@ export function StatCard({
   className,
 }: Props) {
   const shown = value ?? (amountKurus !== undefined ? format(amountKurus) : "—");
+  const look = toneToIconLook(tone);
 
   const body = (
     <>
+      <span data-accent-bar aria-hidden className="hidden" />
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2.5">
           {Icon && (
-            <span
-              className="flex size-9 shrink-0 items-center justify-center rounded-xl text-[var(--kpi-icon-fg)]"
-              style={{
-                background: "var(--kpi-icon-gradient, var(--kpi-icon-bg))",
-              }}
-            >
-              <Icon className="size-4" />
-            </span>
+            <IconSquare icon={Icon} tint={look.tint} stroke={look.stroke} size="lg" />
           )}
-          <span>{label}</span>
+          <span data-stat-label className="text-sm text-muted-foreground">
+            {label}
+          </span>
         </div>
         {trend && (
           <TrendPill value={trend.value} direction={trend.direction ?? "up"} />
         )}
       </div>
       <p
+        data-stat-figure
         className={cn(
           "mt-2 text-2xl font-semibold tabular-nums",
           toneClass(tone),
@@ -111,17 +110,32 @@ export function StatCard({
   );
 
   const shell = cn(
-    "rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]",
+    "relative rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]",
     href && "block transition-colors hover:border-primary/40 hover:bg-muted/30",
     className,
   );
 
   if (href) {
     return (
-      <Link href={href} className={shell}>
+      <Link
+        href={href}
+        data-meaning-card
+        data-tone={tone}
+        className={shell}
+        style={{ ["--accent-bar" as string]: look.accent }}
+      >
         {body}
       </Link>
     );
   }
-  return <div className={shell}>{body}</div>;
+  return (
+    <div
+      data-meaning-card
+      data-tone={tone}
+      className={shell}
+      style={{ ["--accent-bar" as string]: look.accent }}
+    >
+      {body}
+    </div>
+  );
 }

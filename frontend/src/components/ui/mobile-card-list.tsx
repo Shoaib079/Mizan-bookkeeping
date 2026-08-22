@@ -4,9 +4,23 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 import type { MeaningChipTone } from "@/components/ui/meaning-chip";
+import {
+  IconSquare,
+  type IconStroke,
+  type IconTint,
+} from "@/components/ui/icon-square";
 import { cn } from "@/lib/utils";
 
 export type MobileRowIconTone = MeaningChipTone;
+
+function rowIconLook(
+  tone: MobileRowIconTone,
+): { tint: IconTint; stroke: IconStroke } {
+  if (tone === "in") return { tint: "mint", stroke: "green" };
+  if (tone === "out") return { tint: "blush", stroke: "red" };
+  if (tone === "attention") return { tint: "sand", stroke: "amber" };
+  return { tint: "sky", stroke: "blue" };
+}
 
 export function MobileCardList({
   children,
@@ -54,29 +68,22 @@ export function MobileCardRow({
   /** Coloured movement icon — money in/out/attention/neutral. */
   leadingIcon?: { icon: LucideIcon; tone: MobileRowIconTone };
 }) {
-  const toneBg: Record<MobileRowIconTone, string> = {
-    in: "bg-chip-in-soft text-chip-in",
-    out: "bg-chip-out-soft text-chip-out",
-    attention: "bg-chip-attention-soft text-chip-attention",
-    neutral: "bg-chip-neutral-soft text-chip-neutral",
-  };
   const LeadingIcon = leadingIcon?.icon;
+  const look = leadingIcon ? rowIconLook(leadingIcon.tone) : null;
 
   return (
     <RowShell href={href} onClick={onClick}>
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          {LeadingIcon && leadingIcon && (
-            <span
-              className={cn(
-                "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
-                toneBg[leadingIcon.tone],
-              )}
-            >
-              <LeadingIcon className="size-4" />
-            </span>
+          {LeadingIcon && look && (
+            <IconSquare
+              icon={LeadingIcon}
+              tint={look.tint}
+              stroke={look.stroke}
+              size="sm"
+            />
           )}
-          <div className="min-w-0 flex-1 truncate text-sm font-medium leading-snug">
+          <div className="min-w-0 flex-1 truncate text-[13px] font-medium leading-snug text-foreground">
             {title}
           </div>
         </div>
@@ -85,7 +92,7 @@ export function MobileCardRow({
             {amount !== undefined && (
               <div
                 className={cn(
-                  "whitespace-nowrap text-sm font-semibold tabular-nums",
+                  "whitespace-nowrap text-sm font-bold tabular-nums text-foreground",
                   amountClassName,
                 )}
               >
@@ -102,7 +109,7 @@ export function MobileCardRow({
         )}
       </div>
       {meta && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted-foreground">
           {meta}
         </div>
       )}
@@ -133,7 +140,11 @@ function RowShell({
   }
   if (onClick) {
     return (
-      <button type="button" onClick={onClick} className={cn(shell, "active:bg-muted/60")}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(shell, "active:bg-muted/60")}
+      >
         {children}
       </button>
     );

@@ -1,17 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight, Flag, Landmark, Settings, Users, Cloud } from "lucide-react";
+import {
+  ChevronRight,
+  Cloud,
+  Flag,
+  Landmark,
+  Settings,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
 import { MobileSettingsModules } from "@/components/layout/mobile-settings-modules";
+import { IconSquare } from "@/components/ui/icon-square";
 
-function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SettingsSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mb-5">
       <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
         {title}
       </h2>
-      <div className="overflow-hidden rounded-[var(--radius-list)] bg-card shadow-[var(--shadow-card)]">{children}</div>
+      <div className="overflow-hidden rounded-[var(--radius-list)] border border-border bg-card shadow-[var(--shadow-card)]">
+        {children}
+      </div>
     </section>
   );
 }
@@ -26,7 +43,7 @@ function SettingsRow({
   href: string;
   label: string;
   sublabel?: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   meta?: React.ReactNode;
 }) {
   return (
@@ -34,14 +51,9 @@ function SettingsRow({
       href={href}
       className="flex min-h-[52px] items-center gap-3 border-b border-border px-4 last:border-b-0 active:bg-muted/60"
     >
-      <span
-        className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] text-[var(--settings-icon-fg)]"
-        style={{ background: "var(--settings-icon-bg)" }}
-      >
-        <Icon className="size-4" />
-      </span>
+      <IconSquare icon={Icon} tint="sky" stroke="blue" size="lg" />
       <span className="min-w-0 flex-1">
-        <span className="block text-base leading-snug">{label}</span>
+        <span className="block text-base leading-snug text-foreground">{label}</span>
         {sublabel ? (
           <span className="block text-xs text-muted-foreground">{sublabel}</span>
         ) : null}

@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Sandbox-wide v2 look:** local `.env.local` sets `NEXT_PUBLIC_DEFAULT_THEME=v2` + `NEXT_PUBLIC_THEME_TOGGLE=true` so the real app renders in the new look for owner A/B; production leaves both unset (v1). Tag `v0.sandbox-wide-v2`. **Awaiting owner review — do not push. Do not roll out to production.**
+- **v2 owner-locked final spec:** white canvas + muted left bars + tinted Lucide icon squares under `data-theme="v2"`; sandbox env + A/B toggle unchanged; production v1. Tag `v0.v2-locked-spec`. **Awaiting owner review — do not push. Do not roll out to production.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — sandbox-wide v2 testing; awaiting review)* |
-| **Last completed slice** | Sandbox-wide v2 look |
-| **Last tag** | `v0.sandbox-wide-v2` |
+| **Active slice** | *(none — v2 locked spec in sandbox; awaiting review)* |
+| **Last completed slice** | v2 owner-locked final spec |
+| **Last tag** | `v0.v2-locked-spec` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner A/B on sandbox → approve rollout or iterate |
 

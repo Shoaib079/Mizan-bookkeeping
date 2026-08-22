@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — sandbox-wide v2 testing; awaiting review)* |
+| **Active slice**         | *(none — v2 locked spec in sandbox; awaiting review)* |
 | **Next up**              | Owner A/B on sandbox → approve rollout or iterate; else POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Sandbox-wide v2 look** (`v0.sandbox-wide-v2`) |
-| **Last commit/tag**      | `v0.sandbox-wide-v2` |
+| **Last completed slice** | **v2 owner-locked final spec** (`v0.v2-locked-spec`) |
+| **Last commit/tag**      | `v0.v2-locked-spec` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | v2 owner-locked final spec                      | `v0.v2-locked-spec`                                    | White canvas; muted left bars; tinted Lucide squares; no gradients; FAB ≥ v1; mutation bright/gradient/FAB → red |
 | 2026-08-22 | Sandbox-wide v2 look                            | `v0.sandbox-wide-v2`                                   | Env-gated `data-theme=v2` on `<html>` + owner New look toggle (localStorage); prod unset → v1; display-only |
 | 2026-08-22 | /preview interactive phone walkthrough          | `v0.preview-interactive-phone`                         | Multi-screen local tabs/drill-in/void sheet; zero API+router; owner-only; v1 live unchanged; mutation router wiring → red |
 | 2026-08-22 | Group-sale discount — all sale types          | `v0.group-sale-discount-all-types`                     | Unified Apply discount UI; rated FX native→TRY+5800; forex-only/TRY unchanged; mutation native/5800 legs → red |

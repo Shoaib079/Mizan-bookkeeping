@@ -195,42 +195,180 @@
   color-scheme: dark;
 }
 
-/* Mobile visual refresh v2 — preview-only until owner approves rollout.
- * Scoped under [data-theme="v2"]; default (v1) tokens above stay live. */
+/* Mobile visual refresh v2 — OWNER-LOCKED final spec (sandbox / A/B only).
+ * Scoped under [data-theme="v2"]; v1 tokens above stay the live default.
+ * No gradients. White canvas. Muted left accent bars. Tinted icon squares. */
 [data-theme="v2"] {
-  --radius: 0.875rem;
-  --radius-card: 1rem;
-  --radius-list: 1rem;
+  --background: #ffffff;
+  --card: #ffffff;
+  --sidebar: #ffffff;
+  --border: #e6eaf2;
+  --foreground: #0b1526;
+  --muted: #f1f5f9;
+  --muted-foreground: #5b6b83;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --ink: #0b1526;
+  --radius: 1rem;
+  --radius-card: 16px;
+  --radius-list: 16px;
   --spacing-card: 1rem;
-  --shadow-card: 0 2px 8px rgb(37 99 235 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
-  --shadow-pop: 0 12px 32px rgb(37 99 235 / 0.12), 0 4px 8px rgb(15 23 42 / 0.06);
-  --shadow-elevated: 0 16px 40px rgb(37 99 235 / 0.14), 0 6px 12px rgb(15 23 42 / 0.06);
-  --kpi-icon-bg: color-mix(in srgb, var(--primary) 12%, white);
-  --kpi-icon-fg: var(--primary);
-  --kpi-icon-gradient: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 18%, white),
-    color-mix(in srgb, var(--primary) 6%, white)
-  );
-  --tab-active-bg: color-mix(in srgb, var(--primary) 12%, transparent);
-  --tab-active-padding-x: 0.75rem;
-  --tab-active-radius: var(--radius-pill);
-  --tab-bar-bg: color-mix(in srgb, var(--background) 92%, transparent);
-  --record-fab-shadow: 0 10px 28px rgb(37 99 235 / 0.45);
-  --record-fab-size: 3.75rem;
-  --list-icon-bg: color-mix(in srgb, var(--primary) 10%, white);
-  --list-icon-fg: var(--primary);
-  --settings-icon-bg: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 16%, white),
-    color-mix(in srgb, var(--primary) 6%, white)
-  );
-  --segment-track-bg: var(--muted);
-  --sheet-handle-bg: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
+  --shadow-card: 0 1px 2px rgba(11, 21, 38, 0.04);
+  --shadow-pop: 0 1px 2px rgba(11, 21, 38, 0.04);
+  --shadow-elevated: 0 1px 2px rgba(11, 21, 38, 0.04);
+
+  /* Muted left accent bars (never bright) */
+  --accent-bar-green: #4e9e77;
+  --accent-bar-red: #c05b62;
+  --accent-bar-amber: #be8a3f;
+  --accent-bar-blue: #4c7fc4;
+  --accent-bar-gray: #a7b0bd;
+
+  /* Icon square tints (background only) */
+  --tint-mint: #e7f7ee;
+  --tint-sky: #e4f2fb;
+  --tint-sand: #fbf0e0;
+  --tint-blush: #feecec;
+  --tint-gray: #f1f5f9;
+
+  /* Icon stroke (full strength) */
+  --icon-green: #16a34a;
+  --icon-blue: #2563eb;
+  --icon-amber: #d97706;
+  --icon-red: #dc2626;
+  --icon-gray: #64748b;
+
+  /* Chip / meaning soft fills → locked tints */
+  --success: #16a34a;
+  --success-soft: #e7f7ee;
+  --destructive: #dc2626;
+  --destructive-soft: #feecec;
+  --warning: #d97706;
+  --chip-in: #16a34a;
+  --chip-in-soft: #e7f7ee;
+  --chip-out: #dc2626;
+  --chip-out-soft: #feecec;
+  --chip-attention: #d97706;
+  --chip-attention-soft: #fbf0e0;
+  --chip-neutral: #2563eb;
+  --chip-neutral-soft: #e4f2fb;
+
+  /* KPI / list / settings icons — solid tints, NEVER gradient */
+  --kpi-icon-bg: #e4f2fb;
+  --kpi-icon-fg: #2563eb;
+  --kpi-icon-gradient: none;
+  --list-icon-bg: #e4f2fb;
+  --list-icon-fg: #2563eb;
+  --settings-icon-bg: #e4f2fb;
+  --settings-icon-fg: #2563eb;
+
+  /* Trend = small muted-green text (no glossy pill) */
+  --trend-up-bg: transparent;
+  --trend-up-fg: #4e9e77;
+  --trend-down-bg: transparent;
+  --trend-down-fg: #c05b62;
+
+  /* Tab bar — white + hairline; FAB size MUST equal v1 (3.5rem), never smaller */
+  --tab-active-bg: transparent;
+  --tab-active-padding-x: 0px;
+  --tab-active-radius: 0px;
+  --tab-active-fg: #2563eb;
+  --tab-bar-bg: #ffffff;
+  --record-fab-size: 3.5rem;
+  --record-fab-shadow: 0 6px 20px color-mix(in srgb, #2563eb 40%, transparent);
+
+  /* Segmented period: track #F1F5F9; active white chip + hairline + ink */
+  --segment-track-bg: #f1f5f9;
+  --segment-active-bg: #ffffff;
+  --segment-active-fg: #0b1526;
+  --sheet-handle-bg: #e6eaf2;
 }
 
 [data-theme="v2"] .mobile-tab-dot {
   display: none;
+}
+
+/* Meaning cards — 3px muted left accent (KPI / stickers) */
+[data-theme="v2"] [data-meaning-card] {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e6eaf2;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(11, 21, 38, 0.04);
+}
+[data-theme="v2"] [data-meaning-card] > [data-accent-bar] {
+  display: block;
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 3px;
+  border-radius: 16px 0 0 16px;
+  background: var(--accent-bar, var(--accent-bar-blue));
+}
+
+/* Sticker under v2: white + ink figure; heading uses muted semantic tone */
+[data-theme="v2"] [data-testid="entity-balance-sticker"] {
+  background: #ffffff !important;
+  border: 1px solid #e6eaf2 !important;
+  color: #0b1526;
+  max-width: 100%;
+}
+[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-heading] {
+  font-size: 13px;
+  font-weight: 600;
+}
+[data-theme="v2"] [data-testid="entity-balance-sticker"][data-direction="company_owes"] [data-sticker-heading] {
+  color: #4e9e77;
+}
+[data-theme="v2"] [data-testid="entity-balance-sticker"][data-direction="they_owe"] [data-sticker-heading] {
+  color: #c05b62;
+}
+[data-theme="v2"] [data-testid="entity-balance-sticker"][data-direction="settled"] [data-sticker-heading] {
+  color: #a7b0bd;
+}
+[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-figure] {
+  color: #0b1526;
+  font-size: 1.375rem; /* 22px */
+  font-weight: 700;
+}
+[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-caption] {
+  font-size: 0.6875rem; /* 11px */
+  color: #5b6b83;
+  opacity: 1;
+}
+
+/* KPI figure under v2 */
+[data-theme="v2"] [data-stat-figure] {
+  color: #0b1526;
+  font-size: 1.25rem; /* 20px */
+  font-weight: 700;
+}
+[data-theme="v2"] [data-stat-label] {
+  font-size: 12px;
+  color: #5b6b83;
+}
+
+/* Segmented active chip gets hairline under v2 */
+[data-theme="v2"] [role="tab"][aria-selected="true"],
+[data-theme="v2"] [data-segment-active="true"] {
+  box-shadow: inset 0 0 0 1px #e6eaf2;
+}
+
+/* Buttons under v2 — primary solid blue pill; secondary white+hairline; destructive blush */
+[data-theme="v2"] button.bg-primary {
+  border-radius: 9999px;
+}
+[data-theme="v2"] [data-button-variant="secondary"] {
+  background: #ffffff !important;
+  color: #0b1526 !important;
+  border: 1px solid #e6eaf2;
+  border-radius: 9999px;
+}
+[data-theme="v2"] [data-button-variant="destructive"] {
+  background: #feecec !important;
+  color: #dc2626 !important;
+  border-radius: 9999px;
 }
 
 @layer base {
