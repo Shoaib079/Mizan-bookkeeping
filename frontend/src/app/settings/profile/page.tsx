@@ -7,13 +7,14 @@ import { Check, Moon, Sun } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { ProfileSignOutClerk } from "@/components/settings/profile-sign-out";
 import { FormPage, FormSection } from "@/components/page/form-page";
 import { useTheme } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
-import { useEntity } from "@/lib/entity-context";
+import { clearMizanStorage, useEntity } from "@/lib/entity-context";
 import { entityAccentColor, entityInitial } from "@/lib/entity-visual";
 import { ENTITY_ROLES } from "@/lib/settings-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
@@ -183,7 +184,7 @@ export default function ProfileSettingsPage() {
           <p className="mt-3 text-xs text-muted-foreground">
             Roles and members are managed in{" "}
             <Link
-              href="/settings/restaurant"
+              href="/settings/restaurant?full=1#team"
               className="text-primary hover:underline"
             >
               Restaurant settings
@@ -213,6 +214,17 @@ export default function ProfileSettingsPage() {
               <Moon className="size-4" /> Dark
             </Button>
           </div>
+        </FormSection>
+
+        <FormSection>
+          <h2 className="text-sm font-semibold">Account</h2>
+          {clerkEnabled ? (
+            <ProfileSignOutClerk />
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sign-in is disabled in dev mode.
+            </p>
+          )}
         </FormSection>
       </FormPage>
     </AppShell>

@@ -60,6 +60,22 @@ export function canAccessSettings(grants: readonly string[]): boolean {
   );
 }
 
+/** Bottom-tab More menu — banking hub or any directory/report/settings nav grant. */
+export function hasMobileMoreTab(grants: readonly string[]): boolean {
+  if (hasGrant(grants, "nav:banking")) return true;
+  const moreNavGrants: Grant[] = [
+    "nav:reports",
+    "nav:suppliers",
+    "nav:customers",
+    "nav:staff",
+    "nav:partners",
+    "nav:settings",
+    "nav:delivery",
+    "nav:cards",
+  ];
+  return moreNavGrants.some((grant) => hasGrant(grants, grant));
+}
+
 export function canUseRecordAction(
   grants: readonly string[],
   actionId: string,

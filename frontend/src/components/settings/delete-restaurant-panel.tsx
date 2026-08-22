@@ -85,7 +85,7 @@ export function DeleteRestaurantPanel() {
 
   return (
     <>
-      <section className="rounded-xl border border-destructive/40 bg-card p-5">
+      <section id="delete" className="rounded-xl border border-destructive/40 bg-card p-5">
         <h2 className="text-sm font-semibold text-destructive">
           Delete this restaurant
         </h2>

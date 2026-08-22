@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Lint hygiene done:** Frontend eslint 0 errors / 0 warnings; tag `v0.lint-hygiene`. **Awaiting owner review — do not push.**
+- **Mobile settings functional done:** Settings hub drill-ins, mobile sign-out, More tab, Record/void/export fixes; tag `v0.mobile-settings-functional`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — lint hygiene done; awaiting review)* |
-| **Last completed slice** | Lint hygiene — frontend eslint 0/0 |
-| **Last tag** | `v0.lint-hygiene` |
+| **Active slice** | *(none — mobile settings functional done; awaiting review)* |
+| **Last completed slice** | Mobile + settings functional audit & fix |
+| **Last tag** | `v0.mobile-settings-functional` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
+| **Next up** | Visual refresh slice after owner approves preview; else POST_LAUNCH_PLAN queue |
 

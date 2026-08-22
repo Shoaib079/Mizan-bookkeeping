@@ -40,5 +40,5 @@ export const LEGACY_SETUP_REDIRECTS: Record<string, string> = {
   "/setup/delivery-platforms": WORKSPACE_ROUTES.deliveryPlatforms,
   "/setup/accounts": WORKSPACE_ROUTES.banking,
   "/setup/accountant": WORKSPACE_ROUTES.manualJournals,
-  "/setup/backups": WORKSPACE_ROUTES.restaurant,
+  "/setup/backups": "/settings/restaurant?full=1#backups",
 };

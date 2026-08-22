@@ -26,6 +26,7 @@ export function Dialog({
   className,
   size = "default",
   mobilePresentation = "fullscreen",
+  elevated = false,
   dirty = false,
   onDiscard,
   onCloseRef,
@@ -47,6 +48,8 @@ export function Dialog({
   size?: "default" | "compact" | "wide";
   /** Mobile layout — sheet keeps context visible behind quick confirms/forms. */
   mobilePresentation?: "fullscreen" | "sheet";
+  /** Raise sheet above other sheets (period unlock over void confirm). */
+  elevated?: boolean;
   /** When true, Esc/backdrop/X paths ask before closing. */
   dirty?: boolean;
   /** Called when the user confirms discarding unsaved changes. */
@@ -144,7 +147,7 @@ export function Dialog({
     <div
       className={cn(
         "fixed inset-0 flex bg-black/30",
-        isMobileSheet ? "z-[60] items-end p-0" : "z-50",
+        isMobileSheet ? (elevated ? "z-[70] items-end p-0" : "z-[60] items-end p-0") : "z-50",
         isMobile && !isMobileSheet && "items-stretch p-0",
         !isMobile && "items-center justify-center p-4",
       )}

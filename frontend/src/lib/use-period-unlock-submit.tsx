@@ -71,6 +71,7 @@ export function usePeriodUnlockSubmit() {
         onClose={cancelUnlock}
         size="compact"
         mobilePresentation="sheet"
+        elevated
       >
         <form onSubmit={onUnlockSubmit} className="space-y-3">
           <p className="text-sm text-muted-foreground">{apiMessage}</p>

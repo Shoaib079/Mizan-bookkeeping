@@ -49,7 +49,13 @@ export function DownloadMenu({
   disabled?: boolean;
 }) {
   const { grants } = useEntityAccess();
-  if (!canExportFiles(grants)) return null;
+  if (!canExportFiles(grants)) {
+    return (
+      <p className="text-xs text-muted-foreground" role="status">
+        Exports require owner or partner access.
+      </p>
+    );
+  }
 
   return (
     <DownloadMenuInner items={items} disabled={disabled} />

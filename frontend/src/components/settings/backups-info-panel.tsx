@@ -110,7 +110,7 @@ export function BackupsInfoPanel() {
 
   if (forbidden) {
     return (
-      <section className="rounded-lg border border-border bg-card p-5">
+      <section id="backups" className="rounded-lg border border-border bg-card p-5">
         <h2 className="text-sm font-semibold">Backups</h2>
         <div className="mt-3">
           <ForbiddenMessage detail="Only restaurant owners and admins can run a manual backup." />
@@ -120,7 +120,7 @@ export function BackupsInfoPanel() {
   }
 
   return (
-    <section className="rounded-lg border border-border bg-card p-5">
+    <section id="backups" className="rounded-lg border border-border bg-card p-5">
       <h2 className="text-sm font-semibold">Backups</h2>
       <p className="mt-2 text-sm text-muted-foreground">
         Nightly backups upload automatically to Cloudflare R2. Use{" "}

@@ -12,7 +12,7 @@ import {
 
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { activeMobileTab } from "@/lib/mobile-shell";
-import { hasGrant } from "@/lib/entity-access";
+import { hasGrant, hasMobileMoreTab } from "@/lib/entity-access";
 import { useUnsavedWork } from "@/lib/unsaved-work";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
@@ -111,7 +111,8 @@ export function MobileBottomTabs({
   const tab = activeMobileTab(pathname);
   const showReview = hasGrant(grants, "nav:review");
   const showBanking = hasGrant(grants, "nav:banking");
-  const showSalesTab = hasGrant(grants, "nav:sales") && !showBanking;
+  const showMore = hasMobileMoreTab(grants);
+  const showSalesTab = hasGrant(grants, "nav:sales") && !showBanking && !showMore;
 
   function navigate(href: string) {
     if (href === pathname) return;
@@ -169,6 +170,15 @@ export function MobileBottomTabs({
               onNavigate={navigate}
             />
           </>
+        )}
+        {!showBanking && showMore && (
+          <TabLink
+            href="/more"
+            label="More"
+            icon={Menu}
+            active={tab === "/more"}
+            onNavigate={navigate}
+          />
         )}
         {showSalesTab && (
           <TabLink

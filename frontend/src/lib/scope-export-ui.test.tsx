@@ -58,12 +58,13 @@ describe("DownloadMenu grant gate", () => {
     expect(screen.getByRole("button", { name: /Download/i })).toBeTruthy();
   });
 
-  it("hides Download without scope:export", () => {
+  it("hides Download without scope:export and explains why", () => {
     accessState.grants = grantsForRole("partner_view_only");
     render(
       <DownloadMenu items={[{ label: "Excel", run: async () => undefined }]} />,
     );
     expect(screen.queryByRole("button", { name: /Download/i })).toBeNull();
+    expect(screen.getByText(/Exports require owner or partner access/i)).toBeTruthy();
   });
 
   it("mutation: removing canExportFiles check from DownloadMenu goes red", () => {

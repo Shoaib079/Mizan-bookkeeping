@@ -47,8 +47,12 @@ export function MobileSettingsHub() {
   return (
     <div className="pb-4">
       <SettingsSection title="Restaurant">
-        <SettingsRow href="/settings/restaurant" label="Company profile" icon={Settings} />
-        <SettingsRow href="/settings/restaurant?full=1" label="Team" icon={Users} />
+        <SettingsRow
+          href="/settings/restaurant?full=1#company-profile"
+          label="Company profile"
+          icon={Settings}
+        />
+        <SettingsRow href="/settings/restaurant?full=1#team" label="Team" icon={Users} />
       </SettingsSection>
 
       <SettingsSection title="Books">
@@ -66,7 +70,7 @@ export function MobileSettingsHub() {
       </SettingsSection>
 
       <p className="px-3 text-xs text-muted-foreground">
-        Sign out is in your profile menu (avatar, top-right on tab screens).
+        Sign out is on your profile page (avatar, top-right on tab screens).
       </p>
 
       <SettingsSection title="">

@@ -145,9 +145,12 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
         <nav
           aria-label="Record type"
           className={cn(
-            "flex shrink-0 gap-1 overflow-x-auto pb-1",
+            "flex shrink-0 gap-1 pb-1",
             mobileQuick
-              ? "gap-2 pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              ? cn(
+                  "gap-2 pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                  moreOpen ? "overflow-visible" : "overflow-x-auto",
+                )
               : "lg:w-44 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0",
           )}
         >

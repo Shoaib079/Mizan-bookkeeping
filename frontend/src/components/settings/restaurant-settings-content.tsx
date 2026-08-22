@@ -18,6 +18,7 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { saveEntitySetting } from "@/lib/save-entity-setting";
 import { type EntitySettingRow } from "@/lib/settings-types";
+import { useScrollToHash } from "@/lib/use-scroll-to-hash";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { normalizeVknInput, vknValidationMessage } from "@/lib/vkn";
@@ -82,6 +83,9 @@ export function RestaurantSettingsContent() {
   useEffect(() => {
     void reloadSettings();
   }, [reloadSettings]);
+
+  const contentReady = !settingsLoading && !profileLoading;
+  useScrollToHash(contentReady);
 
   function settingValue(key: string): boolean {
     const row = settings.find((s) => s.key === key);
@@ -153,7 +157,7 @@ export function RestaurantSettingsContent() {
 
   return (
     <FormPage title="Restaurant settings" width="wide">
-      <FormSection>
+      <FormSection id="company-profile">
         <h2 className="text-sm font-semibold">Company profile</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Your registered business details — used to identify your company on
@@ -215,7 +219,7 @@ export function RestaurantSettingsContent() {
 
       <RestaurantBrandingPanel />
 
-      <FormSection>
+      <FormSection id="modules">
         <h2 className="text-sm font-semibold">Modules</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Per-restaurant feature toggles. Turn modules on or off when your needs
@@ -237,7 +241,7 @@ export function RestaurantSettingsContent() {
         />
       </FormSection>
 
-      <FormSection>
+      <FormSection id="team">
         <h2 className="text-sm font-semibold">Team</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Members who can access this restaurant and their roles.
@@ -247,7 +251,7 @@ export function RestaurantSettingsContent() {
         </div>
       </FormSection>
 
-      <FormSection>
+      <FormSection id="opening-balances">
         <h2 className="text-sm font-semibold">Opening balances</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Go-live date, cash and bank balances, payables, and equity — the

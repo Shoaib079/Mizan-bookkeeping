@@ -203,7 +203,7 @@ export function RestaurantBrandingPanel() {
   }
 
   return (
-    <FormSection>
+    <FormSection id="branding">
       <h2 className="text-sm font-semibold">Menu and document details</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         What this restaurant prints on the menus you send to agencies. Each

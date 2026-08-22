@@ -105,15 +105,18 @@ export function FormSection({
   actions,
   children,
   className,
+  id,
 }: {
   title?: string;
   hint?: React.ReactNode;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
     <section
+      id={id}
       className={cn(
         "rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)]",
         className,
