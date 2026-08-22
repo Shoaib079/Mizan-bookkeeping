@@ -46,6 +46,7 @@ import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { subledgerRowClassName } from "@/lib/ledger-display";
+import { fxLedgerVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
@@ -240,6 +241,13 @@ export function FxWalletPageContent() {
                           row.journal_source !== "fx_purchase" && (
                             <SubledgerRowActions
                               row={row}
+                              voidConfirmDetail={fxLedgerVoidConfirmDetail({
+                                movement_date: row.movement_date,
+                                movement_type: row.movement_type,
+                                native_quantity: row.native_quantity,
+                                currency,
+                                description: row.description,
+                              })}
                               onEdit={() =>
                                 setCorrectSpend({
                                   journal_entry_id: row.journal_entry_id,
@@ -264,6 +272,13 @@ export function FxWalletPageContent() {
                         {row.movement_type === "purchase" && (
                           <SubledgerRowActions
                             row={row}
+                            voidConfirmDetail={fxLedgerVoidConfirmDetail({
+                              movement_date: row.movement_date,
+                              movement_type: row.movement_type,
+                              native_quantity: row.native_quantity,
+                              currency,
+                              description: row.description,
+                            })}
                             onEdit={() =>
                               setCorrectPurchase({
                                 journal_entry_id: row.journal_entry_id,

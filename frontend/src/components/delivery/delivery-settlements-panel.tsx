@@ -24,6 +24,7 @@ import { apiFetch } from "@/lib/api";
 import { useDeliveryHubUrl } from "@/lib/use-delivery-hub-url";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { deliverySettlementVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import type { DeliveryPlatform, DeliverySettlement } from "@/lib/pos-delivery-types";
 import { useEntityList } from "@/lib/use-entity-list";
 import { cn } from "@/lib/utils";
@@ -213,6 +214,11 @@ export function DeliverySettlementsPanel() {
                   >
                     {row.status !== "voided" && (
                       <VoidTriggerButton
+                        confirmDetail={deliverySettlementVoidConfirmDetail({
+                          settlement_date: row.settlement_date,
+                          platform_name: row.platform_name,
+                          amount_kurus: row.amount_kurus,
+                        })}
                         onContinue={() => setVoidSettlement(row)}
                       />
                     )}

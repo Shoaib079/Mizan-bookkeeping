@@ -25,6 +25,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatDeliveryPeriod } from "@/lib/delivery-period";
+import { deliveryReportVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { useDeliveryHubUrl } from "@/lib/use-delivery-hub-url";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
@@ -246,7 +247,14 @@ export function DeliveryReportsPanel() {
                     onClick={(event) => event.stopPropagation()}
                   >
                     {row.status === "posted" && (
-                      <VoidTriggerButton onContinue={() => setVoidReport(row)} />
+                      <VoidTriggerButton
+                        confirmDetail={deliveryReportVoidConfirmDetail({
+                          period_label: formatDeliveryPeriod(row),
+                          platform_name: row.platform_name,
+                          gross_kurus: row.gross_kurus,
+                        })}
+                        onContinue={() => setVoidReport(row)}
+                      />
                     )}
                   </DataTableCell>
                 </tr>

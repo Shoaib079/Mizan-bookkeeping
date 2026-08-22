@@ -13,7 +13,8 @@ import { ExpenseItemFilterPicker } from "@/components/review/expense-item-filter
 import { ExpenseItemsReviewPanel } from "@/components/review/expense-items-review-panel";
 import { ExpensesScopeNote } from "@/components/review/expenses-scope-note";
 import { ExpensesReviewRangeBar } from "@/components/review/expenses-review-range-bar";
-import { Button } from "@/components/ui/button";import {
+import { Button } from "@/components/ui/button";
+import {
   DataTable,
   DataTableBody,
   DataTableCell,
@@ -30,6 +31,7 @@ import { Wallet } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { expenseVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { invalidateReviewCounts } from "@/lib/review-counts-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
 import {
@@ -316,6 +318,7 @@ export function ExpensesReviewPanel() {
                             display_kind: "effective",
                             journal_entry_id: row.journal_entry_id,
                           }}
+                          voidConfirmDetail={expenseVoidConfirmDetail(row)}
                           onEdit={() => setCorrectExpense(row)}
                           onVoid={() =>
                             setVoidTarget({

@@ -33,6 +33,7 @@ import {
 import { useEntity } from "@/lib/entity-context";
 import { canExportFiles } from "@/lib/entity-access";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { posDailySalesVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
@@ -296,7 +297,10 @@ export function SalesReviewPanel({
                       >
                         Edit
                       </Button>
-                      <VoidTriggerButton onContinue={() => setVoidSummary(row)} />
+                      <VoidTriggerButton
+                        confirmDetail={posDailySalesVoidConfirmDetail(row)}
+                        onContinue={() => setVoidSummary(row)}
+                      />
                     </div>
                   ) : isPendingReviewStatus(row.status) ? (
                     <Link

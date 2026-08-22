@@ -26,6 +26,10 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useCardsUrl } from "@/lib/use-cards-url";
 import { formatTrDate, formatTry } from "@/lib/money";
+import {
+  cardSalesBatchVoidConfirmDetail,
+  posSettlementVoidConfirmDetail,
+} from "@/lib/ledger-void-confirm-detail";
 import type {
   CardSalesBatch,
   ClearingReconciliation,
@@ -280,7 +284,10 @@ export function CardsPageContent() {
                   <DataTableCell>{row.description}</DataTableCell>
                   <DataTableCell align="right">
                     {row.status !== "voided" && (
-                      <VoidTriggerButton onContinue={() => setVoidBatch(row)} />
+                      <VoidTriggerButton
+                        confirmDetail={cardSalesBatchVoidConfirmDetail(row)}
+                        onContinue={() => setVoidBatch(row)}
+                      />
                     )}
                   </DataTableCell>
                 </DataTableRow>
@@ -328,6 +335,7 @@ export function CardsPageContent() {
                   <DataTableCell align="right">
                     {row.status !== "voided" && (
                       <VoidTriggerButton
+                        confirmDetail={posSettlementVoidConfirmDetail(row)}
                         onContinue={() => setVoidSettlement(row)}
                       />
                     )}

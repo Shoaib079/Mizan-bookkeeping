@@ -24,9 +24,9 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — supplier/customer balance stickers done; awaiting owner review)* |
+| **Active slice**         | *(none — void confirm detail done; awaiting owner review)* |
 | **Next up**              | Per POST_LAUNCH_PLAN queue — owner chooses next slice (not lint-hygiene) |
-| **Last completed slice** | **Supplier + customer balance stickers** (`v0.supplier-customer-balance-stickers`) |
+| **Last completed slice** | **Void confirm detail line — every surface** (`v0.void-confirm-detail`) |
 | **Last commit/tag**      | `v0.group-sale-form-polish-note` |
 
 

@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Supplier + customer balance stickers done:** Directory totals + customer detail use EntityBalanceSticker; tag `v0.supplier-customer-balance-stickers`. **Awaiting owner review — do not push.**
+- **Void confirm detail done:** Every void confirm shows date · type · amount; tag `v0.void-confirm-detail`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — balance stickers done; awaiting review)* |
-| **Last completed slice** | Supplier + customer balance stickers |
-| **Last tag** | `v0.supplier-customer-balance-stickers` |
+| **Active slice** | *(none — void confirm detail done; awaiting review)* |
+| **Last completed slice** | Void confirm detail line — every surface |
+| **Last tag** | `v0.void-confirm-detail` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN (not lint-hygiene) |
 

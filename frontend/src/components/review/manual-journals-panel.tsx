@@ -30,6 +30,7 @@ import { BookOpen } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { manualJournalVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 
 type ManualJournalLine = {
   account_id: string;
@@ -175,7 +176,11 @@ export function ManualJournalsPanel() {
                     </Button>
                     <VoidTriggerButton
                       className="px-2 text-xs text-destructive"
-                      confirmDetail={row.description}
+                      confirmDetail={manualJournalVoidConfirmDetail({
+                        entry_date: row.entry_date,
+                        description: row.description,
+                        total_kurus: entryTotalKurus(row.lines),
+                      })}
                       onContinue={() =>
                         setVoidTarget({
                           id: row.id,
@@ -226,7 +231,11 @@ export function ManualJournalsPanel() {
                       </Button>
                       <VoidTriggerButton
                         className="h-8 px-2 text-foreground hover:text-destructive"
-                        confirmDetail={row.description}
+                        confirmDetail={manualJournalVoidConfirmDetail({
+                          entry_date: row.entry_date,
+                          description: row.description,
+                          total_kurus: entryTotalKurus(row.lines),
+                        })}
                         onContinue={() =>
                           setVoidTarget({
                             id: row.id,

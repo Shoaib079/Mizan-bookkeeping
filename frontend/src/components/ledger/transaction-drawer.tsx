@@ -24,6 +24,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useEntity } from "@/lib/entity-context";
 import { LEDGER_CHANGED_EVENT, emitLedgerChanged } from "@/lib/ledger-events";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { glEntryVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import {
   genericVoidPath,
   ledgerEntryHref,
@@ -268,9 +269,21 @@ export function TransactionPeekProvider({
               )}
             </div>
 
-            {canVoidHere && (
+            {canVoidHere && entry && (
               <div className="border-t border-border px-5 py-3">
-                <VoidTriggerButton onContinue={() => setVoidOpen(true)} />
+                <VoidTriggerButton
+                  confirmDetail={glEntryVoidConfirmDetail({
+                    entry_date: entry.entry_date,
+                    source: entry.source,
+                    reverses_entry_id: entry.reverses_entry_id,
+                    amount_kurus:
+                      entry.lines && entry.lines.length > 0
+                        ? debitTotalKurus(entry.lines)
+                        : undefined,
+                    description: entry.description,
+                  })}
+                  onContinue={() => setVoidOpen(true)}
+                />
               </div>
             )}
           </aside>

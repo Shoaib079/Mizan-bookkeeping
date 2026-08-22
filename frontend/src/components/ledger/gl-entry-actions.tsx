@@ -11,15 +11,13 @@ import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { apiFetch, entityPath } from "@/lib/api";
 import { editTargetFor } from "@/lib/gl-edit-target";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
 import { useToast } from "@/lib/toast";
 import {
   canUseGenericLedgerCorrect,
   generalLedgerEntryActions,
   journalEntryRowActions,
 } from "@/lib/subledger-actions";
-import { ledgerRowSourceLabel } from "@/lib/transaction-registry";
-import { formatVoidConfirmDetail } from "@/lib/void-confirm-summary";
+import { glEntryVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 
 export type GlEntryActionsRow = {
   id: string;
@@ -132,13 +130,11 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   if (row.status !== "posted") return null;
   if (!actions.canEdit && !actions.canVoid) return null;
 
-  const voidConfirmDetail = formatVoidConfirmDetail({
-    date: formatTrDate(row.entry_date),
-    type: ledgerRowSourceLabel(row.source, row.reverses_entry_id),
-    amount: (() => {
-      const total = glEntryDisplayTotal(row);
-      return total != null ? formatTry(total) : undefined;
-    })(),
+  const voidConfirmDetail = glEntryVoidConfirmDetail({
+    entry_date: row.entry_date,
+    source: row.source,
+    reverses_entry_id: row.reverses_entry_id,
+    amount_kurus: glEntryDisplayTotal(row),
     description: row.description,
   });
 
