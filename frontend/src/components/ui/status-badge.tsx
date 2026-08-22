@@ -1,19 +1,19 @@
 import { cn } from "@/lib/utils";
 
 const statusStyles: Record<string, string> = {
-  posted: "bg-success/10 text-success",
-  needs_review: "bg-warning/10 text-warning",
+  posted: "bg-chip-in-soft text-chip-in",
+  needs_review: "bg-chip-attention-soft text-chip-attention",
   draft: "bg-muted text-muted-foreground",
-  rejected: "bg-destructive/10 text-destructive",
-  confirmed: "bg-primary/10 text-primary",
-  duplicate: "bg-warning/10 text-warning",
-  active: "bg-success/10 text-success",
+  rejected: "bg-chip-out-soft text-chip-out",
+  confirmed: "bg-chip-neutral-soft text-chip-neutral",
+  duplicate: "bg-chip-attention-soft text-chip-attention",
+  active: "bg-chip-in-soft text-chip-in",
   inactive: "bg-muted text-muted-foreground",
-  open: "bg-primary/10 text-primary",
+  open: "bg-chip-neutral-soft text-chip-neutral",
   closed: "bg-muted text-muted-foreground",
   imported: "bg-muted text-muted-foreground",
-  classified: "bg-primary/10 text-primary",
-  linked: "bg-success/10 text-success",
+  classified: "bg-chip-neutral-soft text-chip-neutral",
+  linked: "bg-chip-in-soft text-chip-in",
   voided: "bg-muted text-muted-foreground line-through",
   // A record that was corrected: the superseded original is kept for the
   // audit trail but no longer counts. Struck through like a void, because

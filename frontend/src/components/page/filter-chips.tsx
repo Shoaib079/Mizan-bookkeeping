@@ -51,7 +51,7 @@ export function FilterChips<T extends string>({
               // the picked one apart is the whole job — filling all of them
               // would say nothing.
               active
-                ? "bg-primary font-medium text-primary-foreground"
+                ? "bg-[var(--segment-active-bg)] font-medium text-[var(--segment-active-fg)]"
                 : "border border-primary/40 text-primary hover:bg-primary/15",
             )}
             onClick={() => onChange(chip.id)}

@@ -22,8 +22,8 @@ describe("EntityBalanceSticker", () => {
     expect(src).toContain("max-w-full");
     expect(src).toContain("sm:max-w-[16rem]");
     expect(src).toContain("sm:ml-auto");
-    expect(src).toContain("bg-success-soft");
-    expect(src).toContain("bg-destructive-soft");
+    expect(src).toContain("bg-chip-in-soft");
+    expect(src).toContain("bg-chip-out-soft");
     expect(src).toContain("bg-muted");
     expect(src).toContain("tabular-nums");
     expect(src).toContain('from "@/lib/money"');

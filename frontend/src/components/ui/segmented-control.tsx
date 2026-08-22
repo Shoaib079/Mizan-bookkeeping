@@ -43,7 +43,8 @@ export function SegmentedControl<T extends string>({
       role={role}
       aria-label={ariaLabel}
       className={cn(
-        "flex flex-wrap gap-1 rounded-md border border-border bg-muted/40 p-1",
+        "flex flex-wrap gap-1 rounded-md border border-border p-1",
+        "bg-[var(--segment-track-bg)]",
         className,
       )}
     >
@@ -61,7 +62,7 @@ export function SegmentedControl<T extends string>({
               "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
               MOBILE_TOUCH_TARGET,
               active
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-[var(--segment-active-bg)] text-[var(--segment-active-fg)] shadow-sm"
                 : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
             )}
           >

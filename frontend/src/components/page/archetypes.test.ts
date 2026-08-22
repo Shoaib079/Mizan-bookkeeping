@@ -155,7 +155,7 @@ describe("page archetypes", () => {
     // against rounded-lg/p-4, so the pair visibly failed to line up.
     const stat = sourceDeclaring("StatCard");
     const snapshot = sourceDeclaring("CashBankSnapshotCard");
-    const shell = "rounded-lg border border-border bg-card p-4";
+    const shell = "rounded-[var(--radius-card)] border border-border bg-card p-4";
     expect(stat).toContain(shell);
     expect(snapshot).toContain(shell);
     expect(snapshot).not.toContain("rounded-xl");
@@ -467,7 +467,7 @@ describe("filters read as choices", () => {
     // The chosen chip is solidly filled — a tint was repeatedly read as no
     // colour at all. The unchosen ones stay outlined, because telling the
     // picked one apart is the whole point of a filter row.
-    expect(source).toContain("bg-primary font-medium text-primary-foreground");
+    expect(source).toContain("bg-[var(--segment-active-bg)] font-medium text-[var(--segment-active-fg)]");
   });
 
   it("ListPage gives filters their own row", () => {

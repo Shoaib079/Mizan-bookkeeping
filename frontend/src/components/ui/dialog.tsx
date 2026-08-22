@@ -177,7 +177,7 @@ export function Dialog({
       >
         {isMobileSheet && (
           <div
-            className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-border"
+            className="mx-auto mb-3 h-1 w-9 shrink-0 rounded-full bg-[var(--sheet-handle-bg)]"
             aria-hidden
           />
         )}

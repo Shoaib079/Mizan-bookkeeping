@@ -17,13 +17,13 @@
 
 ## Current
 
-- **POS daily sales mobile parity done:** Mobile posted cards get Edit + Void via shared `PosDailySalesPostedActions`; tag `v0.pos-daily-sales-mobile-parity`. **Awaiting owner review — do not push.**
+- **Mobile visual v2 preview done:** `[data-theme="v2"]` tokens + shared component upgrades; owner-only `/preview` gallery; live app unchanged. Tag `v0.mobile-visual-v2-preview`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — POS daily sales mobile parity done; awaiting review)* |
-| **Last completed slice** | POS daily sales mobile parity — Correct + Void |
-| **Last tag** | `v0.pos-daily-sales-mobile-parity` |
+| **Active slice** | *(none — mobile visual v2 preview done; awaiting review)* |
+| **Last completed slice** | Mobile visual refresh v2 — preview-only |
+| **Last tag** | `v0.mobile-visual-v2-preview` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Visual refresh slice after owner approves preview; else POST_LAUNCH_PLAN queue |
+| **Next up** | Owner approves `/preview` → rollout slice; else POST_LAUNCH_PLAN queue |
 

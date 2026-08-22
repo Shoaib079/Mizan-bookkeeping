@@ -16,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { formatTry } from "@/lib/money";
 import type { AmountFormatter } from "@/components/page/summary-panel";
+import { TrendPill } from "@/components/ui/trend-pill";
 import { cn } from "@/lib/utils";
 
 export type StatLine = {
@@ -43,6 +44,8 @@ type Props = {
   lines?: StatLine[];
   /** Makes the whole card a link to the page that explains the number. */
   href?: string;
+  /** Optional trend pill — e.g. "+12%". */
+  trend?: { value: string; direction?: "up" | "down" | "flat" };
   className?: string;
 };
 
@@ -56,15 +59,30 @@ export function StatCard({
   caption,
   lines,
   href,
+  trend,
   className,
 }: Props) {
   const shown = value ?? (amountKurus !== undefined ? format(amountKurus) : "—");
 
   const body = (
     <>
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        {Icon && <Icon className="size-4" />}
-        {label}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {Icon && (
+            <span
+              className="flex size-9 shrink-0 items-center justify-center rounded-xl text-[var(--kpi-icon-fg)]"
+              style={{
+                background: "var(--kpi-icon-gradient, var(--kpi-icon-bg))",
+              }}
+            >
+              <Icon className="size-4" />
+            </span>
+          )}
+          <span>{label}</span>
+        </div>
+        {trend && (
+          <TrendPill value={trend.value} direction={trend.direction ?? "up"} />
+        )}
       </div>
       <p
         className={cn(
@@ -93,7 +111,7 @@ export function StatCard({
   );
 
   const shell = cn(
-    "rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)]",
+    "rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]",
     href && "block transition-colors hover:border-primary/40 hover:bg-muted/30",
     className,
   );

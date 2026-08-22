@@ -11,7 +11,7 @@ function SettingsSection({ title, children }: { title: string; children: React.R
       <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
         {title}
       </h2>
-      <div className="overflow-hidden rounded-xl bg-card shadow-sm">{children}</div>
+      <div className="overflow-hidden rounded-[var(--radius-list)] bg-card shadow-[var(--shadow-card)]">{children}</div>
     </section>
   );
 }
@@ -19,11 +19,13 @@ function SettingsSection({ title, children }: { title: string; children: React.R
 function SettingsRow({
   href,
   label,
+  sublabel,
   icon: Icon,
   meta,
 }: {
   href: string;
   label: string;
+  sublabel?: string;
   icon: React.ComponentType<{ className?: string }>;
   meta?: React.ReactNode;
 }) {
@@ -32,10 +34,18 @@ function SettingsRow({
       href={href}
       className="flex min-h-[52px] items-center gap-3 border-b border-border px-4 last:border-b-0 active:bg-muted/60"
     >
-      <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
+      <span
+        className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] text-[var(--settings-icon-fg)]"
+        style={{ background: "var(--settings-icon-bg)" }}
+      >
         <Icon className="size-4" />
       </span>
-      <span className="min-w-0 flex-1 text-base">{label}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base leading-snug">{label}</span>
+        {sublabel ? (
+          <span className="block text-xs text-muted-foreground">{sublabel}</span>
+        ) : null}
+      </span>
       {meta}
       <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
     </Link>
@@ -50,15 +60,22 @@ export function MobileSettingsHub() {
         <SettingsRow
           href="/settings/restaurant?full=1#company-profile"
           label="Company profile"
+          sublabel="Name, address, tax details"
           icon={Settings}
         />
-        <SettingsRow href="/settings/restaurant?full=1#team" label="Team" icon={Users} />
+        <SettingsRow
+          href="/settings/restaurant?full=1#team"
+          label="Team"
+          sublabel="Members and roles"
+          icon={Users}
+        />
       </SettingsSection>
 
       <SettingsSection title="Books">
         <SettingsRow
           href="/onboarding/opening-balances"
           label="Opening balances"
+          sublabel="Start-of-period figures"
           icon={Landmark}
         />
       </SettingsSection>
@@ -66,7 +83,12 @@ export function MobileSettingsHub() {
       <MobileSettingsModules />
 
       <SettingsSection title="Account">
-        <SettingsRow href="/settings/restaurant?full=1#backups" label="Backups" icon={Cloud} />
+        <SettingsRow
+          href="/settings/restaurant?full=1#backups"
+          label="Backups"
+          sublabel="Download full backup"
+          icon={Cloud}
+        />
       </SettingsSection>
 
       <p className="px-3 text-xs text-muted-foreground">

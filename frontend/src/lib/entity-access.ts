@@ -24,6 +24,11 @@ export function isOwner(role: EntityRole): boolean {
   return role === "owner";
 }
 
+/** Owner-only theme preview gallery — not rolled out until approved. */
+export function canAccessThemePreview(role: EntityRole): boolean {
+  return isOwner(role);
+}
+
 export function canManageMembers(grants: readonly string[]): boolean {
   return hasGrant(grants, "admin:manage_members");
 }

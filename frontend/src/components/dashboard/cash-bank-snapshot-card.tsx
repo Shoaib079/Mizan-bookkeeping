@@ -44,7 +44,7 @@ export function CashBankSnapshotCard({ cashKurus, bankKurus }: Props) {
   return (
     // Same shell as StatCard, which it sits beside. It used to carry a wider
     // radius and more padding than its neighbour, so the pair never lined up.
-    <div className="rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)]">
+    <div className="rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Wallet className="size-4" /> Cash & bank
       </div>

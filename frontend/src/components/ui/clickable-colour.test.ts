@@ -36,6 +36,8 @@ const COLOUR_TOKENS = [
   "bg-sidebar",
   "text-warning",
   "text-success",
+  "--segment-active-bg",
+  "--segment-active-fg",
 ];
 
 /** Clickable, but deliberately not a button to look at.

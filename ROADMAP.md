@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — POS daily sales mobile parity done; awaiting review)* |
-| **Next up**              | Per POST_LAUNCH_PLAN queue — owner chooses next slice (not visual refresh until approved) |
-| **Last completed slice** | **POS daily sales mobile parity — Correct + Void** (`v0.pos-daily-sales-mobile-parity`) |
-| **Last commit/tag**      | `v0.pos-daily-sales-mobile-parity` |
+| **Active slice**         | *(none — mobile visual v2 preview done; awaiting review)* |
+| **Next up**              | Owner approves `/preview` → rollout slice; else POST_LAUNCH_PLAN queue |
+| **Last completed slice** | **Mobile visual refresh v2 — preview-only** (`v0.mobile-visual-v2-preview`) |
+| **Last commit/tag**      | `v0.mobile-visual-v2-preview` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.

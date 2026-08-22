@@ -154,7 +154,7 @@ What the slice turned up:
 - The balance sheet's KPI band is the one that was reporting a broken accounting equation until the contra-account fix earlier the same day — worth re-reading on production.
 
 ### Slice 7 — forms + settings + auth (7) — **done 2026-08-04**
-☑ `/settings/restaurant` ☑ `/settings/profile` ☑ `/onboarding/opening-balances` ☑ `/banking/accounts/[id]/import` ☑ `/split` ☑ `/sign-in` ☑ `/sign-up` ☑ `/review/manual-journals/new`
+☑ `/settings/restaurant` ☑ `/settings/profile` ☑ `/onboarding/opening-balances` ☑ `/banking/accounts/[id]/import` ☑ `/split` ☑ `/sign-in` ☑ `/sign-up` ☑ `/review/manual-journals/new` ☑ `/preview`
 
 Four compose `FormPage`. **`/split`** is a workflow rather than a settings form, so it takes `PageHeader` only. **`/sign-in` and `/sign-up`** live outside `AppShell` entirely — they are Clerk's own components on a centred background, with no app chrome, and giving them an archetype would be pretending they are app pages.
 

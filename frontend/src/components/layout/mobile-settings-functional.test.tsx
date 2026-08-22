@@ -43,14 +43,14 @@ describe("MobileSettingsHub navigation", () => {
 
   it("Team drill-in lands on the team section", () => {
     render(<MobileSettingsHub />);
-    expect(screen.getByRole("link", { name: /^Team$/i }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: /Team/i }).getAttribute("href")).toBe(
       "/settings/restaurant?full=1#team",
     );
   });
 
   it("Backups drill-in lands on the backups section", () => {
     render(<MobileSettingsHub />);
-    expect(screen.getByRole("link", { name: /^Backups$/i }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: /Backups/i }).getAttribute("href")).toBe(
       "/settings/restaurant?full=1#backups",
     );
   });

@@ -36,6 +36,18 @@
   --radius-lg: var(--radius);
   --spacing-card: var(--spacing-card);
   --spacing-section: var(--spacing-section);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-chip-in: var(--chip-in);
+  --color-chip-in-soft: var(--chip-in-soft);
+  --color-chip-out: var(--chip-out);
+  --color-chip-out-soft: var(--chip-out-soft);
+  --color-chip-attention: var(--chip-attention);
+  --color-chip-attention-soft: var(--chip-attention-soft);
+  --color-chip-neutral: var(--chip-neutral);
+  --color-chip-neutral-soft: var(--chip-neutral-soft);
+  --radius-card: var(--radius-card);
+  --radius-pill: var(--radius-pill);
 }
 
 :root {
@@ -98,6 +110,43 @@
   /* Elevation (audit C3) */
   --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05);
   --shadow-pop: 0 8px 24px rgb(15 23 42 / 0.12), 0 2px 6px rgb(15 23 42 / 0.08);
+  --shadow-elevated: var(--shadow-pop);
+  /* Meaning chips — green in / red out / amber attention / blue neutral */
+  --info: #2563eb;
+  --info-soft: color-mix(in srgb, var(--info) 10%, transparent);
+  --chip-in: var(--success);
+  --chip-in-soft: var(--success-soft);
+  --chip-out: var(--destructive);
+  --chip-out-soft: var(--destructive-soft);
+  --chip-attention: var(--warning);
+  --chip-attention-soft: color-mix(in srgb, var(--warning) 14%, transparent);
+  --chip-neutral: var(--primary);
+  --chip-neutral-soft: color-mix(in srgb, var(--primary) 10%, transparent);
+  /* Component shells — v1 defaults; v2 overrides below */
+  --radius-card: var(--radius);
+  --radius-pill: 9999px;
+  --radius-list: 0.75rem;
+  --kpi-icon-bg: var(--muted);
+  --kpi-icon-fg: var(--muted-foreground);
+  --kpi-icon-gradient: none;
+  --trend-up-bg: color-mix(in srgb, var(--success) 12%, transparent);
+  --trend-up-fg: var(--success);
+  --trend-down-bg: color-mix(in srgb, var(--destructive) 12%, transparent);
+  --trend-down-fg: var(--destructive);
+  --tab-active-bg: transparent;
+  --tab-active-padding-x: 0px;
+  --tab-active-radius: 0px;
+  --tab-bar-bg: color-mix(in srgb, var(--background) 95%, transparent);
+  --record-fab-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 45%, transparent);
+  --record-fab-size: 3.5rem;
+  --list-icon-bg: var(--muted);
+  --list-icon-fg: var(--muted-foreground);
+  --settings-icon-bg: color-mix(in srgb, var(--primary) 10%, transparent);
+  --settings-icon-fg: var(--primary);
+  --segment-track-bg: color-mix(in srgb, var(--muted) 40%, transparent);
+  --segment-active-bg: var(--primary);
+  --segment-active-fg: var(--primary-foreground);
+  --sheet-handle-bg: var(--border);
 }
 
 /* Dark theme — same token contract, flipped values (audit C3). */
@@ -142,7 +191,46 @@
   --entity-7: #f43f5e;
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+  --shadow-elevated: var(--shadow-pop);
   color-scheme: dark;
+}
+
+/* Mobile visual refresh v2 — preview-only until owner approves rollout.
+ * Scoped under [data-theme="v2"]; default (v1) tokens above stay live. */
+[data-theme="v2"] {
+  --radius: 0.875rem;
+  --radius-card: 1rem;
+  --radius-list: 1rem;
+  --spacing-card: 1rem;
+  --shadow-card: 0 2px 8px rgb(37 99 235 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 12px 32px rgb(37 99 235 / 0.12), 0 4px 8px rgb(15 23 42 / 0.06);
+  --shadow-elevated: 0 16px 40px rgb(37 99 235 / 0.14), 0 6px 12px rgb(15 23 42 / 0.06);
+  --kpi-icon-bg: color-mix(in srgb, var(--primary) 12%, white);
+  --kpi-icon-fg: var(--primary);
+  --kpi-icon-gradient: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 18%, white),
+    color-mix(in srgb, var(--primary) 6%, white)
+  );
+  --tab-active-bg: color-mix(in srgb, var(--primary) 12%, transparent);
+  --tab-active-padding-x: 0.75rem;
+  --tab-active-radius: var(--radius-pill);
+  --tab-bar-bg: color-mix(in srgb, var(--background) 92%, transparent);
+  --record-fab-shadow: 0 10px 28px rgb(37 99 235 / 0.45);
+  --record-fab-size: 3.75rem;
+  --list-icon-bg: color-mix(in srgb, var(--primary) 10%, white);
+  --list-icon-fg: var(--primary);
+  --settings-icon-bg: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 16%, white),
+    color-mix(in srgb, var(--primary) 6%, white)
+  );
+  --segment-track-bg: var(--muted);
+  --sheet-handle-bg: color-mix(in srgb, var(--muted-foreground) 35%, transparent);
+}
+
+[data-theme="v2"] .mobile-tab-dot {
+  display: none;
 }
 
 @layer base {

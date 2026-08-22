@@ -43,10 +43,15 @@ function TabLink({
       onClick={() => onNavigate(href)}
       className={cn(
         "relative flex min-h-11 flex-1 flex-col items-center justify-end gap-0.5 pb-2 pt-2 text-[10px] font-medium transition-colors",
-        active ? "text-primary" : "text-muted-foreground",
+        active ? "text-[var(--tab-active-fg,var(--primary))]" : "text-muted-foreground",
       )}
     >
-      <span className="relative">
+      <span
+        className={cn(
+          "relative flex flex-col items-center gap-0.5 rounded-[var(--tab-active-radius)] px-[var(--tab-active-padding-x)] py-0.5",
+          active && "bg-[var(--tab-active-bg)]",
+        )}
+      >
         <Icon className={cn("size-[18px]", active && "scale-105")} />
         {badge !== undefined && badge > 0 && (
           <NavCountBadge
@@ -58,7 +63,7 @@ function TabLink({
       <span>{label}</span>
       {active && (
         <span
-          className="mt-0.5 size-1 rounded-full bg-primary"
+          className="mobile-tab-dot mt-0.5 size-1 rounded-full bg-primary"
           aria-hidden
         />
       )}
@@ -82,7 +87,8 @@ function RecordFab({
     >
       <span
         className={cn(
-          "flex size-14 -mt-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_6px_20px] shadow-primary/45 ring-4 ring-background",
+          "flex items-center justify-center rounded-full bg-primary text-primary-foreground ring-4 ring-background",
+          "size-[var(--record-fab-size)] -mt-5 shadow-[var(--record-fab-shadow)]",
           active && "ring-primary/20",
         )}
       >
@@ -122,7 +128,7 @@ export function MobileBottomTabs({
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/90 bg-background/95 backdrop-blur-md pb-[env(safe-area-inset-bottom,0px)]"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/90 bg-[var(--tab-bar-bg)] backdrop-blur-md pb-[env(safe-area-inset-bottom,0px)]"
     >
       <div className="flex items-end">
         <TabLink

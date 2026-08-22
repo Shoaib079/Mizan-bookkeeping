@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import type { LucideIcon } from "lucide-react";
 
+import type { MeaningChipTone } from "@/components/ui/meaning-chip";
 import { cn } from "@/lib/utils";
+
+export type MobileRowIconTone = MeaningChipTone;
 
 export function MobileCardList({
   children,
@@ -14,7 +18,7 @@ export function MobileCardList({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-card shadow-sm divide-y divide-border",
+        "overflow-hidden rounded-[var(--radius-list)] border border-border bg-card shadow-[var(--shadow-card)] divide-y divide-border",
         className,
       )}
     >
@@ -32,6 +36,7 @@ export function MobileCardRow({
   amountNote,
   amountClassName,
   trailing,
+  leadingIcon,
 }: {
   /** Where the row leads. Omit when it opens something in place. */
   href?: string;
@@ -46,12 +51,34 @@ export function MobileCardRow({
   amountNote?: React.ReactNode;
   amountClassName?: string;
   trailing?: React.ReactNode;
+  /** Coloured movement icon — money in/out/attention/neutral. */
+  leadingIcon?: { icon: LucideIcon; tone: MobileRowIconTone };
 }) {
+  const toneBg: Record<MobileRowIconTone, string> = {
+    in: "bg-chip-in-soft text-chip-in",
+    out: "bg-chip-out-soft text-chip-out",
+    attention: "bg-chip-attention-soft text-chip-attention",
+    neutral: "bg-chip-neutral-soft text-chip-neutral",
+  };
+  const LeadingIcon = leadingIcon?.icon;
+
   return (
     <RowShell href={href} onClick={onClick}>
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1 truncate text-sm font-medium leading-snug">
-          {title}
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          {LeadingIcon && leadingIcon && (
+            <span
+              className={cn(
+                "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
+                toneBg[leadingIcon.tone],
+              )}
+            >
+              <LeadingIcon className="size-4" />
+            </span>
+          )}
+          <div className="min-w-0 flex-1 truncate text-sm font-medium leading-snug">
+            {title}
+          </div>
         </div>
         {(amount !== undefined || trailing) && (
           <div className="flex max-w-[42%] shrink-0 flex-col items-end gap-0.5 pl-2 text-right">
@@ -124,7 +151,7 @@ export function MobileCardListSkeleton({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-card divide-y divide-border",
+        "overflow-hidden rounded-[var(--radius-list)] border border-border bg-card divide-y divide-border",
         className,
       )}
       aria-busy
