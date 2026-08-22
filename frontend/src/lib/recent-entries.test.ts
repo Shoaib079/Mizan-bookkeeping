@@ -32,12 +32,12 @@ describe("recentEntriesListUrl", () => {
     expect(url).not.toContain("to=");
   });
 
-  it("can omit effective_only so voided rows can appear (Record desk)", () => {
+  it("Record desk requests effective-only with a fetch buffer above display cap", () => {
     const url = recentEntriesListUrl("ent-1", {
       limit: 25,
-      effectiveOnly: false,
+      effectiveOnly: true,
     });
-    expect(url).not.toContain("effective_only=");
+    expect(url).toContain("effective_only=true");
     expect(url).toContain("limit=25");
   });
 
@@ -52,13 +52,19 @@ describe("recentEntriesListUrl", () => {
 });
 
 describe("filterRecentEntriesForDisplay", () => {
-  it("drops void-reversal rows and caps at 10", () => {
+  it("drops voided and void-reversal rows and caps at 10", () => {
     const items = [
       row({ id: "1", entry_date: "2026-08-22" }),
       row({
+        id: "voided",
+        entry_date: "2026-08-22",
+        status: "voided",
+        description: "Voided expense",
+      }),
+      row({
         id: "rev",
         entry_date: "2026-08-22",
-        reverses_entry_id: "voided-1",
+        reverses_entry_id: "voided",
         description: "Void: expense",
       }),
       row({ id: "2", entry_date: "2026-08-21" }),
@@ -68,6 +74,7 @@ describe("filterRecentEntriesForDisplay", () => {
     ];
     const filtered = filterRecentEntriesForDisplay(items);
     expect(filtered.map((r) => r.id)).not.toContain("rev");
+    expect(filtered.map((r) => r.id)).not.toContain("voided");
     expect(filtered).toHaveLength(10);
     expect(filtered[0]?.id).toBe("1");
   });

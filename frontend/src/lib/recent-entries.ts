@@ -60,13 +60,15 @@ export function todayIsoDate(reference = new Date()): string {
   return dateToIsoLocal(reference);
 }
 
-/** Drop void-reversal rows; keep posted (and any voided if history fetched). */
+/** Drop voided originals and void-reversal rows; keep posted (incl. corrected). */
 export function filterRecentEntriesForDisplay(
   items: RecentEntryRow[],
   limit: number = RECENT_ENTRIES_LIMIT,
 ): RecentEntryRow[] {
   return items
-    .filter((row) => !row.reverses_entry_id)
+    .filter(
+      (row) => row.status !== "voided" && !row.reverses_entry_id,
+    )
     .slice(0, limit);
 }
 

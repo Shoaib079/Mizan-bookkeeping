@@ -4,7 +4,6 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { RecentEntriesCard } from "@/components/dashboard/recent-entries-card";
 import { RecentlyRecordedCard } from "@/components/record/recently-recorded-card";
 import { sourceDeclaring } from "@/test-support/source";
 import type { RecentEntryRow } from "@/lib/recent-entries";
@@ -38,7 +37,8 @@ function renderWithQuery(ui: React.ReactNode) {
 }
 
 function entry(
-  partial: Partial<RecentEntryRow> & Pick<RecentEntryRow, "id" | "entry_date" | "description">,
+  partial: Partial<RecentEntryRow> &
+    Pick<RecentEntryRow, "id" | "entry_date" | "description">,
 ): RecentEntryRow {
   return {
     source: "manual_expense",
@@ -82,7 +82,7 @@ describe("Recently recorded — render", () => {
     expect(dates[2]?.textContent).toMatch(/01\.07\.2026/);
   });
 
-  it("voided entry is struck-through with Voided badge; reversals absent", async () => {
+  it("voided entry is ABSENT; reversals absent", async () => {
     apiFetchMock.mockResolvedValue({
       items: [
         entry({
@@ -106,23 +106,40 @@ describe("Recently recorded — render", () => {
       total: 3,
     });
 
-    renderWithQuery(
-      <RecentEntriesCard
-        entityId="ent-1"
-        title="Recently recorded"
-        listUrl="/entities/ent-1/ledger/entries?limit=10"
-      />,
-    );
+    renderWithQuery(<RecentlyRecordedCard entityId="ent-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText("Voided rent")).toBeTruthy();
+      expect(screen.getByText("Keep me")).toBeTruthy();
     });
-    expect(screen.getByText("Voided")).toBeTruthy();
+    expect(screen.queryByText("Voided rent")).toBeNull();
     expect(screen.queryByText("Void: rent")).toBeNull();
-    const voidedRow = screen
-      .getAllByTestId("recent-entry-row")
-      .find((el) => el.getAttribute("data-entry-status") === "voided");
-    expect(voidedRow?.className).toMatch(/line-through/);
+    expect(screen.queryByText("Voided")).toBeNull();
+    expect(
+      screen
+        .getAllByTestId("recent-entry-row")
+        .some((el) => el.getAttribute("data-entry-status") === "voided"),
+    ).toBe(false);
+  });
+
+  it("corrected repost present with Edited badge", async () => {
+    apiFetchMock.mockResolvedValue({
+      items: [
+        entry({
+          id: "new-1",
+          entry_date: "2026-08-21",
+          description: "Corrected rent",
+          amends_entry_id: "old-1",
+        }),
+      ],
+      total: 1,
+    });
+
+    renderWithQuery(<RecentlyRecordedCard entityId="ent-1" />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Corrected rent")).toBeTruthy();
+    });
+    expect(screen.getByText("Edited")).toBeTruthy();
   });
 
   it("View all links to /reports/ledger", async () => {
@@ -138,31 +155,31 @@ describe("Recently recorded — render", () => {
 });
 
 describe("RecentlyRecordedCard wiring + mutation", () => {
-  it("uses recentEntriesListUrl without today filter and Recently recorded heading", () => {
+  it("uses effective-only list URL and Recently recorded heading", () => {
     const src = sourceDeclaring("RecentlyRecordedCard");
     expect(src).toContain('title="Recently recorded"');
     expect(src).toContain("recentEntriesListUrl(entityId");
-    expect(src).toContain("effectiveOnly: false");
+    expect(src).toContain("effectiveOnly: true");
     expect(src).toContain('viewAllHref="/reports/ledger"');
-    expect(src).not.toContain("Recorded today");
-    expect(src).not.toContain("recordedTodayListUrl");
+    expect(src).not.toContain("effectiveOnly: false");
   });
 
-  it("mutation: re-introduce today-only filter or Recorded today heading → red", () => {
-    const src = sourceDeclaring("RecentlyRecordedCard");
-    const brokenHeading = src.replace(
-      'title="Recently recorded"',
-      'title="Recorded today"',
+  it("mutation: render a voided row inside Recently recorded → red", () => {
+    const filterSrc = sourceDeclaring("filterRecentEntriesForDisplay");
+    const brokenFilter = filterSrc.replace(
+      'row.status !== "voided" && !row.reverses_entry_id',
+      "!row.reverses_entry_id",
     );
-    expect(brokenHeading).toContain("Recorded today");
-    expect(src).not.toContain("Recorded today");
+    expect(brokenFilter).not.toContain('row.status !== "voided"');
+    expect(filterSrc).toContain('row.status !== "voided"');
 
-    const brokenFilter = src.replace(
+    const cardSrc = sourceDeclaring("RecentlyRecordedCard");
+    const brokenCard = cardSrc.replace(
+      "effectiveOnly: true",
       "effectiveOnly: false",
-      "from: todayIsoDate(), to: todayIsoDate()",
     );
-    expect(brokenFilter).toContain("todayIsoDate()");
-    expect(src).not.toContain("todayIsoDate");
+    expect(brokenCard).toContain("effectiveOnly: false");
+    expect(cardSrc).toContain("effectiveOnly: true");
   });
 
   it("Record desk mounts RecentlyRecordedCard", () => {

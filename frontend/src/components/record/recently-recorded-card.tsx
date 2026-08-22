@@ -18,7 +18,7 @@ export function RecentlyRecordedCard({ entityId, className }: Props) {
       title="Recently recorded"
       listUrl={recentEntriesListUrl(entityId, {
         limit: 25,
-        effectiveOnly: false,
+        effectiveOnly: true,
       })}
       queryKey={["recently-recorded", entityId]}
       emptyMessage="Nothing recorded yet"

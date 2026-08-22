@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Record desk — Recently recorded:** last 10 any-date journal entries on Record desk; reuse `GET …/ledger/entries`. Tag `v0.recently-recorded`. **Awaiting owner review — do not push.**
+- **Recently recorded — hide voided:** Record desk list excludes voided + reversals via `effective_only` + client filter. Tag `v0.recently-recorded-hide-voided`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — recently recorded awaiting review)* |
-| **Last completed slice** | Record desk — Recently recorded |
-| **Last tag** | `v0.recently-recorded` |
+| **Active slice** | *(none — hide-voided awaiting review)* |
+| **Last completed slice** | Recently recorded — hide voided |
+| **Last tag** | `v0.recently-recorded-hide-voided` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |
