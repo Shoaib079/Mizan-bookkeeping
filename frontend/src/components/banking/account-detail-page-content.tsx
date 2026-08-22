@@ -3,6 +3,7 @@
 /** Money account detail — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
 import Link from "next/link";
+import { Building2, CreditCard } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -174,6 +175,9 @@ export function AccountDetailPageContent() {
               account.account_kind === "credit_card"
                 ? "Card payable"
                 : "Current balance"
+            }
+            icon={
+              account.account_kind === "credit_card" ? CreditCard : Building2
             }
             amountKurus={account.balance_kurus}
             format={() => balanceDisplay}

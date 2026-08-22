@@ -19,6 +19,7 @@ import {
   IconSquare,
   stickerDirectionLook,
 } from "@/components/ui/icon-square";
+import { MeaningCardAccentBar } from "@/components/ui/meaning-card";
 import { cn } from "@/lib/utils";
 
 export type BalanceStickerDirection = "company_owes" | "they_owe" | "settled";
@@ -79,7 +80,7 @@ export function EntityBalanceSticker({
       )}
       style={{ ["--accent-bar" as string]: look.accent }}
     >
-      <span data-accent-bar aria-hidden className="hidden" />
+      <MeaningCardAccentBar />
       <div className="flex items-start gap-2.5">
         <IconSquare icon={Icon} tint={look.tint} stroke={look.stroke} size="lg" />
         <div className="min-w-0 flex-1">

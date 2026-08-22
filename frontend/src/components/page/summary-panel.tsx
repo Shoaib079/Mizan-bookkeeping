@@ -6,7 +6,11 @@
  * explains its headline number the same way: a few contributing lines, a rule,
  * then the figure that matters. */
 
+import type { LucideIcon } from "lucide-react";
+
 import { formatTry } from "@/lib/money";
+import { IconSquare, toneToIconLook } from "@/components/ui/icon-square";
+import { MeaningCardAccentBar } from "@/components/ui/meaning-card";
 import { cn } from "@/lib/utils";
 
 export type SummaryLine = {
@@ -146,13 +150,14 @@ export function SummaryPanel({
   );
 }
 
-/** The one number a page exists to answer. */
+/** The one number a page exists to answer. Under v2: meaning card + muted bar. */
 export function HeadlineFigure({
   label,
   amountKurus,
   caption,
   tone = "default",
   format = formatTry,
+  icon,
   className,
 }: {
   label: string;
@@ -161,16 +166,28 @@ export function HeadlineFigure({
   tone?: "default" | "good" | "bad";
   /** Defaults to lira — pass through for foreign-currency pages. */
   format?: AmountFormatter;
+  /** Optional Lucide icon — sky/blue for bank/FX wallet cards. */
+  icon?: LucideIcon;
   className?: string;
 }) {
+  const look = toneToIconLook(tone);
   return (
     <div
+      data-meaning-card
+      data-testid="headline-figure"
       className={cn(
-        "min-w-[13rem] flex-1 rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)]",
+        "relative min-w-[13rem] flex-1 rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]",
         className,
       )}
+      style={{ ["--accent-bar" as string]: look.accent }}
     >
-      <p className="text-sm text-muted-foreground">{label}</p>
+      <MeaningCardAccentBar />
+      <div className="flex items-center gap-2.5">
+        {icon ? (
+          <IconSquare icon={icon} tint={look.tint} stroke={look.stroke} size="lg" />
+        ) : null}
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </div>
       <p
         className={cn(
           "mt-1 text-2xl font-semibold tabular-nums",

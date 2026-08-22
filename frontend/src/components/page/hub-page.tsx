@@ -4,12 +4,17 @@
  *
  * Banking, Delivery, Review, Record, Reports, More and Settings all present a
  * grid of "go here" tiles; each used to draw its own grid and tile. One tile,
- * one grid, everywhere. */
+ * one grid, everywhere. Under v2: muted left accent + tinted Lucide square. */
 
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/page/page-header";
+import { IconSquare } from "@/components/ui/icon-square";
+import {
+  ACCENT_BAR,
+  MeaningCardAccentBar,
+} from "@/components/ui/meaning-card";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { cn } from "@/lib/utils";
 
@@ -31,10 +36,9 @@ export function HubTileCard({ tile }: { tile: HubTile }) {
   const { icon: Icon } = tile;
   const body = (
     <>
+      <MeaningCardAccentBar />
       <div className="flex items-start justify-between gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-          <Icon className="size-4" />
-        </span>
+        <IconSquare icon={Icon} tint="sky" stroke="blue" size="lg" />
         {tile.badge !== undefined && tile.badge > 0 && (
           <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
             {tile.badge}
@@ -52,17 +56,29 @@ export function HubTileCard({ tile }: { tile: HubTile }) {
   );
 
   const className = cn(
-    "block rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-colors",
+    "relative block rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-colors",
     tile.disabled
       ? "pointer-events-none opacity-60"
       : "hover:border-primary/40 hover:bg-muted/30",
   );
 
+  const shellStyle = { ["--accent-bar" as string]: ACCENT_BAR.blue };
+
   if (tile.disabled) {
-    return <div className={className}>{body}</div>;
+    return (
+      <div data-meaning-card data-testid="hub-tile-card" className={className} style={shellStyle}>
+        {body}
+      </div>
+    );
   }
   return (
-    <Link href={tile.href} className={className}>
+    <Link
+      href={tile.href}
+      data-meaning-card
+      data-testid="hub-tile-card"
+      className={className}
+      style={shellStyle}
+    >
       {body}
     </Link>
   );

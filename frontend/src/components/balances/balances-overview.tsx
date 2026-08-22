@@ -5,8 +5,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
-import { apiFetch } from "@/lib/api";
 import {
   ArrowRight,
   Banknote,
@@ -14,19 +12,29 @@ import {
   HandCoins,
   Receipt,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 
-import type { MoneyAccountTree } from "@/lib/banking-types";
 import {
-  fxHoldingsNativeSummary,
-} from "@/lib/banking-tree-helpers";
+  IconSquare,
+  type IconStroke,
+  type IconTint,
+} from "@/components/ui/icon-square";
+import {
+  ACCENT_BAR,
+  MeaningCardAccentBar,
+  type AccentBarTone,
+} from "@/components/ui/meaning-card";
+import { apiFetch } from "@/lib/api";
+import type { MoneyAccountTree } from "@/lib/banking-types";
+import { fxHoldingsNativeSummary } from "@/lib/banking-tree-helpers";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
+import { subledgerCountLabel } from "@/lib/subledger-total";
 import {
   useCustomerBalances,
   useSupplierBalances,
 } from "@/lib/use-balance-map";
-import { subledgerCountLabel } from "@/lib/subledger-total";
 import {
   usePartnerBalanceTotal,
   useStaffBalanceTotal,
@@ -37,10 +45,13 @@ type CardProps = {
   href: string;
   title: string;
   hint: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   amount?: string;
   amountClass?: string;
   loading?: boolean;
+  accent: AccentBarTone;
+  tint: IconTint;
+  stroke: IconStroke;
 };
 
 function BalanceCard({
@@ -51,15 +62,23 @@ function BalanceCard({
   amount,
   amountClass,
   loading,
+  accent,
+  tint,
+  stroke,
 }: CardProps) {
   return (
     <Link
       href={href}
-      className="group flex flex-col justify-between rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50"
+      data-meaning-card
+      data-testid="balances-overview-card"
+      data-accent={accent}
+      className="group relative flex flex-col justify-between rounded-[var(--radius-card)] border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50"
+      style={{ ["--accent-bar" as string]: ACCENT_BAR[accent] }}
     >
+      <MeaningCardAccentBar />
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <Icon className="h-4 w-4 text-muted-foreground" />
+        <div className="flex items-center gap-2.5 text-sm font-medium text-foreground">
+          <IconSquare icon={Icon} tint={tint} stroke={stroke} size="lg" />
           {title}
         </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
@@ -111,7 +130,6 @@ export function BalancesOverview({ embedded = false }: Props) {
   const staff = useStaffBalanceTotal(entityId);
   const partners = usePartnerBalanceTotal(entityId);
 
-  // FX wallets fetched separately — not mixed into cash or bank.
   const [fxNativeSummary, setFxNativeSummary] = useState("No holdings");
   const [fxLoading, setFxLoading] = useState(false);
 
@@ -148,6 +166,13 @@ export function BalancesOverview({ embedded = false }: Props) {
     );
   }
 
+  const staffAccent: AccentBarTone =
+    staff.netSign > 0 ? "green" : staff.netSign < 0 ? "red" : "gray";
+  const staffTint: IconTint =
+    staff.netSign > 0 ? "mint" : staff.netSign < 0 ? "blush" : "gray";
+  const staffStroke: IconStroke =
+    staff.netSign > 0 ? "green" : staff.netSign < 0 ? "red" : "gray";
+
   return (
     <>
       {!embedded && (
@@ -165,6 +190,9 @@ export function BalancesOverview({ embedded = false }: Props) {
           amount={formatTry(payables.totalKurus)}
           amountClass={payables.totalKurus > 0 ? "text-destructive" : undefined}
           loading={payables.loading}
+          accent="green"
+          tint="mint"
+          stroke="green"
         />
         <BalanceCard
           href="/customers"
@@ -174,6 +202,9 @@ export function BalancesOverview({ embedded = false }: Props) {
           amount={formatTry(receivables.totalKurus)}
           amountClass={receivables.totalKurus > 0 ? "text-success" : undefined}
           loading={receivables.loading}
+          accent="red"
+          tint="blush"
+          stroke="red"
         />
         <BalanceCard
           href="/banking/fx"
@@ -182,6 +213,9 @@ export function BalancesOverview({ embedded = false }: Props) {
           icon={Coins}
           amount={fxNativeSummary}
           loading={fxLoading}
+          accent="blue"
+          tint="sky"
+          stroke="blue"
         />
         <BalanceCard
           href="/staff"
@@ -202,6 +236,9 @@ export function BalancesOverview({ embedded = false }: Props) {
                 : undefined
           }
           loading={staff.loading}
+          accent={staffAccent}
+          tint={staffTint}
+          stroke={staffStroke}
         />
         <BalanceCard
           href="/partners"
@@ -213,6 +250,9 @@ export function BalancesOverview({ embedded = false }: Props) {
             partners.totalKurus > 0 ? "text-destructive" : undefined
           }
           loading={partners.loading}
+          accent={partners.totalKurus > 0 ? "green" : "gray"}
+          tint={partners.totalKurus > 0 ? "mint" : "gray"}
+          stroke={partners.totalKurus > 0 ? "green" : "gray"}
         />
       </div>
     </>

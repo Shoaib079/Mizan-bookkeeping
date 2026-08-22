@@ -2,6 +2,7 @@
 
 /** FX wallet — DESIGN_ARCHETYPES §2 (`EntityDetailPage`). */
 
+import { Coins } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -149,6 +150,7 @@ export function FxWalletPageContent() {
         balance && (
           <HeadlineFigure
             label="Wallet balance"
+            icon={Coins}
             amountKurus={balance.native_quantity}
             format={() => formatFxNative(balance.native_quantity, currency)}
           />

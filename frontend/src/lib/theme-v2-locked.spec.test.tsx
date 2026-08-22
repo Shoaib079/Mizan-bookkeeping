@@ -45,7 +45,7 @@ function renderV2(ui: React.ReactNode) {
 
 
 describe("locked v2 meaning cards", () => {
-  it("StatCard renders white shell + hairline + 3px muted left bar + tinted icon square", () => {
+  it("StatCard renders white shell + hairline + 4px muted left bar + tinted icon square", () => {
     const { container } = renderV2(
       <StatCard
         label="Sales"

@@ -288,7 +288,7 @@
   display: none;
 }
 
-/* Meaning cards — 3px muted left accent (KPI / stickers) */
+/* Meaning cards — 4px muted left accent (phone-visible floor) */
 [data-theme="v2"] [data-meaning-card] {
   position: relative;
   overflow: hidden;
@@ -298,13 +298,15 @@
   box-shadow: 0 1px 2px rgba(11, 21, 38, 0.04);
 }
 [data-theme="v2"] [data-meaning-card] > [data-accent-bar] {
-  display: block;
+  /* !important beats Tailwind `hidden` if a caller leaves it on the node */
+  display: block !important;
   position: absolute;
   inset-block: 0;
   left: 0;
-  width: 3px;
+  width: 4px;
   border-radius: 16px 0 0 16px;
   background: var(--accent-bar, var(--accent-bar-blue));
+  pointer-events: none;
 }
 
 /* Sticker under v2: white + ink figure; heading uses muted semantic tone */

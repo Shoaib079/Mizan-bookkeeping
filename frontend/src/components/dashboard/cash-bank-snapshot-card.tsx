@@ -5,6 +5,11 @@ import { Wallet } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { BankAccountBalanceRows } from "@/components/banking/bank-account-balance-rows";
+import { IconSquare } from "@/components/ui/icon-square";
+import {
+  ACCENT_BAR,
+  MeaningCardAccentBar,
+} from "@/components/ui/meaning-card";
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountTree } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
@@ -42,11 +47,17 @@ export function CashBankSnapshotCard({ cashKurus, bankKurus }: Props) {
   }, [entityId]);
 
   return (
-    // Same shell as StatCard, which it sits beside. It used to carry a wider
-    // radius and more padding than its neighbour, so the pair never lined up.
-    <div className="rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Wallet className="size-4" /> Cash & bank
+    // Same shell as StatCard — meaning card + blue bar + sky icon under v2.
+    <div
+      data-meaning-card
+      data-testid="cash-bank-snapshot-card"
+      className="relative rounded-[var(--radius-card)] border border-border bg-card p-4 shadow-[var(--shadow-card)]"
+      style={{ ["--accent-bar" as string]: ACCENT_BAR.blue }}
+    >
+      <MeaningCardAccentBar />
+      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+        <IconSquare icon={Wallet} tint="sky" stroke="blue" size="lg" />
+        Cash & bank
       </div>
       <div className="mt-3 space-y-3 text-sm">
         <div className="flex items-baseline justify-between gap-4">

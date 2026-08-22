@@ -17,13 +17,13 @@
 
 ## Current
 
-- **v2 owner-locked final spec:** white canvas + muted left bars + tinted Lucide icon squares under `data-theme="v2"`; sandbox env + A/B toggle unchanged; production v1. Tag `v0.v2-locked-spec`. **Awaiting owner review — do not push. Do not roll out to production.**
+- **v2 meaning bars everywhere:** locked left accent (4px) + tinted Lucide squares on banking hub, cash/bank snapshot, Balances/Right-now, FX/bank headlines, stickers, KPI under `data-theme="v2"`. Tag `v0.v2-meaning-bars-everywhere`. **Awaiting owner review — do not push. Do not roll out to production.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — v2 locked spec in sandbox; awaiting review)* |
-| **Last completed slice** | v2 owner-locked final spec |
-| **Last tag** | `v0.v2-locked-spec` |
+| **Active slice** | *(none — v2 meaning bars everywhere in sandbox; awaiting review)* |
+| **Last completed slice** | v2 meaning bars everywhere |
+| **Last tag** | `v0.v2-meaning-bars-everywhere` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner A/B on sandbox → approve rollout or iterate |
 

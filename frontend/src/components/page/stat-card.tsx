@@ -17,6 +17,7 @@ import type { LucideIcon } from "lucide-react";
 import { formatTry } from "@/lib/money";
 import type { AmountFormatter } from "@/components/page/summary-panel";
 import { IconSquare, toneToIconLook } from "@/components/ui/icon-square";
+import { MeaningCardAccentBar } from "@/components/ui/meaning-card";
 import { TrendPill } from "@/components/ui/trend-pill";
 import { cn } from "@/lib/utils";
 
@@ -68,7 +69,7 @@ export function StatCard({
 
   const body = (
     <>
-      <span data-accent-bar aria-hidden className="hidden" />
+      <MeaningCardAccentBar />
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           {Icon && (

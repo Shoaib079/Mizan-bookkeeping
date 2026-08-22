@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — v2 locked spec in sandbox; awaiting review)* |
+| **Active slice**         | *(none — v2 meaning bars everywhere in sandbox; awaiting review)* |
 | **Next up**              | Owner A/B on sandbox → approve rollout or iterate; else POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **v2 owner-locked final spec** (`v0.v2-locked-spec`) |
-| **Last commit/tag**      | `v0.v2-locked-spec` |
+| **Last completed slice** | **v2 meaning bars everywhere** (`v0.v2-meaning-bars-everywhere`) |
+| **Last commit/tag**      | `v0.v2-meaning-bars-everywhere` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | v2 meaning bars everywhere                      | `v0.v2-meaning-bars-everywhere`                        | 4px muted left bar + tinted Lucide on banking/cash/FX/balances/stickers/KPI; mutation HubTileCard bar → red |
 | 2026-08-22 | v2 owner-locked final spec                      | `v0.v2-locked-spec`                                    | White canvas; muted left bars; tinted Lucide squares; no gradients; FAB ≥ v1; mutation bright/gradient/FAB → red |
 | 2026-08-22 | Sandbox-wide v2 look                            | `v0.sandbox-wide-v2`                                   | Env-gated `data-theme=v2` on `<html>` + owner New look toggle (localStorage); prod unset → v1; display-only |
 | 2026-08-22 | /preview interactive phone walkthrough          | `v0.preview-interactive-phone`                         | Multi-screen local tabs/drill-in/void sheet; zero API+router; owner-only; v1 live unchanged; mutation router wiring → red |
