@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { formatFxNative, parseFxNative } from "@/lib/fx-money";
 import { useToast } from "@/lib/toast";
+import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 
 type Props = {
   open: boolean;
@@ -38,6 +39,7 @@ export function GroupSaleForexDiscountDialog({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
+  const submitIdempotency = useSubmitIdempotency();
   const [amountText, setAmountText] = useState("");
   const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -65,8 +67,10 @@ export function GroupSaleForexDiscountDialog({
     setSubmitting(true);
     setError(null);
     try {
+      const idempotencyKey = submitIdempotency.beginSubmit();
       await apiFetch(`/entities/${entityId}/group-sales/${groupSaleId}/discount`, {
         method: "POST",
+        idempotencyKey,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           discount_kurus: 0,
@@ -75,6 +79,7 @@ export function GroupSaleForexDiscountDialog({
           actor_id: actorId,
         }),
       });
+      submitIdempotency.completeSubmit();
       toast("Discount recorded");
       onSaved?.();
       onClose();

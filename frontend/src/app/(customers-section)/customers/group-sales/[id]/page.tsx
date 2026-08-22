@@ -246,31 +246,29 @@ export default function GroupSaleDetailPage() {
         <>
           {(sale.discounts?.length ?? 0) > 0 && (
             <DetailSection title="Discounts">
-              <DataTable>
-                <DataTableHead>
-                  <tr>
-                    <DataTableHeaderCell>Date</DataTableHeaderCell>
-                    <DataTableHeaderCell>Description</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                  </tr>
-                </DataTableHead>
-                <DataTableBody>
-                  {sale.discounts!.map((d) => (
-                    <DataTableRow key={d.customer_ledger_entry_id}>
-                      <DataTableCell>{formatTrDate(d.movement_date)}</DataTableCell>
-                      <DataTableCell>{d.description}</DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {sale.forex_currency
-                          ? formatFxNative(
-                              d.discount_native_minor,
-                              sale.forex_currency,
-                            )
-                          : formatTry(d.discount_native_minor)}
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
+              <ul className="divide-y divide-border rounded-md border">
+                {sale.discounts!.map((d) => (
+                  <li
+                    key={d.customer_ledger_entry_id}
+                    className="flex flex-col gap-1 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">{d.description}</p>
+                      <p className="text-muted-foreground">
+                        {formatTrDate(d.movement_date)}
+                      </p>
+                    </div>
+                    <p className="tabular-nums sm:text-right">
+                      {sale.forex_currency
+                        ? formatFxNative(
+                            d.discount_native_minor,
+                            sale.forex_currency,
+                          )
+                        : formatTry(d.discount_native_minor)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             </DetailSection>
           )}
           <DetailSection title="Menu lines">
