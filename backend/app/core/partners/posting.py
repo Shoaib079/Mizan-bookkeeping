@@ -533,7 +533,22 @@ def post_pay_partner(
 
     with entity_context(session, entity_id):
         require_entity_context()
-        _get_partner(session, entity_id, partner_id)
+        partner = _get_partner(session, entity_id, partner_id)
+
+        from app.features.partners.ledger_display_description import (
+            compose_partner_post_description,
+        )
+
+        reimb_description = compose_partner_post_description(
+            movement_type=PartnerMovementType.REIMBURSEMENT_PAID.value,
+            partner_name=partner.name,
+            raw_note=description,
+        )
+        drawing_description = compose_partner_post_description(
+            movement_type=PartnerMovementType.DRAWING.value,
+            partner_name=partner.name,
+            raw_note=description,
+        )
 
         payment_gl = _validate_payment_account(session, entity_id, payment_account_id)
         owe = max(0, _reimbursement_balance(session, entity_id, partner_id))
@@ -558,7 +573,7 @@ def post_pay_partner(
                 session,
                 entity_id,
                 payment_date,
-                description,
+                reimb_description,
                 lines,
                 actor_id=actor_id,
                 source=JournalEntrySource.PARTNER_REIMBURSEMENT_PAID,
@@ -569,7 +584,7 @@ def post_pay_partner(
                 movement_date=payment_date,
                 movement_type=PartnerMovementType.REIMBURSEMENT_PAID,
                 amount_kurus=-reimbursement_kurus,
-                description=description,
+                description=reimb_description,
                 actor_id=actor_id,
                 journal_entry_id=reimb_je.id,
             )
@@ -585,7 +600,7 @@ def post_pay_partner(
                 session,
                 entity_id,
                 payment_date,
-                description,
+                drawing_description,
                 lines,
                 actor_id=actor_id,
                 source=JournalEntrySource.PARTNER_DRAWING,
@@ -596,7 +611,7 @@ def post_pay_partner(
                 movement_date=payment_date,
                 movement_type=PartnerMovementType.DRAWING,
                 amount_kurus=-drawing_kurus,
-                description=description,
+                description=drawing_description,
                 actor_id=actor_id,
                 journal_entry_id=drawing_je.id,
             )

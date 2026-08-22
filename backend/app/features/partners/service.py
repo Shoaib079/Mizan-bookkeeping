@@ -91,6 +91,28 @@ from app.features.reports.financial_statements import get_profit_and_loss
 HUNDRED = Decimal("100")
 
 
+def _partner_composed_description(
+    session: Session,
+    entity_id: uuid.UUID,
+    partner_id: uuid.UUID,
+    *,
+    movement_type: str,
+    raw_note: str | None,
+    subject_name: str | None = None,
+) -> str:
+    partner = get_partner(session, entity_id, partner_id)
+    from app.features.partners.ledger_display_description import (
+        compose_partner_post_description,
+    )
+
+    return compose_partner_post_description(
+        movement_type=movement_type,
+        partner_name=partner.name,
+        subject_name=subject_name,
+        raw_note=raw_note,
+    )
+
+
 def _partner_entry_reads(
     session: Session, entries: list[PartnerLedgerEntry]
 ) -> list[PartnerLedgerEntryRead]:
@@ -305,7 +327,13 @@ def record_expense_fronted(
         partner_id,
         expense_date=payload.expense_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description,
+        description=_partner_composed_description(
+            session,
+            entity_id,
+            partner_id,
+            movement_type=PartnerMovementType.EXPENSE_FRONTED.value,
+            raw_note=payload.description,
+        ),
         actor_id=payload.actor_id,
         expense_account_id=payload.expense_account_id,
     )
@@ -365,7 +393,13 @@ def record_reimbursement_paid(
         partner_id,
         payment_date=payload.payment_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description,
+        description=_partner_composed_description(
+            session,
+            entity_id,
+            partner_id,
+            movement_type=PartnerMovementType.REIMBURSEMENT_PAID.value,
+            raw_note=payload.description,
+        ),
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
@@ -394,7 +428,7 @@ def record_pay_partner(
         partner_id,
         payment_date=payload.payment_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description.strip(),
+        description=payload.description.strip() if payload.description else "",
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
@@ -435,7 +469,13 @@ def record_drawing(
         partner_id,
         drawing_date=payload.drawing_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description,
+        description=_partner_composed_description(
+            session,
+            entity_id,
+            partner_id,
+            movement_type=PartnerMovementType.DRAWING.value,
+            raw_note=payload.description,
+        ),
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
@@ -463,7 +503,13 @@ def record_drawing_repayment(
         partner_id,
         payment_date=payload.payment_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description,
+        description=_partner_composed_description(
+            session,
+            entity_id,
+            partner_id,
+            movement_type=PartnerMovementType.DRAWING_REPAYMENT.value,
+            raw_note=payload.description,
+        ),
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
@@ -494,7 +540,13 @@ def record_capital_contribution(
         partner_id,
         contribution_date=payload.contribution_date,
         amount_kurus=payload.amount_kurus,
-        description=note,
+        description=_partner_composed_description(
+            session,
+            entity_id,
+            partner_id,
+            movement_type=PartnerMovementType.CAPITAL_CONTRIBUTION.value,
+            raw_note=note,
+        ),
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
@@ -523,7 +575,13 @@ def record_profit_paid(
         partner_id,
         payment_date=payload.payment_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description.strip(),
+        description=_partner_composed_description(
+            session,
+            entity_id,
+            partner_id,
+            movement_type=PartnerMovementType.PROFIT_PAID.value,
+            raw_note=payload.description,
+        ),
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )

@@ -50,7 +50,7 @@ export function FxExpenseSpendForm({
   const [expenseAccountId, setExpenseAccountId] = useState("");
   const [nativeText, setNativeText] = useState("");
   const [dateText, setDateText] = useState("");
-  const [description, setDescription] = useState(`FX expense (${currency})`);
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -157,12 +157,11 @@ export function FxExpenseSpendForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-spend-desc">Description</Label>
+          <Label htmlFor="fx-spend-desc">Note (optional)</Label>
           <Input
             id="fx-spend-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

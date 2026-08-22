@@ -62,7 +62,7 @@ export function StaffAccrualForm({
   const [periodYear, setPeriodYear] = useState("");
   const [periodMonth, setPeriodMonth] = useState("");
   const [amountText, setAmountText] = useState("");
-  const [description, setDescription] = useState("Salary accrual");
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -76,7 +76,7 @@ export function StaffAccrualForm({
     setPeriodYear(String(period.year));
     setPeriodMonth(String(period.month));
     setAmountText("");
-    setDescription("Salary accrual");
+    setDescription("");
     setError(null);
   }, [open, defaultSalaryPeriod]);
 
@@ -220,12 +220,11 @@ export function StaffAccrualForm({
           )}
         </div>
         <div>
-          <Label htmlFor="acc-desc">Description</Label>
+          <Label htmlFor="acc-desc">Note (optional)</Label>
           <Input
             id="acc-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

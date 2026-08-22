@@ -116,11 +116,6 @@ export function PartnerDetailLedger({
                   </DataTableCell>
                   <DataTableCell>
                     <span>{entry.description}</span>
-                    {entry.subject_name && (
-                      <span className="ml-2 text-muted-foreground">
-                        · {entry.subject_name}
-                      </span>
-                    )}
                     {entry.was_corrected && (
                       <span className="ml-2">
                         <EditedBadge />

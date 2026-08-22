@@ -47,7 +47,7 @@ export function StaffAdvanceReturnForm({
   const [glAccountId, setGlAccountId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
-  const [description, setDescription] = useState("Advance returned");
+  const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +65,7 @@ export function StaffAdvanceReturnForm({
       submitIdempotency.resetSubmit();
       setDateText(todayTrDate());
       setAmountText("");
-      setDescription("Advance returned");
+      setDescription("");
       setError(null);
       void load().catch(() => undefined);
     }
@@ -154,12 +154,11 @@ export function StaffAdvanceReturnForm({
           />
         </div>
         <div>
-          <Label htmlFor="ret-desc">Description</Label>
+          <Label htmlFor="ret-desc">Note (optional)</Label>
           <Input
             id="ret-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

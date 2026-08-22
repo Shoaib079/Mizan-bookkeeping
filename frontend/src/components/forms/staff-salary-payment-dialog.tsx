@@ -110,7 +110,7 @@ export function StaffSalaryPaymentDialog({
   const isStatement = source === "statement";
 
   const [dateText, setDateText] = useState("");
-  const [description, setDescription] = useState("Salary payment");
+  const [description, setDescription] = useState("");
   const [tryAccounts, setTryAccounts] = useState<MoneyAccountOption[]>([]);
   const [paymentGlAccountId, setPaymentGlAccountId] = useState("");
   const [fundingMode, setFundingMode] = useState<SalaryFundingMode>("cash");
@@ -267,7 +267,7 @@ export function StaffSalaryPaymentDialog({
       setPeriodYear(String(period.year));
       setPeriodMonth(String(period.month));
     }
-    setDescription("Salary payment");
+    setDescription("");
     setFundingMode("cash");
     setPartnerId("");
     setSalaryText("");
@@ -524,12 +524,11 @@ export function StaffSalaryPaymentDialog({
 
         {!isStatement && !hidePaymentDate && (
           <div>
-            <Label htmlFor="pay-desc">Description</Label>
+            <Label htmlFor="pay-desc">Note (optional)</Label>
             <Input
               id="pay-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              required
             />
           </div>
         )}

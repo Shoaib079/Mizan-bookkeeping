@@ -179,7 +179,7 @@ def post_fx_conversion(
     native_quantity: int,
     try_received_kurus: int,
     conversion_date: date,
-    description: str,
+    description: str | None = "",
     actor_id: uuid.UUID,
 ) -> FxConversionPostResult:
     """Spend FX from wallet, receive TRY — realized gain/loss only on conversion."""
@@ -216,11 +216,23 @@ def post_fx_conversion(
             try_cost_kurus=try_cost_kurus,
         )
 
+        from app.features.fx.ledger_display_description import (
+            build_fx_conversion_description,
+            note_from_payload,
+        )
+
+        ledger_description = build_fx_conversion_description(
+            native_quantity=native_quantity,
+            currency=fx_account.currency or "FX",
+            try_received_kurus=try_received_kurus,
+            note=note_from_payload(description),
+        )
+
         journal_entry = prepare_journal_entry(
             session,
             entity_id,
             conversion_date,
-            description,
+            ledger_description,
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.FX_CONVERSION,
@@ -233,7 +245,7 @@ def post_fx_conversion(
             movement_type=FxMovementType.SPEND,
             native_quantity=-native_quantity,
             try_cost_kurus=-try_cost_kurus,
-            description=description,
+            description=ledger_description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
         )
@@ -259,7 +271,7 @@ def post_fx_expense_spend(
     expense_account_id: uuid.UUID,
     native_quantity: int,
     spend_date: date,
-    description: str,
+    description: str | None = "",
     actor_id: uuid.UUID,
 ) -> FxExpenseSpendPostResult:
     """Pay a business expense directly from FX wallet at average cost."""
@@ -285,11 +297,25 @@ def post_fx_expense_spend(
             try_cost_kurus=try_cost_kurus,
         )
 
+        from app.features.fx.ledger_display_description import (
+            build_fx_spend_description,
+            note_from_payload,
+        )
+
+        # Single-field UX: payload description is expense text when not bare.
+        expense_text = note_from_payload(description)
+        ledger_description = build_fx_spend_description(
+            native_quantity=native_quantity,
+            currency=_fx_account.currency or "FX",
+            expense_description=expense_text,
+            note=None,
+        )
+
         journal_entry = prepare_journal_entry(
             session,
             entity_id,
             spend_date,
-            description,
+            ledger_description,
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.FX_EXPENSE_SPEND,
@@ -302,7 +328,7 @@ def post_fx_expense_spend(
             movement_type=FxMovementType.SPEND,
             native_quantity=-native_quantity,
             try_cost_kurus=-try_cost_kurus,
-            description=description,
+            description=ledger_description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
         )

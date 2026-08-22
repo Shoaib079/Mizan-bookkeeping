@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Recently recorded — hide voided:** Record desk list excludes voided + reversals via `effective_only` + client filter. Tag `v0.recently-recorded-hide-voided`. **Awaiting owner review — do not push.**
+- **Ledger rich descriptions:** staff / FX / partner identifying copy at read+write; GL batch enrichment. Tag `v0.ledger-rich-descriptions`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — hide-voided awaiting review)* |
-| **Last completed slice** | Recently recorded — hide voided |
-| **Last tag** | `v0.recently-recorded-hide-voided` |
+| **Active slice** | *(none — ledger rich descriptions awaiting review)* |
+| **Last completed slice** | Ledger rich descriptions — staff/FX/partner |
+| **Last tag** | `v0.ledger-rich-descriptions` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |

@@ -38,15 +38,8 @@ _ALLOCATION_PART = {
 
 
 def _described(entry) -> str:
-    """The note, and who or what it was for.
-
-    The page shows the subject beside the description; a statement has one
-    column, so it joins them. Without this a partner who fronted three
-    salaries in a week has three rows reading "Temmuz maaşı" and no way to
-    tell whose — which is the whole reason the name was surfaced.
-    """
-    subject = getattr(entry, "subject_name", None)
-    return f"{entry.description} — {subject}" if subject else entry.description
+    """Description only — subject is already folded in by apply_partner_*."""
+    return entry.description
 
 
 def _rows(entries: list) -> list[SubledgerRow]:

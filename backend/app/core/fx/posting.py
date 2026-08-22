@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from app.core.cash.guards import resolve_session_for_movement
 from app.core.chart_of_accounts.models import Account
 from app.core.chart_of_accounts.types import AccountNormalBalance
-from app.core.fx.ledger import record_fx_movement, resolve_fx_purchase_description
+from app.core.fx.ledger import record_fx_movement
+from app.features.fx.ledger_display_description import (
+    build_fx_purchase_description,
+    note_from_payload,
+)
 from app.core.fx.models import FxLedgerEntry
 from app.core.fx.types import FxMovementType
 from app.core.ledger.models import JournalEntry, JournalEntrySource
@@ -175,8 +179,12 @@ def post_fx_purchase(
         if fx_account.id == try_cash_account.id:
             raise InvalidFxPurchaseError("FX wallet and TRY cash account must differ")
 
-        ledger_description = resolve_fx_purchase_description(
-            description, fx_account.currency
+        ledger_description = build_fx_purchase_description(
+            native_quantity=native_quantity,
+            currency=fx_account.currency,
+            try_cost_kurus=try_cost_kurus,
+            cash_account_name=try_cash_account.name,
+            note=note_from_payload(description),
         )
 
         lines = build_fx_purchase_posting_lines(

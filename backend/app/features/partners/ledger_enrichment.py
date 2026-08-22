@@ -47,6 +47,11 @@ def _attach_payment_accounts(session: Session, reads: Sequence[Any]) -> None:
 def enrich_partner_reads(
     session: Session, rows: Sequence[Any], reads: Sequence[Any]
 ) -> None:
-    """Both enrichments, in one call, over one page of rows."""
+    """Payment account, subject name, then rich description (subject folded in)."""
     _attach_payment_accounts(session, reads)
     attach_subject_names(session, rows, reads)
+    from app.features.partners.ledger_display_description import (
+        apply_partner_ledger_descriptions,
+    )
+
+    apply_partner_ledger_descriptions(session, rows, reads)

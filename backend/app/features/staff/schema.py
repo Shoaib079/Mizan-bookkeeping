@@ -73,7 +73,7 @@ class StaffLedgerRead(BaseModel):
 class StaffAccrualCreate(AcknowledgeDuplicateMixin):
     accrual_date: date
     amount_minor: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     period_year: int = Field(ge=2000, le=2100)
     period_month: int = Field(ge=1, le=12)
@@ -89,7 +89,7 @@ class StaffAccrualCreate(AcknowledgeDuplicateMixin):
 class StaffAdvanceCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     amount_minor: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None
@@ -99,7 +99,7 @@ class StaffAdvanceCreate(AcknowledgeDuplicateMixin):
 class StaffAdvanceReturnCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     amount_minor: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
@@ -123,7 +123,7 @@ class StaffExtraDaysPaidResponse(BaseModel):
 class StaffPaymentCreate(AcknowledgeDuplicateMixin):
     payment_date: date
     amount_minor: int = Field(ge=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID | None = None
     fx_money_account_id: uuid.UUID | None = None

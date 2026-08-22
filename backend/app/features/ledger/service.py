@@ -114,7 +114,13 @@ def list_journal_entries(
             )
         )
         entries, total = fetch_paginated(session, stmt, params)
-        return [_to_journal_entry_out(entry) for entry in entries], total
+        outs = [_to_journal_entry_out(entry) for entry in entries]
+        from app.features.ledger.enrich_descriptions import (
+            enrich_journal_entry_descriptions,
+        )
+
+        enrich_journal_entry_descriptions(session, outs)
+        return outs, total
 
 
 def void_entry(

@@ -91,6 +91,12 @@ def _staff_entry_reads(
         for r in reads:
             if r.journal_entry_id in account_by_je:
                 r.payment_account_id = account_by_je[r.journal_entry_id]
+
+    from app.features.staff.ledger_display_description import (
+        apply_staff_ledger_descriptions,
+    )
+
+    apply_staff_ledger_descriptions(session, entries, reads)
     return reads
 
 
@@ -253,6 +259,18 @@ def record_accrual(
     employee_id: uuid.UUID,
     payload: StaffAccrualCreate,
 ) -> StaffAccrualResponse:
+    employee = get_employee(session, entity_id, employee_id)
+    from app.features.staff.ledger_display_description import (
+        compose_staff_post_description,
+    )
+
+    description = compose_staff_post_description(
+        movement_type=StaffMovementType.SALARY_ACCRUED.value,
+        employee_name=employee.name,
+        period_year=payload.period_year,
+        period_month=payload.period_month,
+        raw_note=payload.description,
+    )
     with entity_context(session, entity_id):
         require_entity_context()
         ensure_not_duplicate(
@@ -273,7 +291,7 @@ def record_accrual(
         employee_id,
         accrual_date=payload.accrual_date,
         amount_minor=payload.amount_minor,
-        description=payload.description,
+        description=description,
         actor_id=payload.actor_id,
         period_year=payload.period_year,
         period_month=payload.period_month,
@@ -296,6 +314,16 @@ def record_advance(
     payload: StaffAdvanceCreate,
 ) -> StaffAdvanceResponse:
     require_manual_cash_payment_account(session, entity_id, payload.payment_account_id)
+    employee = get_employee(session, entity_id, employee_id)
+    from app.features.staff.ledger_display_description import (
+        compose_staff_post_description,
+    )
+
+    description = compose_staff_post_description(
+        movement_type=StaffMovementType.ADVANCE_PAID.value,
+        employee_name=employee.name,
+        raw_note=payload.description,
+    )
     with entity_context(session, entity_id):
         require_entity_context()
         ensure_not_duplicate(
@@ -314,7 +342,7 @@ def record_advance(
         employee_id,
         payment_date=payload.payment_date,
         amount_minor=payload.amount_minor,
-        description=payload.description,
+        description=description,
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
         fx_money_account_id=payload.fx_money_account_id,
@@ -341,6 +369,16 @@ def record_advance_return(
     payload: StaffAdvanceReturnCreate,
 ) -> StaffAdvanceResponse:
     require_manual_cash_payment_account(session, entity_id, payload.payment_account_id)
+    employee = get_employee(session, entity_id, employee_id)
+    from app.features.staff.ledger_display_description import (
+        compose_staff_post_description,
+    )
+
+    description = compose_staff_post_description(
+        movement_type=StaffMovementType.ADVANCE_RETURNED.value,
+        employee_name=employee.name,
+        raw_note=payload.description,
+    )
     with entity_context(session, entity_id):
         require_entity_context()
         ensure_not_duplicate(
@@ -359,7 +397,7 @@ def record_advance_return(
         employee_id,
         payment_date=payload.payment_date,
         amount_minor=payload.amount_minor,
-        description=payload.description,
+        description=description,
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
     )
@@ -496,6 +534,18 @@ def record_payment(
     payload: StaffPaymentCreate,
 ) -> StaffPaymentResponse:
     require_manual_cash_payment_account(session, entity_id, payload.payment_account_id)
+    employee = get_employee(session, entity_id, employee_id)
+    from app.features.staff.ledger_display_description import (
+        compose_staff_post_description,
+    )
+
+    description = compose_staff_post_description(
+        movement_type=StaffMovementType.SALARY_PAYMENT.value,
+        employee_name=employee.name,
+        period_year=payload.period_year,
+        period_month=payload.period_month,
+        raw_note=payload.description,
+    )
     with entity_context(session, entity_id):
         require_entity_context()
         if payload.amount_minor == 0:
@@ -534,7 +584,7 @@ def record_payment(
         period_year=payload.period_year,
         period_month=payload.period_month,
         period_salary_minor=payload.period_salary_minor,
-        description=payload.description,
+        description=description,
         actor_id=payload.actor_id,
         payment_account_id=payload.payment_account_id,
         fx_money_account_id=payload.fx_money_account_id,

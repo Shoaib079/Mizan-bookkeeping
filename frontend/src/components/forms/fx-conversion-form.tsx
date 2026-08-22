@@ -48,7 +48,7 @@ export function FxConversionForm({
   const [nativeText, setNativeText] = useState("");
   const [tryReceivedText, setTryReceivedText] = useState("");
   const [dateText, setDateText] = useState("");
-  const [description, setDescription] = useState(`Convert ${currency} to TRY`);
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -179,12 +179,11 @@ export function FxConversionForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-conv-desc">Description</Label>
+          <Label htmlFor="fx-conv-desc">Note (optional)</Label>
           <Input
             id="fx-conv-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

@@ -251,6 +251,13 @@ def get_fx_ledger(
             reads.append(
                 _to_ledger_read(session, entry, entity_id=entity_id, journal=journal),
             )
+        from app.features.fx.ledger_display_description import (
+            apply_fx_ledger_descriptions,
+        )
+
+        apply_fx_ledger_descriptions(
+            session, entries, reads, entity_id=entity_id
+        )
     return reads, total
 
 

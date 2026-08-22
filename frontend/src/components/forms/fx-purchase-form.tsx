@@ -203,7 +203,7 @@ export function FxPurchaseFormFields({
         label="Pay from cash drawer"
       />
       <div>
-        <Label htmlFor="fx-buy-desc">Description (optional)</Label>
+        <Label htmlFor="fx-buy-desc">Note (optional)</Label>
         <Input
           id="fx-buy-desc"
           placeholder={`Buy ${currency}`}

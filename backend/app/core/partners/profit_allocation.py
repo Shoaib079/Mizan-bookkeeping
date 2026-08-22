@@ -270,11 +270,18 @@ def post_profit_allocation(
             partner_capital_id=capital.id,
             splits=splits,
         )
+        from app.features.partners.ledger_display_description import (
+            compose_partner_post_description,
+            note_from_payload,
+        )
+
+        note = note_from_payload(description)
+        journal_description = note or "Profit allocation"
         journal_entry = prepare_journal_entry(
             session,
             entity_id,
             allocation_date,
-            description,
+            journal_description,
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.PARTNER_PROFIT_ALLOCATION,
@@ -282,9 +289,15 @@ def post_profit_allocation(
         )
 
         partner_entries: list[PartnerLedgerEntry] = []
-        settlement_desc = f"Settled from profit — {description}"
+        partners_by_id = {p.id: p for p in partners}
         for split in splits:
+            partner = partners_by_id[split.partner_id]
             if split.offset_kurus > 0:
+                settlement_desc = compose_partner_post_description(
+                    movement_type=PartnerMovementType.PROFIT_SETTLEMENT.value,
+                    partner_name=partner.name,
+                    raw_note=note,
+                )
                 entry = partner_ledger.persist_partner_ledger_entry(
                     session,
                     split.partner_id,
@@ -297,13 +310,18 @@ def post_profit_allocation(
                 )
                 partner_entries.append(entry)
             if split.amount_kurus > 0:
+                alloc_desc = compose_partner_post_description(
+                    movement_type=PartnerMovementType.PROFIT_ALLOCATION.value,
+                    partner_name=partner.name,
+                    raw_note=note,
+                )
                 entry = partner_ledger.persist_partner_ledger_entry(
                     session,
                     split.partner_id,
                     movement_date=allocation_date,
                     movement_type=PartnerMovementType.PROFIT_ALLOCATION,
                     amount_kurus=split.amount_kurus,
-                    description=description,
+                    description=alloc_desc,
                     actor_id=actor_id,
                     journal_entry_id=journal_entry.id,
                 )

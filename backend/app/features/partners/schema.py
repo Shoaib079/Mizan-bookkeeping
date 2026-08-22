@@ -117,7 +117,7 @@ class PartnerLedgerRead(BaseModel):
 class ExpenseFrontedCreate(AcknowledgeDuplicateMixin):
     expense_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     expense_account_id: uuid.UUID
 
@@ -149,7 +149,7 @@ class PartnerSplitBuyResponse(BaseModel):
 class ReimbursementPaidCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
@@ -171,7 +171,7 @@ class PayPartnerCreate(BaseModel):
 
     payment_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
@@ -188,7 +188,7 @@ class PayPartnerResponse(BaseModel):
 class DrawingCreate(BaseModel):
     drawing_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
@@ -196,7 +196,7 @@ class DrawingCreate(BaseModel):
 class DrawingRepaymentCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
@@ -230,7 +230,7 @@ class CapitalContributionResponse(BaseModel):
 class ProfitPaidCreate(BaseModel):
     payment_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     payment_account_id: uuid.UUID
 
@@ -293,7 +293,7 @@ class ProfitAllocationPost(BaseModel):
     profit_kurus: int | None = Field(default=None, gt=0)
     period_from: date | None = None
     period_to: date | None = None
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
     net_against_drawings: bool = True
 

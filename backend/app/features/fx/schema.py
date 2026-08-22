@@ -69,7 +69,7 @@ class FxConversionCreate(BaseModel):
     native_quantity: int = Field(gt=0, description="Foreign currency spent in minor units")
     try_received_kurus: int = Field(gt=0, description="TRY received in kuruş (owner-entered)")
     conversion_date: date
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
 
 
@@ -85,7 +85,7 @@ class FxExpenseSpendCreate(BaseModel):
     expense_account_id: uuid.UUID
     native_quantity: int = Field(gt=0)
     spend_date: date
-    description: str = Field(min_length=1, max_length=512)
+    description: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
 
 

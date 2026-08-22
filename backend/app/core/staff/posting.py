@@ -1011,25 +1011,46 @@ def _ensure_period_accrual_up_to(
         )
         from app.core.ledger.correction import correct_staff_journal_entry
 
+        from app.features.staff.ledger_display_description import (
+            compose_staff_post_description,
+        )
+
+        accrual_description = compose_staff_post_description(
+            movement_type="salary_accrued",
+            employee_name=employee.name,
+            period_year=period_year,
+            period_month=period_month,
+        )
         correct_staff_journal_entry(
             session,
             entity_id,
             primary.journal_entry_id,
             accrual_date,
-            f"Salary {period_year}-{period_month:02d}",
+            accrual_description,
             lines,
             actor_id=actor_id,
             amount_minor=new_primary_amount,
         )
         return
 
+    employee = _get_employee(session, entity_id, employee_id)
+    from app.features.staff.ledger_display_description import (
+        compose_staff_post_description,
+    )
+
+    accrual_description = compose_staff_post_description(
+        movement_type="salary_accrued",
+        employee_name=employee.name,
+        period_year=period_year,
+        period_month=period_month,
+    )
     post_salary_accrual(
         session,
         entity_id,
         employee_id,
         accrual_date=accrual_date,
         amount_minor=period_salary_minor,
-        description=f"Salary {period_year}-{period_month:02d}",
+        description=accrual_description,
         actor_id=actor_id,
         period_year=period_year,
         period_month=period_month,

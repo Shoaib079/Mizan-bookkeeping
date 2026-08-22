@@ -149,8 +149,9 @@ def test_fx_purchase_blank_description_uses_currency_fallback(
         actor_id=ACTOR_ID,
     )
 
-    assert result.fx_ledger_entry.description == "Buy USD"
-    assert result.journal_entry.description == "Buy USD"
+    assert result.fx_ledger_entry.description.startswith("FX purchase ·")
+    assert result.journal_entry.description.startswith("FX purchase ·")
+    assert "USD" in result.fx_ledger_entry.description
 
 
 def test_control_account_try_cost_matches_gl(db_session, fx_setup) -> None:
@@ -396,7 +397,8 @@ def test_fx_purchase_cash_movement_visible_on_drawer_session(
     assert len(movements) == 1
     assert movements[0]["direction"] == "out"
     assert movements[0]["amount_kurus"] == 175_000
-    assert movements[0]["description"] == "Drawer FX buy"
+    assert movements[0]["description"].startswith("FX purchase ·")
+    assert movements[0]["description"].endswith("Drawer FX buy")
 
 
 def test_fx_purchase_correct_voids_and_reposts_cash_movement(
@@ -508,7 +510,9 @@ def test_api_fx_purchase_optional_description(
         },
     )
     assert purchase.status_code == 201
-    assert purchase.json()["fx_ledger_entry"]["description"] == "Buy USD"
+    desc = purchase.json()["fx_ledger_entry"]["description"]
+    assert desc.startswith("FX purchase ·")
+    assert "USD" in desc
 
 
 def test_rls_isolation_raw_sql(db_session, restaurant_a, restaurant_b, fx_setup) -> None:

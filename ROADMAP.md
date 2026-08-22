@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — recently-recorded hide-voided awaiting review)* |
+| **Active slice**         | *(none — ledger rich descriptions awaiting review)* |
 | **Next up**              | Owner review → push when approved; else POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Recently recorded — hide voided** (`v0.recently-recorded-hide-voided`) |
-| **Last commit/tag**      | `v0.recently-recorded-hide-voided` |
+| **Last completed slice** | **Ledger rich descriptions — staff/FX/partner** (`v0.ledger-rich-descriptions`) |
+| **Last commit/tag**      | `v0.ledger-rich-descriptions` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Ledger rich descriptions — staff/FX/partner     | `v0.ledger-rich-descriptions`                          | Compose who/period/currency at read+write; GL enrich; optional note; mutation bare → red |
 | 2026-08-22 | Recently recorded — hide voided                 | `v0.recently-recorded-hide-voided`                     | effective_only + client drop voided/reversals; Edited kept; GL untouched; mutation voided → red |
 | 2026-08-22 | Record desk — Recently recorded                 | `v0.recently-recorded`                                 | Last 10 any-date entries; voided/corrected display; View all → GL; reuse ledger/entries API |
 | 2026-08-22 | Theme leak hardening                            | `v0.theme-leak-hardening`                              | Accepted-live bars+IconSquare as v1 baseline; gate remaining v2; DEFAULT alone cannot flip; mutation leak → red |

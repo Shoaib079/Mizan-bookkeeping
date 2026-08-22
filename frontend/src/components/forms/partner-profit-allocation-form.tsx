@@ -55,7 +55,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
   const [amountText, setAmountText] = useState("");
   const [periodFromText, setPeriodFromText] = useState("");
   const [periodToText, setPeriodToText] = useState("");
-  const [description, setDescription] = useState("Partner profit allocation");
+  const [description, setDescription] = useState("");
   const [netAgainstDrawings, setNetAgainstDrawings] = useState(true);
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -284,7 +284,7 @@ export function PartnerProfitAllocationForm({ open, onClose, onSaved }: Props) {
         </div>
 
         <div>
-          <Label htmlFor="alloc-desc">Description</Label>
+          <Label htmlFor="alloc-desc">Note (optional)</Label>
           <Input
             id="alloc-desc"
             value={description}

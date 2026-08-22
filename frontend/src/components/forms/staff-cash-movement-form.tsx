@@ -107,7 +107,7 @@ function StaffAdvanceForm({
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
   const [tryCostText, setTryCostText] = useState("");
-  const [description, setDescription] = useState("Salary advance");
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -270,12 +270,11 @@ function StaffAdvanceForm({
           </div>
         )}
         <div>
-          <Label htmlFor="staff-desc">Description</Label>
+          <Label htmlFor="staff-desc">Note (optional)</Label>
           <Input
             id="staff-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
           />
         </div>
         {isTry ? (

@@ -103,13 +103,11 @@ export function PartnerRecordForm({
   const defaultDescription = useMemo(() => {
     switch (kind) {
       case "cash":
-        return "Partner cash payment";
       case "profit_paid":
-        return "Partner profit paid";
+      case "returned":
+        return "";
       case "capital":
         return "";
-      case "returned":
-        return "Partner returned cash";
     }
   }, [kind]);
 
@@ -177,12 +175,8 @@ export function PartnerRecordForm({
       return;
     }
     const note = description.trim();
-    if (!note) {
-      setError(
-        kind === "capital"
-          ? "Add a note — why did this partner invest?"
-          : "Description is required.",
-      );
+    if (!note && kind === "capital") {
+      setError("Add a note — why did this partner invest?");
       return;
     }
     if (kind === "profit_paid") {
@@ -377,13 +371,13 @@ export function PartnerRecordForm({
         </div>
         <div>
           <Label htmlFor="pr-desc">
-            {kind === "capital" ? "Note (required)" : "Description"}
+            {kind === "capital" ? "Note (required)" : "Note (optional)"}
           </Label>
           <Input
             id="pr-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
+            required={kind === "capital"}
           />
         </div>
         <CashDrawerPicker
