@@ -32,3 +32,9 @@ export function isSupplierAdvanceBalance(kurus: number): boolean {
 export function supplierBalanceHeading(balanceKurus: number): string {
   return balanceHeading(balanceKurus, "supplier");
 }
+
+/** Directory roll-up — keep the aggregate noun when net payable. */
+export function supplierDirectoryBalanceLabel(totalKurus: number): string {
+  if (totalKurus > 0) return "Total payables";
+  return supplierBalanceHeading(totalKurus);
+}

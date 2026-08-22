@@ -24,9 +24,9 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — void safety done; awaiting owner review)* |
-| **Next up**              | Per POST_LAUNCH_PLAN queue — owner chooses next slice (not sticker slice) |
-| **Last completed slice** | **Void safety — two-step confirm on every void path** (`v0.void-safety-confirm`) |
+| **Active slice**         | *(none — supplier/customer balance stickers done; awaiting owner review)* |
+| **Next up**              | Per POST_LAUNCH_PLAN queue — owner chooses next slice (not lint-hygiene) |
+| **Last completed slice** | **Supplier + customer balance stickers** (`v0.supplier-customer-balance-stickers`) |
 | **Last commit/tag**      | `v0.group-sale-form-polish-note` |
 
 

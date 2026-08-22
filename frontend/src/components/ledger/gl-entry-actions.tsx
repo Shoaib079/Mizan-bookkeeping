@@ -28,9 +28,20 @@ export type GlEntryActionsRow = {
   source: string;
   status: string;
   reverses_entry_id?: string | null;
-  /** Display total for void confirmation (e.g. sum of debit lines). */
+  /** When present, debit sum feeds void confirm detail. */
+  lines?: { side: string; amount_kurus: number }[];
+  /** Override display total for void confirmation. */
   amount_kurus?: number;
 };
+
+function glEntryDisplayTotal(row: GlEntryActionsRow): number | undefined {
+  if (row.amount_kurus != null) return row.amount_kurus;
+  if (!row.lines?.length) return undefined;
+  return row.lines.reduce(
+    (sum, line) => sum + (line.side === "debit" ? line.amount_kurus : 0),
+    0,
+  );
+}
 
 type LedgerEntryActionsResponse = {
   can_edit: boolean;
@@ -124,8 +135,10 @@ export function GlEntryActions({ row, onGenericEdit, onSaved }: Props) {
   const voidConfirmDetail = formatVoidConfirmDetail({
     date: formatTrDate(row.entry_date),
     type: ledgerRowSourceLabel(row.source, row.reverses_entry_id),
-    amount:
-      row.amount_kurus != null ? formatTry(row.amount_kurus) : undefined,
+    amount: (() => {
+      const total = glEntryDisplayTotal(row);
+      return total != null ? formatTry(total) : undefined;
+    })(),
     description: row.description,
   });
 

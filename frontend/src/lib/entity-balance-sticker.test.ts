@@ -52,6 +52,7 @@ describe("detail pages share one sticker", () => {
     "PartnerDetailPage",
     "StaffDetailPage",
     "SupplierDetailPage",
+    "CustomerDetailPage",
   ] as const;
 
   it("each page mounts EntityBalanceSticker and drops the full-width HeadlineFigure", () => {

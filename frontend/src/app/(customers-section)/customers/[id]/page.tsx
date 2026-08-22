@@ -11,7 +11,7 @@ import {
 } from "@/components/page/entity-detail-page";
 import { LedgerTable } from "@/components/page/ledger-table";
 import { MetaFacts } from "@/components/page/page-header";
-import { HeadlineFigure } from "@/components/page/summary-panel";
+import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { EditedBadge } from "@/components/ledger/corrected-badge";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import {
@@ -54,6 +54,10 @@ import {
   type SubledgerDisplayKind,
 } from "@/lib/ledger-display";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
+import {
+  customerBalanceHeading,
+  customerBalanceStickerMinor,
+} from "@/lib/customer-balance";
 
 type CustomerLedgerEntry = {
   id: string;
@@ -254,20 +258,16 @@ export default function CustomerDetailPage() {
         onEdit: () => setEditOpen(true),
         onWriteOff: () => setWriteOffOpen(true),
       })}
-      headline={
+      balance={
         ledger && (
-          <HeadlineFigure
-            label="Receivable balance"
-            amountKurus={ledger.balance_kurus}
-            caption={
-              // The books are in lira and the figure above is the ledger's
-              // truth. What the agency agreed to pay is what they will hand
-              // over, though, so it is named here — the lira equivalent moves
-              // with the rate until they do.
-              formatForexOutstanding(ledger.outstanding_by_currency) ??
-              (ledger.balance_kurus > 0
-                ? "Owed by this customer"
-                : "Nothing outstanding")
+          <EntityBalanceSticker
+            label={customerBalanceHeading(ledger.balance_kurus)}
+            caption="Current balance"
+            signedBalanceMinor={customerBalanceStickerMinor(ledger.balance_kurus)}
+            details={
+              formatForexOutstanding(ledger.outstanding_by_currency) ? (
+                <p>{formatForexOutstanding(ledger.outstanding_by_currency)}</p>
+              ) : undefined
             }
           />
         )

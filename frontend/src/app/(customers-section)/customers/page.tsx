@@ -17,7 +17,7 @@ import {
   DataTableRow,
 } from "@/components/ui/data-table";
 import { ListPage } from "@/components/page/list-page";
-import { HeadlineFigure } from "@/components/page/summary-panel";
+import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -31,6 +31,10 @@ import { formatTry } from "@/lib/money";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useCustomerBalances } from "@/lib/use-balance-map";
+import {
+  customerBalanceStickerMinor,
+  customerDirectoryBalanceLabel,
+} from "@/lib/customer-balance";
 
 export default function CustomersPage() {
   const { entityId } = useEntity();
@@ -172,11 +176,14 @@ export default function CustomersPage() {
       }
       summary={
         entityId && (
-          <HeadlineFigure
-            label="Total receivable"
-            amountKurus={balancesState.totalKurus}
+          <EntityBalanceSticker
+            label={customerDirectoryBalanceLabel(balancesState.totalKurus)}
             caption="Across all customers."
-            format={balancesState.loading ? () => "…" : undefined}
+            signedBalanceMinor={customerBalanceStickerMinor(
+              balancesState.totalKurus,
+            )}
+            format={balancesState.loading ? () => "…" : formatTry}
+            className="sm:ml-0 sm:max-w-none"
           />
         )
       }

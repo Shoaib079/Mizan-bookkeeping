@@ -486,10 +486,7 @@ function LedgerPanelContent() {
                         </DataTableCell>
                         <DataTableCell align="right">
                           <GlEntryActions
-                            row={{
-                              ...row,
-                              amount_kurus: entryTotalKurus(row.lines),
-                            }}
+                            row={row}
                             onGenericEdit={() =>
                               setCorrectTarget({
                                 id: row.id,

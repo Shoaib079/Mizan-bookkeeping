@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Void safety done:** Two-step void confirm on desktop + mobile; tag `v0.void-safety-confirm`. **Awaiting owner review — do not push.**
+- **Supplier + customer balance stickers done:** Directory totals + customer detail use EntityBalanceSticker; tag `v0.supplier-customer-balance-stickers`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — void safety done; awaiting review)* |
-| **Last completed slice** | Void safety — two-step confirm on every void path |
-| **Last tag** | `v0.void-safety-confirm` |
+| **Active slice** | *(none — balance stickers done; awaiting review)* |
+| **Last completed slice** | Supplier + customer balance stickers |
+| **Last tag** | `v0.supplier-customer-balance-stickers` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN (not sticker slice) |
+| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN (not lint-hygiene) |
 

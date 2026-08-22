@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/data-table";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { ListPage } from "@/components/page/list-page";
-import { HeadlineFigure } from "@/components/page/summary-panel";
+import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -30,6 +30,7 @@ import { formatTry } from "@/lib/money";
 import { useDebouncedValue } from "@/lib/use-debounced-value";
 import { useEntityList } from "@/lib/use-entity-list";
 import { useSupplierBalances } from "@/lib/use-balance-map";
+import { supplierDirectoryBalanceLabel } from "@/lib/supplier-balance";
 import { cn } from "@/lib/utils";
 
 function SupplierCardList({
@@ -229,11 +230,12 @@ export default function SuppliersPage() {
       }
       summary={
         entityId && (
-          <HeadlineFigure
-            label="Total payables"
-            amountKurus={balancesState.totalKurus}
+          <EntityBalanceSticker
+            label={supplierDirectoryBalanceLabel(balancesState.totalKurus)}
             caption="Across all suppliers — any month until paid."
-            format={balancesState.loading ? () => "…" : undefined}
+            signedBalanceMinor={balancesState.totalKurus}
+            format={balancesState.loading ? () => "…" : formatTry}
+            className="sm:ml-0 sm:max-w-none"
           />
         )
       }

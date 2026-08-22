@@ -4,6 +4,7 @@ import {
   computeSupplierAdvanceKurus,
   formatSupplierPayableBalance,
   supplierBalanceHeading,
+  supplierDirectoryBalanceLabel,
 } from "@/lib/supplier-balance";
 
 describe("supplier-balance", () => {
@@ -22,5 +23,11 @@ describe("supplier-balance", () => {
     expect(supplierBalanceHeading(50_000)).toBe("You owe supplier");
     expect(supplierBalanceHeading(-50_000)).toBe("Supplier owes you");
     expect(supplierBalanceHeading(0)).toBe("Settled");
+  });
+
+  it("directory label keeps aggregate noun when net payable", () => {
+    expect(supplierDirectoryBalanceLabel(50_000)).toBe("Total payables");
+    expect(supplierDirectoryBalanceLabel(-50_000)).toBe("Supplier owes you");
+    expect(supplierDirectoryBalanceLabel(0)).toBe("Settled");
   });
 });
