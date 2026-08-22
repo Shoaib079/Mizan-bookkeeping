@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Ledger rich descriptions:** staff / FX / partner identifying copy at read+write; GL batch enrichment. Tag `v0.ledger-rich-descriptions`. **Awaiting owner review — do not push.**
+- **Transfer rich descriptions:** `Transfer · from → to` at write + GL/list enrich for old rows; Note optional; bare “Account transfer” ignored. Tag `v0.transfer-rich-descriptions`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — ledger rich descriptions awaiting review)* |
-| **Last completed slice** | Ledger rich descriptions — staff/FX/partner |
-| **Last tag** | `v0.ledger-rich-descriptions` |
+| **Active slice** | *(none — transfer rich descriptions awaiting review)* |
+| **Last completed slice** | Transfer rich descriptions |
+| **Last tag** | `v0.transfer-rich-descriptions` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |

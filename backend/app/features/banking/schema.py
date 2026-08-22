@@ -342,7 +342,7 @@ class AccountTransferCreate(BaseModel):
     to_money_account_id: uuid.UUID
     transfer_date: date
     amount_kurus: int = Field(gt=0)
-    description: str = Field(min_length=1, max_length=512)
+    description: str = Field(default="", max_length=512)
     actor_id: OptionalActorId = None
 
 

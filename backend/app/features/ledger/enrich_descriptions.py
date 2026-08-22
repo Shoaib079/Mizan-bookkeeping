@@ -13,6 +13,11 @@ from app.core.ledger.models import JournalEntrySource
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.row_subjects import attach_subject_names
 from app.core.staff.models import StaffLedgerEntry
+from app.features.banking.schema import AccountTransferRead
+from app.features.banking.transfer_display_description import (
+    apply_transfer_descriptions,
+)
+from app.features.banking.transfer_models import AccountTransfer
 from app.features.fx.ledger_display_description import apply_fx_ledger_descriptions
 from app.features.fx.schema import FxLedgerEntryRead
 from app.features.ledger.schema import JournalEntryOut
@@ -144,6 +149,43 @@ def enrich_journal_entry_descriptions(
         attach_subject_names(session, partner_entries, partner_reads)
         apply_partner_ledger_descriptions(session, partner_entries, partner_reads)
         for entry, read in zip(partner_entries, partner_reads, strict=True):
+            out = out_by_id.get(entry.journal_entry_id)  # type: ignore[arg-type]
+            if out is not None:
+                out.description = read.description
+
+    transfer_rows = list(
+        session.scalars(
+            select(AccountTransfer).where(AccountTransfer.journal_entry_id.in_(je_ids))
+        )
+    )
+    transfer_entries: list[AccountTransfer] = []
+    transfer_reads: list[AccountTransferRead] = []
+    for row in transfer_rows:
+        if row.journal_entry_id is None:
+            continue
+        out = out_by_id.get(row.journal_entry_id)
+        if out is None or out.source != JournalEntrySource.TRANSFER:
+            continue
+        transfer_entries.append(row)
+        transfer_reads.append(
+            AccountTransferRead(
+                id=row.id,
+                entity_id=row.entity_id,
+                from_money_account_id=row.from_money_account_id,
+                to_money_account_id=row.to_money_account_id,
+                amount_kurus=row.amount_kurus,
+                transfer_date=row.transfer_date,
+                description=row.description,
+                actor_id=row.actor_id,
+                journal_entry_id=row.journal_entry_id,
+                from_statement_line_id=row.from_statement_line_id,
+                to_statement_line_id=row.to_statement_line_id,
+                created_at=row.created_at,
+            )
+        )
+    if transfer_entries:
+        apply_transfer_descriptions(session, transfer_entries, transfer_reads)
+        for entry, read in zip(transfer_entries, transfer_reads, strict=True):
             out = out_by_id.get(entry.journal_entry_id)  # type: ignore[arg-type]
             if out is not None:
                 out.description = read.description

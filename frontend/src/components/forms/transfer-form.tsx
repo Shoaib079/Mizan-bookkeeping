@@ -46,7 +46,7 @@ export function TransferForm({
   const [toId, setToId] = useState("");
   const [dateText, setDateText] = useState("");
   const [amountText, setAmountText] = useState("");
-  const [description, setDescription] = useState("Account transfer");
+  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,6 +65,8 @@ export function TransferForm({
   useEffect(() => {
     if (open) {
       setDateText(todayTrDate());
+      setDescription("");
+      setError(null);
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
@@ -186,12 +188,12 @@ export function TransferForm({
           )}
         </div>
         <div>
-          <Label htmlFor="xfer-desc">Description</Label>
+          <Label htmlFor="xfer-desc">Note (optional)</Label>
           <Input
             id="xfer-desc"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            required
+            placeholder="Optional note"
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

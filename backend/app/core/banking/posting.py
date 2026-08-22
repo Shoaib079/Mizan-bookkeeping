@@ -120,7 +120,7 @@ def post_account_transfer(
     to_money_account_id: uuid.UUID,
     transfer_date: date,
     amount_kurus: int,
-    description: str,
+    description: str | None = "",
     actor_id: uuid.UUID,
     from_statement_line_id: uuid.UUID | None = None,
     to_statement_line_id: uuid.UUID | None = None,
@@ -144,6 +144,18 @@ def post_account_transfer(
         _validate_asset_gl_account(session, entity_id, from_account.gl_account_id)
         _validate_asset_gl_account(session, entity_id, to_account.gl_account_id)
 
+        from app.features.banking.transfer_display_description import (
+            compose_transfer_post_description,
+        )
+
+        ledger_description = compose_transfer_post_description(
+            from_name=from_account.name,
+            from_kind=from_account.account_kind,
+            to_name=to_account.name,
+            to_kind=to_account.account_kind,
+            raw_note=description,
+        )
+
         lines = build_transfer_posting_lines(
             from_gl_account_id=from_account.gl_account_id,
             to_gl_account_id=to_account.gl_account_id,
@@ -154,7 +166,7 @@ def post_account_transfer(
             session,
             entity_id,
             transfer_date,
-            description,
+            ledger_description,
             lines,
             actor_id=actor_id,
             source=JournalEntrySource.TRANSFER,
@@ -166,7 +178,7 @@ def post_account_transfer(
             to_money_account_id=to_money_account_id,
             transfer_date=transfer_date,
             amount_kurus=amount_kurus,
-            description=description,
+            description=ledger_description,
             actor_id=actor_id,
             journal_entry_id=journal_entry.id,
             from_statement_line_id=from_statement_line_id,

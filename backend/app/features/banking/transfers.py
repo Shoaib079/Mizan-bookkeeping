@@ -39,6 +39,18 @@ def _to_read(transfer: AccountTransfer) -> AccountTransferRead:
     )
 
 
+def _enriched_reads(
+    session: Session, transfers: list[AccountTransfer]
+) -> list[AccountTransferRead]:
+    reads = [_to_read(t) for t in transfers]
+    from app.features.banking.transfer_display_description import (
+        apply_transfer_descriptions,
+    )
+
+    apply_transfer_descriptions(session, transfers, reads)
+    return reads
+
+
 def create_account_transfer(
     session: Session,
     entity_id: uuid.UUID,
@@ -51,7 +63,7 @@ def create_account_transfer(
         to_money_account_id=payload.to_money_account_id,
         transfer_date=payload.transfer_date,
         amount_kurus=payload.amount_kurus,
-        description=payload.description,
+        description=payload.description or "",
         actor_id=payload.actor_id,
     )
     return _to_read(result.account_transfer)
@@ -107,4 +119,4 @@ def list_account_transfers(
             )
         )
         transfers, total = fetch_paginated(session, stmt, params)
-        return [_to_read(transfer) for transfer in transfers], total
+        return _enriched_reads(session, list(transfers)), total
