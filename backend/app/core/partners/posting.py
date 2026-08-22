@@ -536,18 +536,11 @@ def post_pay_partner(
         partner = _get_partner(session, entity_id, partner_id)
 
         from app.features.partners.ledger_display_description import (
-            compose_partner_post_description,
+            compose_pay_partner_pair,
         )
 
-        reimb_description = compose_partner_post_description(
-            movement_type=PartnerMovementType.REIMBURSEMENT_PAID.value,
-            partner_name=partner.name,
-            raw_note=description,
-        )
-        drawing_description = compose_partner_post_description(
-            movement_type=PartnerMovementType.DRAWING.value,
-            partner_name=partner.name,
-            raw_note=description,
+        reimb_description, drawing_description = compose_pay_partner_pair(
+            partner.name, description
         )
 
         payment_gl = _validate_payment_account(session, entity_id, payment_account_id)

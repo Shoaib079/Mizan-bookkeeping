@@ -74,6 +74,24 @@ def _try_received_from_journal(
     return total if found else None
 
 
+def reads_for_fx_ledger(
+    session: Session,
+    entries: Sequence[FxLedgerEntry],
+    *,
+    entity_id: uuid.UUID,
+    to_ledger_read,
+) -> list[FxLedgerEntryRead]:
+    """Build FX ledger reads and apply rich descriptions."""
+    from app.core.ledger.models import JournalEntry
+
+    reads: list[FxLedgerEntryRead] = []
+    for entry in entries:
+        journal = session.get(JournalEntry, entry.journal_entry_id)
+        reads.append(to_ledger_read(session, entry, entity_id=entity_id, journal=journal))
+    apply_fx_ledger_descriptions(session, entries, reads, entity_id=entity_id)
+    return reads
+
+
 def apply_fx_ledger_descriptions(
     session: Session,
     entries: Sequence[FxLedgerEntry],

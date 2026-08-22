@@ -270,13 +270,12 @@ def post_profit_allocation(
             partner_capital_id=capital.id,
             splits=splits,
         )
-        from app.features.partners.ledger_display_description import (
-            compose_partner_post_description,
-            note_from_payload,
+        from app.core.partners.profit_allocation_rows import (
+            journal_and_partner_descriptions,
+            persist_allocation_partner_rows,
         )
 
-        note = note_from_payload(description)
-        journal_description = note or "Profit allocation"
+        journal_description, note = journal_and_partner_descriptions(description)
         journal_entry = prepare_journal_entry(
             session,
             entity_id,
@@ -288,44 +287,16 @@ def post_profit_allocation(
             period_unlock_reason=period_unlock_reason,
         )
 
-        partner_entries: list[PartnerLedgerEntry] = []
         partners_by_id = {p.id: p for p in partners}
-        for split in splits:
-            partner = partners_by_id[split.partner_id]
-            if split.offset_kurus > 0:
-                settlement_desc = compose_partner_post_description(
-                    movement_type=PartnerMovementType.PROFIT_SETTLEMENT.value,
-                    partner_name=partner.name,
-                    raw_note=note,
-                )
-                entry = partner_ledger.persist_partner_ledger_entry(
-                    session,
-                    split.partner_id,
-                    movement_date=allocation_date,
-                    movement_type=PartnerMovementType.PROFIT_SETTLEMENT,
-                    amount_kurus=split.offset_kurus,
-                    description=settlement_desc,
-                    actor_id=actor_id,
-                    journal_entry_id=journal_entry.id,
-                )
-                partner_entries.append(entry)
-            if split.amount_kurus > 0:
-                alloc_desc = compose_partner_post_description(
-                    movement_type=PartnerMovementType.PROFIT_ALLOCATION.value,
-                    partner_name=partner.name,
-                    raw_note=note,
-                )
-                entry = partner_ledger.persist_partner_ledger_entry(
-                    session,
-                    split.partner_id,
-                    movement_date=allocation_date,
-                    movement_type=PartnerMovementType.PROFIT_ALLOCATION,
-                    amount_kurus=split.amount_kurus,
-                    description=alloc_desc,
-                    actor_id=actor_id,
-                    journal_entry_id=journal_entry.id,
-                )
-                partner_entries.append(entry)
+        partner_entries = persist_allocation_partner_rows(
+            session,
+            allocation_date=allocation_date,
+            splits=splits,
+            partners_by_id=partners_by_id,
+            actor_id=actor_id,
+            journal_entry_id=journal_entry.id,
+            note=note,
+        )
 
         session.commit()
         session.refresh(journal_entry)

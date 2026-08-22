@@ -82,6 +82,8 @@ def test_the_salary_row_names_the_employee(db_session, partner_fronted_a_salary)
     assert row.subject_name == EMPLOYEE_NAME, (
         "the row has carried the employee id all along; this is the read-back"
     )
+    assert EMPLOYEE_NAME in row.description
+    assert "Canan Takan" in row.description
 
 
 def test_a_row_pointing_at_nothing_stays_unnamed(db_session, partner_fronted_a_salary):
@@ -118,8 +120,10 @@ def test_the_statement_carries_the_name_too(db_session, partner_fronted_a_salary
     entity_id, partner_id = partner_fronted_a_salary
     ledger = partner_service.get_partner_ledger(db_session, entity_id, partner_id)
     rows = ledger_export._rows(effective_entries(ledger.entries))
-    salary = next(r for r in rows if r.description.startswith("Temmuz maaşı"))
-    assert salary.description == f"Temmuz maaşı — {EMPLOYEE_NAME}"
+    salary = next(r for r in rows if EMPLOYEE_NAME in r.description)
+    assert EMPLOYEE_NAME in salary.description
+    assert "Canan Takan" in salary.description
+    assert "Temmuz maaşı" in salary.description
 
 
 def test_one_lookup_per_reference_type_not_per_row(db_session, partner_fronted_a_salary):

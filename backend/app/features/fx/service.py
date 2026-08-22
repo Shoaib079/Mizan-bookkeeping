@@ -243,20 +243,10 @@ def get_fx_ledger(
         list_params=list_params,
     )
     with entity_context(session, entity_id):
-        from app.core.ledger.models import JournalEntry
+        from app.features.fx.ledger_display_apply import reads_for_fx_ledger
 
-        reads: list[FxLedgerEntryRead] = []
-        for entry in entries:
-            journal = session.get(JournalEntry, entry.journal_entry_id)
-            reads.append(
-                _to_ledger_read(session, entry, entity_id=entity_id, journal=journal),
-            )
-        from app.features.fx.ledger_display_description import (
-            apply_fx_ledger_descriptions,
-        )
-
-        apply_fx_ledger_descriptions(
-            session, entries, reads, entity_id=entity_id
+        reads = reads_for_fx_ledger(
+            session, entries, entity_id=entity_id, to_ledger_read=_to_ledger_read
         )
     return reads, total
 

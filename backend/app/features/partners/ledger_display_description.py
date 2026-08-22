@@ -115,6 +115,24 @@ def compose_partner_post_description(
     )
 
 
+def compose_pay_partner_pair(
+    partner_name: str, raw_note: str | None
+) -> tuple[str, str]:
+    """Reimbursement + drawing descriptions for a single cash payout action."""
+    return (
+        compose_partner_post_description(
+            movement_type="reimbursement_paid",
+            partner_name=partner_name,
+            raw_note=raw_note,
+        ),
+        compose_partner_post_description(
+            movement_type="drawing",
+            partner_name=partner_name,
+            raw_note=raw_note,
+        ),
+    )
+
+
 def apply_partner_ledger_descriptions(
     session: Session,
     entries: Sequence[PartnerLedgerEntry],
@@ -147,7 +165,6 @@ def apply_partner_ledger_descriptions(
             note=None,
         )
         note = owner_note_from_stored(entry.description, body)
-        # If stored already starts with the label·partner body without subject,
-        # avoid treating the subject segment as a note when subject was folded in.
+        # Subject stays on the read model for API/tests; UI/export use description only
+        # (no second " · subject" append) so names are not doubled.
         read.description = append_owner_note(body, note)
-        read.subject_name = None

@@ -176,7 +176,9 @@ def test_manual_capital_contribution_cash_with_note(db_session, partner_setup) -
             payment_account_id=drawer.gl_account_id,
         ),
     )
-    assert result.partner_ledger_entry.description == "Cash for fridge"
+    assert result.partner_ledger_entry.description == (
+        "Capital contribution · Ahmet Partner — Cash for fridge"
+    )
     assert (
         partner_ledger.capital_contribution_kurus(db_session, entity_id, partner_id)
         == 250_000
