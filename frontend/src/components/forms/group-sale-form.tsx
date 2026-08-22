@@ -277,11 +277,6 @@ export function GroupSaleForm({
       setError("Date must be DD.MM.YYYY.");
       return;
     }
-    if (isForex && (fxRateKurus === null || fxRateKurus <= 0)) {
-      setError("Enter the sale-date TRY rate (₺ per 1 unit of foreign currency).");
-      return;
-    }
-
     const apiLines = parsedLines.map((line) => {
       if (line.pax === null || line.pricedBy === null) {
         throw new Error("Each line needs pax and either a rate or a total.");
@@ -314,7 +309,10 @@ export function GroupSaleForm({
         currency,
         lines: apiLines,
         actor_id: actorId,
-        fx_rate_used: isForex ? fxRateKurus : undefined,
+        fx_rate_used:
+          isForex && fxRateKurus != null && fxRateKurus > 0
+            ? fxRateKurus
+            : undefined,
       };
       const idempotencyKey = submitIdempotency.beginSubmit();
       if (isCorrect && correcting) {
@@ -563,15 +561,16 @@ export function GroupSaleForm({
                   : formatTry(totalMinor)
                 : "—"}
             </span>
+            {isForex && fxRateKurus != null && fxRateKurus > 0 ? (
+              <> · TRY revenue:{" "}
+                <span className="tabular-nums">
+                  {totalTryPreview != null ? formatTry(totalTryPreview) : "—"}
+                </span>
+              </>
+            ) : isForex ? (
+              <> · TRY at FX conversion</>
+            ) : null}
           </p>
-          {isForex && (
-            <p className="mt-1 text-muted-foreground">
-              TRY revenue (at sale-date rate):{" "}
-              <span className="tabular-nums">
-                {totalTryPreview != null ? formatTry(totalTryPreview) : "—"}
-              </span>
-            </p>
-          )}
         </div>
 
         <div>

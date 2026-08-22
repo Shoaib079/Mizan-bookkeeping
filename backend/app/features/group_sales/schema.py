@@ -137,8 +137,7 @@ class GroupSaleCreate(AcknowledgeDuplicateMixin):
             if self.total_kurus is not None:
                 raise ValueError("total_kurus override is only for forex bookings")
             return self
-        if self.fx_rate_used is None and self.total_kurus is None:
-            raise ValueError("FX booking requires fx_rate_used or total_kurus")
+        # Forex bookings may omit fx_rate_used and total_kurus (GS-FX rateless path).
         return self
 
 

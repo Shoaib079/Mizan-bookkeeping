@@ -162,7 +162,7 @@ class CreditSaleResponse(BaseModel):
 
 
 class CustomerPaymentResponse(BaseModel):
-    journal_entry_id: uuid.UUID
+    journal_entry_id: uuid.UUID | None
     customer_ledger_entry: CustomerLedgerEntryRead
     balance_kurus: int
     #: Things worth knowing about a receipt that was nonetheless recorded.

@@ -69,7 +69,7 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | — | **BSF-3** | Supplier suggestion from bank description | **Done** |
 | — | **BSF-4** | Per-supplier auto-post toggle | **Done** |
 | — | P5 / ~~P8~~ | Delete company UI · ~~Groceries path~~ | P8 done; P5 queued |
-| — | **GS-FX** | Forex-only group sales (TRY at conversion) | **Design locked, NOT built** — see slice below + DECISIONS 2026-07-13 |
+| **GS-FX** | Forex-only group sales (TRY at conversion) | **DONE** `v0.gs-fx-forex-only-group-sales` — see slice below + DECISIONS 2026-07-13 |
 | — | P4, P7 | Backup prune, lint | Optional |
 
 **Rule:** one slice at a time, in the numbered order. Phase 13 slices assume the app is LIVE — every backend addition must be entity-scoped (RLS) and date-range bounded like the rest.
@@ -111,7 +111,7 @@ Frontend polish (small usage tracking — localStorage per entity, or a light ba
 
 ## 🔨 Build queue (each = one slice)
 
-### GS-FX — Forex-only group sales (TRY recognition deferred to conversion)  *(design locked, NOT built)*
+### GS-FX — Forex-only group sales (TRY recognition deferred to conversion)  *(DONE `v0.gs-fx-forex-only-group-sales`)*
 
 **Why:** Owner books agency groups in forex (e.g. 5,000 USD), thinks/settles in forex, and keeps the forex record separate. Entering a TRY rate/amount at sale time is confusing and not useful to them. Full model + rationale + caveat: **DECISIONS.md 2026-07-13 — "Forex-only group sales"**. Owner agreed the model 2026-07-13 and chose to defer to a dedicated, test-covered session (money-critical FX-engine change; the working session couldn't run backend pytest).
 

@@ -121,6 +121,58 @@ def persist_customer_ledger_entry(
     return entry
 
 
+def persist_forex_only_customer_ledger_entry(
+    session: Session,
+    customer_id: uuid.UUID,
+    *,
+    movement_date: date,
+    movement_type: CustomerMovementType,
+    description: str,
+    actor_id: uuid.UUID,
+    forex_currency: str,
+    total_forex_minor: int | None = None,
+    payment_native_quantity: int | None = None,
+    reference_type: str | None = None,
+    reference_id: uuid.UUID | None = None,
+) -> CustomerLedgerEntry:
+    """Forex-only receivable movement — amount_kurus stays 0, no GL link."""
+    if movement_type == CustomerMovementType.CREDIT_SALE:
+        if total_forex_minor is None or total_forex_minor <= 0:
+            raise ZeroMovementError("forex-only credit sale requires total_forex_minor")
+    elif movement_type == CustomerMovementType.PAYMENT_RECEIVED:
+        if payment_native_quantity is None or payment_native_quantity <= 0:
+            raise ZeroMovementError(
+                "forex-only payment requires payment_native_quantity"
+            )
+    else:
+        raise DisallowedMovementTypeError(
+            f"forex-only movement type {movement_type.value!r} not supported"
+        )
+
+    customer = session.get(Customer, customer_id)
+    if customer is None:
+        raise LookupError("Customer not found")
+
+    entry = CustomerLedgerEntry(
+        customer_id=customer_id,
+        movement_date=movement_date,
+        movement_type=movement_type,
+        amount_kurus=0,
+        description=description,
+        actor_id=actor_id,
+        journal_entry_id=None,
+        reference_type=reference_type,
+        reference_id=reference_id,
+        forex_currency=forex_currency,
+        total_forex_minor=total_forex_minor,
+        payment_native_quantity=payment_native_quantity,
+    )
+    session.add(entry)
+    session.flush()
+    session.refresh(entry)
+    return entry
+
+
 def record_customer_movement(
     session: Session,
     entity_id: uuid.UUID,

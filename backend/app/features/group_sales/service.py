@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.chart_of_accounts.default_chart import GROUP_SALES_REVENUE_CODE
@@ -17,15 +17,18 @@ from app.core.receivables import ledger as receivables_ledger
 from app.core.receivables import posting as receivables_posting
 from app.core.receivables.models import CustomerLedgerEntry
 from app.core.receivables.types import CustomerMovementType
-from app.core.duplicate_guard import (
-    ensure_not_duplicate,
-    find_duplicate_credit_sale,
-)
 from app.db.session import entity_context, require_entity_context
 from app.features.customers.models import Customer
 from app.features.entities import service as entity_service
 from app.features.group_sales.calculations import compute_group_sale
 from app.features.group_sales.fx_receivable import native_balance_for_currency, remaining_on_group_sale
+from app.features.group_sales.forex_only_sale_flow import (
+    ensure_group_sale_not_duplicate,
+    is_forex_only_sale,
+    post_forex_only_group_sale_ledger,
+)
+from app.features.group_sales.forex_only_void import reverse_forex_only_group_sale
+from app.features.group_sales.linked_payments import has_linked_payments
 from app.features.group_sales.models import (
     GroupMenu,
     GroupMenuLine,
@@ -248,23 +251,6 @@ def replace_group_menu_lines(
         return _menu_with_lines(session, menu_id)
 
 
-def _has_linked_payments(session: Session, group_sale_id: uuid.UUID) -> bool:
-    """True only if a live (net, un-reversed) payment is applied to this sale.
-
-    Payments reduce AR (negative amount_kurus); a voided/corrected payment appends
-    an equal-and-opposite PAYMENT_RECEIVED reversal row carrying the same group-sale
-    reference. So a fully-reversed payment nets to zero and no longer blocks void.
-    """
-    net = session.scalar(
-        select(func.coalesce(func.sum(CustomerLedgerEntry.amount_kurus), 0)).where(
-            CustomerLedgerEntry.reference_type == GROUP_SALE_REFERENCE,
-            CustomerLedgerEntry.reference_id == group_sale_id,
-            CustomerLedgerEntry.movement_type == CustomerMovementType.PAYMENT_RECEIVED,
-        )
-    )
-    return int(net or 0) != 0
-
-
 def post_group_sale(
     session: Session,
     entity_id: uuid.UUID,
@@ -281,16 +267,10 @@ def post_group_sale(
 
         menu_names = _menu_name_map(session, payload.lines)
         computed = compute_group_sale(payload, menu_names)
-        ensure_not_duplicate(
-            find_duplicate_credit_sale(
-                session,
-                customer_id=payload.customer_id,
-                sale_date=payload.sale_date,
-                amount_kurus=computed.total_kurus,
-            ),
-            acknowledged=payload.acknowledge_duplicate,
+        forex_only = is_forex_only_sale(computed)
+        ensure_group_sale_not_duplicate(
+            session, payload, computed, forex_only=forex_only
         )
-        revenue = _group_sales_revenue_account(session)
 
         group_sale = GroupSale(
             customer_id=payload.customer_id,
@@ -308,24 +288,29 @@ def post_group_sale(
         session.add(group_sale)
         session.flush()
 
-        result = receivables_posting.post_credit_sale(
-            session,
-            entity_id,
-            payload.customer_id,
-            sale_date=payload.sale_date,
-            amount_kurus=computed.total_kurus,
-            description=payload.description.strip(),
-            actor_id=payload.actor_id,
-            revenue_account_id=revenue.id,
-            forex_currency=computed.forex_currency,
-            total_forex_minor=computed.total_forex_minor,
-            reference_type=GROUP_SALE_REFERENCE,
-            reference_id=group_sale.id,
-            journal_source=JournalEntrySource.GROUP_SALE,
-        )
-
-        group_sale.journal_entry_id = result.journal_entry.id
-        group_sale.customer_ledger_entry_id = result.customer_ledger_entry.id
+        if forex_only:
+            group_sale.customer_ledger_entry_id = post_forex_only_group_sale_ledger(
+                session, entity_id, payload, group_sale, computed
+            )
+        else:
+            revenue = _group_sales_revenue_account(session)
+            result = receivables_posting.post_credit_sale(
+                session,
+                entity_id,
+                payload.customer_id,
+                sale_date=payload.sale_date,
+                amount_kurus=computed.total_kurus,
+                description=payload.description.strip(),
+                actor_id=payload.actor_id,
+                revenue_account_id=revenue.id,
+                forex_currency=computed.forex_currency,
+                total_forex_minor=computed.total_forex_minor,
+                reference_type=GROUP_SALE_REFERENCE,
+                reference_id=group_sale.id,
+                journal_source=JournalEntrySource.GROUP_SALE,
+            )
+            group_sale.journal_entry_id = result.journal_entry.id
+            group_sale.customer_ledger_entry_id = result.customer_ledger_entry.id
 
         for line in computed.lines:
             session.add(
@@ -413,6 +398,10 @@ def post_group_sale_discount(
             )
         if discount_kurus <= 0:
             raise GroupSaleError("discount must be positive")
+        if group_sale.total_kurus == 0 and group_sale.forex_currency:
+            raise GroupSaleError(
+                "Discounts are not supported on forex-only group sales"
+            )
         remaining_kurus, remaining_native = remaining_on_group_sale(session, group_sale)
         if discount_kurus > remaining_kurus:
             raise GroupSaleError("discount exceeds remaining balance")
@@ -452,12 +441,22 @@ def _reverse_group_sale_gl(
     void_date: date | None = None,
     period_unlock_reason: str | None = None,
 ) -> None:
-    if _has_linked_payments(session, group_sale.id):
+    if has_linked_payments(session, group_sale.id):
         raise GroupSaleHasPaymentsError(
             "Cannot void — void or settle the linked payment first"
         )
-    if group_sale.journal_entry_id is None or group_sale.customer_ledger_entry_id is None:
-        raise GroupSaleError("Group sale missing journal links")
+    if group_sale.customer_ledger_entry_id is None:
+        raise GroupSaleError("Group sale missing customer ledger link")
+    if group_sale.journal_entry_id is None:
+        reverse_forex_only_group_sale(
+            session,
+            group_sale,
+            has_linked_payments=has_linked_payments,
+            actor_id=actor_id,
+            final_status=final_status,
+            void_date=void_date,
+        )
+        return
 
     customer_row = session.get(CustomerLedgerEntry, group_sale.customer_ledger_entry_id)
     if customer_row is None:

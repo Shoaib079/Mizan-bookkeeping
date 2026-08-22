@@ -90,7 +90,29 @@ def compute_group_sale(payload: GroupSaleCreate, menu_names: dict) -> ComputedGr
     elif fx_rate is not None:
         total_kurus = round(total_minor * fx_rate / 100)
     else:
-        raise ValueError("FX booking requires fx_rate_used or total_kurus")
+        # GS-FX — rateless forex booking; TRY recognized at conversion only.
+        total_kurus = 0
+        fx_rate = None
+        lines = [
+            ComputedLine(
+                group_menu_id=line.group_menu_id,
+                menu_name_snapshot=_menu_name(line, menu_names),
+                pax=line.pax,
+                rate_per_person_minor=_rate_per_person_minor(line),
+                line_total_minor=_line_total_minor(line),
+                line_total_kurus=0,
+            )
+            for line in payload.lines
+        ]
+        return ComputedGroupSale(
+            currency=currency,
+            total_minor=total_minor,
+            total_kurus=0,
+            forex_currency=currency,
+            total_forex_minor=total_minor,
+            fx_rate_used=None,
+            lines=lines,
+        )
 
     if fx_rate is None or fx_rate <= 0:
         raise ValueError("fx_rate_used must be positive")

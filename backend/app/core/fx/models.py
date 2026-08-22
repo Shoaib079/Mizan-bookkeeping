@@ -40,10 +40,10 @@ class FxLedgerEntry(EntityScopedMixin, Base):
     try_cost_kurus: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[str] = mapped_column(String(512), nullable=False)
     actor_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
-    journal_entry_id: Mapped[uuid.UUID] = mapped_column(
+    journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid(as_uuid=True),
         ForeignKey("journal_entries.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

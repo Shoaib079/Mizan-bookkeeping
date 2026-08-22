@@ -34,8 +34,10 @@ def compute_spend_at_average_cost(
         raise InsufficientFxBalanceError(
             f"cannot spend {spend_native} — wallet holds {total_native} minor units"
         )
-    if total_native <= 0 or total_cost <= 0:
+    if total_native <= 0:
         raise InsufficientFxBalanceError("FX wallet has no holdings to spend")
+    if total_cost <= 0:
+        return 0
 
     if spend_native == total_native:
         return total_cost

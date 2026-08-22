@@ -17,13 +17,13 @@
 
 ## Current
 
-- **S16 follow-up done:** Sticker = `supplierBalanceHeading` + caption **Current balance**; activity Closing alone uses `rangedBalanceLabel`. Tag `v0.s16-sticker-direction-caption`. Do not start GS-FX. Do not push until owner says.
+- **GS-FX done:** Rateless forex group sales per DECISIONS 2026-07-13 — subledger-only receivable, zero-cost wallet receipt, TRY at conversion, void/correct subledger-only, discounts blocked. Tag `v0.gs-fx-forex-only-group-sales`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — S16 follow-up done; awaiting review / push)* |
-| **Last completed slice** | S16 follow-up direction heading + Current balance caption |
-| **Last tag** | `v0.s16-sticker-direction-caption` |
-| **Unpushed** | yes — do not push until owner says |
-| **Next up** | GS-FX — wait for owner |
+| **Active slice** | *(none — GS-FX done; awaiting review / push)* |
+| **Last completed slice** | GS-FX forex-only group sales |
+| **Last tag** | `v0.gs-fx-forex-only-group-sales` |
+| **Unpushed** | yes — do not push until owner review + sign-off |
+| **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
 

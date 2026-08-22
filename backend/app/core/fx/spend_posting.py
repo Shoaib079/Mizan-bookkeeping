@@ -95,8 +95,22 @@ def build_fx_conversion_posting_lines(
     """Dr bank/cash (TRY received) / Cr FX at average cost / realized gain or loss."""
     if try_received_kurus <= 0:
         raise ValueError("try_received_kurus must be positive")
-    if try_cost_kurus <= 0:
-        raise ValueError("try_cost_kurus must be positive")
+    if try_cost_kurus < 0:
+        raise ValueError("try_cost_kurus must be non-negative")
+
+    if try_cost_kurus == 0:
+        return [
+            PostingLine(
+                account_id=try_asset_gl_account_id,
+                amount_kurus=try_received_kurus,
+                side=AccountNormalBalance.DEBIT,
+            ),
+            PostingLine(
+                account_id=fx_gain_account_id,
+                amount_kurus=try_received_kurus,
+                side=AccountNormalBalance.CREDIT,
+            ),
+        ]
 
     lines = [
         PostingLine(

@@ -56,7 +56,8 @@ def native_balance_for_currency(
             func.coalesce(func.sum(CustomerLedgerEntry.total_forex_minor), 0)
         ).where(
             CustomerLedgerEntry.movement_type == CustomerMovementType.CREDIT_SALE,
-            CustomerLedgerEntry.amount_kurus > 0,
+            CustomerLedgerEntry.total_forex_minor.isnot(None),
+            CustomerLedgerEntry.amount_kurus >= 0,
         )
     )
     payments = session.scalar(
@@ -129,7 +130,8 @@ def outstanding_by_currency_for_customers(
     sales = func.coalesce(
         func.sum(CustomerLedgerEntry.total_forex_minor).filter(
             CustomerLedgerEntry.movement_type == CustomerMovementType.CREDIT_SALE,
-            CustomerLedgerEntry.amount_kurus > 0,
+            CustomerLedgerEntry.total_forex_minor.isnot(None),
+            CustomerLedgerEntry.amount_kurus >= 0,
         ),
         0,
     )
@@ -198,6 +200,18 @@ def try_balance_for_currency(
         )
     )
     return int(total or 0)
+
+
+def has_forex_only_receivable(
+    session: Session,
+    customer_id: uuid.UUID,
+    forex_currency: str,
+) -> bool:
+    """True when native forex is owed but no TRY was booked on the receivable."""
+    native = native_balance_for_currency(session, customer_id, forex_currency)
+    if native <= 0:
+        return False
+    return try_balance_for_currency(session, customer_id, forex_currency) == 0
 
 
 def remaining_on_group_sale(session: Session, group_sale: GroupSale) -> tuple[int, int | None]:

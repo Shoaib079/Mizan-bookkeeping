@@ -273,9 +273,9 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 
 **Known limit of the guarantee:** the blocking check only sees lines that were *imported*. A bank account with no statement import for the month has nothing to say and the month closes clean. The promise is "nothing imported is unexplained", not "nothing happened that I missed". The `bank_balance_confirmed` warn-check is the partial counterweight.
 
-## 2026-07-13 — Forex-only group sales (design agreed, implementation DEFERRED — NOT BUILT)
+## 2026-07-13 — Forex-only group sales (design agreed; **IMPLEMENTED** `v0.gs-fx-forex-only-group-sales`)
 
-**Status:** ⛔ **NOT IMPLEMENTED.** Design agreed with owner 2026-07-13; deferred to a dedicated, test-covered session (owner chose "next session, staged with verification"). Do **not** assume this exists in code — today a forex group sale still **requires** a sale-date TRY rate (`fx_rate_used` or `total_kurus`). This entry exists so we build it once, correctly, and don't re-litigate the model. Tracked as a to-build slice in `POST_LAUNCH_PLAN.md`.
+**Status:** ✅ **IMPLEMENTED** 2026-08-22 (`v0.gs-fx-forex-only-group-sales`). Design agreed with owner 2026-07-13; built in dedicated test-covered session per POST_LAUNCH_PLAN § GS-FX. Rated forex group sales (with `fx_rate_used`) unchanged — existing GL path.
 
 **Owner need:** When a group/agency booking is agreed in a foreign currency (e.g. "5,000 USD"), the owner thinks and settles in that currency and keeps the forex record separate. Entering a TRY rate + TRY amount + TRY total at sale time is confusing and, to the owner, useless *at that moment*. Quote: *"even if i do not record TRY and it does not show in GL or financials is also fine for me bcz i am keeping forex record separate and when i sell the forex i will have them in financials."*
 
@@ -293,7 +293,7 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 
 **Known caveat (tell the owner):** if one FX wallet holds *both* purchased forex (real TRY cost) and sale-received forex (zero cost), the average-cost math **blends** them, so a later conversion smears the two attributions. Acceptable for most restaurants; flag if precise per-lot attribution is ever needed (would require lot-level tracking).
 
-**Why deferred:** touches the double-entry engine, revenue-recognition timing, and FX cost basis on a **live** app; the current working session **cannot run the backend `pytest` suite** (sandbox lacks Python 3.11 + Postgres). Money-critical FX-engine changes must ship with tests written alongside and run green before touching real books.
+**Why deferred:** touches the double-entry engine, revenue-recognition timing, and FX cost basis on a **live** app; money-critical FX-engine changes must ship with tests written alongside and run green before touching real books. *(Deferred requirement satisfied 2026-08-22 — see tag above.)*
 
 ## 2026-07 — Production stack of record: Neon + Railway + Vercel + R2 (supersedes ALL "Render" references)
 

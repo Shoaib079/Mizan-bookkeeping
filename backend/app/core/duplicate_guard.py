@@ -146,6 +146,60 @@ def find_duplicate_partner_expense_fronted(
     )
 
 
+def find_duplicate_forex_only_group_sale(
+    session: Session,
+    *,
+    customer_id: uuid.UUID,
+    sale_date: date,
+    forex_currency: str,
+    total_forex_minor: int,
+) -> DuplicateMatch | None:
+    row_id = session.scalar(
+        select(CustomerLedgerEntry.id)
+        .outerjoin(JournalEntry, CustomerLedgerEntry.journal_entry_id == JournalEntry.id)
+        .where(
+            CustomerLedgerEntry.customer_id == customer_id,
+            CustomerLedgerEntry.movement_date == sale_date,
+            CustomerLedgerEntry.movement_type == CustomerMovementType.CREDIT_SALE,
+            CustomerLedgerEntry.amount_kurus == 0,
+            CustomerLedgerEntry.forex_currency == forex_currency,
+            CustomerLedgerEntry.total_forex_minor == total_forex_minor,
+            _live_journal_filter(CustomerLedgerEntry.journal_entry_id),
+        )
+        .limit(1)
+    )
+    if row_id is not None:
+        return DuplicateMatch(
+            record_kind="sale",
+            existing_id=row_id,
+            message=(
+                f"A forex group sale for {total_forex_minor / 100:.2f} {forex_currency} on "
+                f"{_format_tr_date(sale_date)} already exists for this customer."
+            ),
+        )
+
+    group_id = session.scalar(
+        select(GroupSale.id).where(
+            GroupSale.customer_id == customer_id,
+            GroupSale.sale_date == sale_date,
+            GroupSale.total_kurus == 0,
+            GroupSale.forex_currency == forex_currency,
+            GroupSale.total_forex_minor == total_forex_minor,
+            GroupSale.status == GroupSaleStatus.POSTED.value,
+        ).limit(1)
+    )
+    if group_id is None:
+        return None
+    return DuplicateMatch(
+        record_kind="sale",
+        existing_id=group_id,
+        message=(
+            f"A forex group sale for {total_forex_minor / 100:.2f} {forex_currency} on "
+            f"{_format_tr_date(sale_date)} already exists for this customer."
+        ),
+    )
+
+
 def find_duplicate_credit_sale(
     session: Session,
     *,
