@@ -72,11 +72,12 @@ export function GroupSaleDiscountDialog({ open, sale, onClose, onSaved }: Props)
 
   useEffect(() => {
     if (open) {
+      submitIdempotency.resetSubmit();
       setError(null);
       setAmountText("");
       setNote("");
     }
-  }, [open]);
+  }, [open, submitIdempotency]);
 
   const tryEcho = useMemo(() => {
     if (mode !== "rated_fx" || sale.fx_rate_used == null) return null;

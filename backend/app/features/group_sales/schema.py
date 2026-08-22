@@ -155,7 +155,7 @@ class GroupSaleLineRead(BaseModel):
 
 class GroupSaleDiscountRead(BaseModel):
     customer_ledger_entry_id: uuid.UUID
-    discount_native_minor: int
+    discount_amount_minor: int
     description: str
     movement_date: date
 

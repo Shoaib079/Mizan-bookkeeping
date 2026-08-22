@@ -258,7 +258,7 @@ export default function GroupSaleDetailPage() {
                       </p>
                     </div>
                     <p className="tabular-nums sm:text-right">
-                      {discountAmountLabel(sale, d.discount_native_minor)}
+                      {discountAmountLabel(sale, d.discount_amount_minor)}
                     </p>
                   </li>
                 ))}

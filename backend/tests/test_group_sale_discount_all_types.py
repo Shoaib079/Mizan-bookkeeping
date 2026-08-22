@@ -268,7 +268,7 @@ def test_try_discount_5800_regression(db_session, discount_all_setup) -> None:
     with entity_context(db_session, entity_id):
         read = group_sales_service.to_group_sale_read(db_session, sale)
     assert len(read.discounts) == 1
-    assert read.discounts[0].discount_native_minor == 20_000
+    assert read.discounts[0].discount_amount_minor == 20_000
 
 
 @pytest.mark.parametrize(

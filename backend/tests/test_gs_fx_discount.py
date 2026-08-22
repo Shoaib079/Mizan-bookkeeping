@@ -131,7 +131,7 @@ def test_forex_native_discount_reduces_receivable_no_gl(
         read = group_sales_service.to_group_sale_read(db_session, sale)
     assert read.remaining_forex_minor == 45_000
     assert len(read.discounts) == 1
-    assert read.discounts[0].discount_native_minor == 5_000
+    assert read.discounts[0].discount_amount_minor == 5_000
 
     with entity_context(db_session, entity_id):
         discount_row = db_session.get(

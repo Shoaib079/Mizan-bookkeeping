@@ -51,7 +51,7 @@ export type GroupSaleLineRead = {
 
 export type GroupSaleDiscountRead = {
   customer_ledger_entry_id: string;
-  discount_native_minor: number;
+  discount_amount_minor: number;
   description: string;
   movement_date: string;
 };

@@ -61,7 +61,7 @@ def to_group_sale_read(session: Session, group_sale: GroupSale) -> GroupSaleRead
         discounts.append(
             GroupSaleDiscountRead(
                 customer_ledger_entry_id=row.id,
-                discount_native_minor=display_minor,
+                discount_amount_minor=display_minor,
                 description=row.description,
                 movement_date=row.movement_date,
             )
