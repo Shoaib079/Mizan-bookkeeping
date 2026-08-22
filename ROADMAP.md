@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — customer ledger group-sale rich description done; awaiting owner review / push)* |
+| **Active slice**         | *(none — group-sale discount all types done; awaiting owner review / push)* |
 | **Next up**              | Per POST_LAUNCH_PLAN queue — owner chooses next slice |
-| **Last completed slice** | **Customer ledger group-sale rich description** (`v0.customer-ledger-group-sale-rich-description`) |
-| **Last commit/tag**      | `v0.customer-ledger-group-sale-rich-description` |
+| **Last completed slice** | **Group-sale discount — all sale types** (`v0.group-sale-discount-all-types`) |
+| **Last commit/tag**      | `v0.group-sale-discount-all-types` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Group-sale discount — all sale types          | `v0.group-sale-discount-all-types`                     | Unified Apply discount UI; rated FX native→TRY+5800; forex-only/TRY unchanged; mutation native/5800 legs → red |
 | 2026-08-22 | Customer ledger group-sale rich description   | `v0.customer-ledger-group-sale-rich-description`       | Menu · pax × rate on screen/PDF/Excel from stored lines; display-only; mutation flat fallback → red |
 | 2026-08-22 | GS-FX forex-native discount on rateless sales   | `v0.gs-fx-forex-native-discount`                       | Native receivable discount subledger-only (no 5800/GL); void discount + void sale reverses linked discounts; rated-FX 5800 unchanged; mutation no-GL + outstanding guard → red |
 | 2026-08-22 | GS-FX forex-only group sales                    | `v0.gs-fx-forex-only-group-sales`                      | Rateless forex AR subledger-only; zero-cost wallet receipt; TRY at conversion; void/correct; mutation no-GL + zero-cost → red |

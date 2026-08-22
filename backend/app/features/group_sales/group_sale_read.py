@@ -43,8 +43,6 @@ def to_group_sale_read(session: Session, group_sale: GroupSale) -> GroupSaleRead
     }
     discounts: list[GroupSaleDiscountRead] = []
     for row in discount_rows:
-        if row.total_forex_minor is None or row.total_forex_minor >= 0:
-            continue
         kind, _ = subledger_display_for_row(
             session,
             journal_entry_id=row.journal_entry_id,
@@ -54,10 +52,16 @@ def to_group_sale_read(session: Session, group_sale: GroupSale) -> GroupSaleRead
             continue
         if f"Reversal: {row.description}" in reversal_descriptions:
             continue
+        if row.total_forex_minor is not None and row.total_forex_minor < 0:
+            display_minor = abs(row.total_forex_minor)
+        elif row.amount_kurus < 0:
+            display_minor = abs(row.amount_kurus)
+        else:
+            continue
         discounts.append(
             GroupSaleDiscountRead(
                 customer_ledger_entry_id=row.id,
-                discount_native_minor=abs(row.total_forex_minor),
+                discount_native_minor=display_minor,
                 description=row.description,
                 movement_date=row.movement_date,
             )

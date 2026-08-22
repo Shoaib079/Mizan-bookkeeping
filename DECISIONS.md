@@ -307,7 +307,9 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 
 **TRY / rated-FX discounts unchanged:** Dr 5800 / Cr AR path stays for any sale that booked TRY at sale time.
 
-**Frontend:** Group-sale detail → Apply discount (native amount + note); customer ledger label **Discount**; void via write-off route using customer ledger entry id when no journal exists.
+**Rated FX discount (2026-08-22 extension):** Owner enters discount in **native** on the unified dialog; backend derives TRY at the sale's `fx_rate_used` and posts **one** `DISCOUNT` subledger row with negative `total_forex_minor` **and** negative `amount_kurus`, linked to Dr 5800 / Cr 1200. Native and TRY receivable both reduce; payment clearing and `native_balance_for_currency` stay tied.
+
+**Frontend (all types):** Group-sale detail → **Apply discount** while outstanding > 0 (TRY, rated FX, forex-only); customer ledger label **Discount**; void via write-off route (ledger id when no journal, journal id when 5800 posted).
 
 ## 2026-07 — Production stack of record: Neon + Railway + Vercel + R2 (supersedes ALL "Render" references)
 

@@ -321,7 +321,7 @@ def test_rated_fx_discount_still_posts_5800_regression(
         db_session,
         entity_id,
         sale.id,
-        discount_kurus=17_500,
+        discount_kurus=0,
         discount_native=500,
         actor_id=ACTOR_ID,
     )

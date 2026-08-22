@@ -59,7 +59,7 @@ def reverse_forex_only_group_sale(
     final_status: str,
     void_date: date | None = None,
 ) -> None:
-    from app.features.group_sales.service import GroupSaleError, GroupSaleHasPaymentsError
+    from app.features.group_sales.errors import GroupSaleError, GroupSaleHasPaymentsError
 
     if has_linked_payments(session, group_sale.id):
         raise GroupSaleHasPaymentsError(

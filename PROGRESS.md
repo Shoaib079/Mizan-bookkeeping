@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Customer ledger group-sale rich description done:** Display-only menu · pax × rate on screen/PDF/Excel from stored lines; tag `v0.customer-ledger-group-sale-rich-description`. **Awaiting owner review — do not push.**
+- **Group-sale discount all types done:** Unified Apply discount on detail for TRY/rated FX/forex-only; tag `v0.group-sale-discount-all-types`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — rich description done; awaiting review / push)* |
-| **Last completed slice** | Customer ledger group-sale rich description |
-| **Last tag** | `v0.customer-ledger-group-sale-rich-description` |
+| **Active slice** | *(none — discount all types done; awaiting review / push)* |
+| **Last completed slice** | Group-sale discount — all sale types |
+| **Last tag** | `v0.group-sale-discount-all-types` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner chooses next slice from POST_LAUNCH_PLAN |
 
