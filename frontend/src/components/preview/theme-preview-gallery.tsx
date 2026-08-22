@@ -22,6 +22,12 @@ import { MobileSettingsHub } from "@/components/layout/mobile-settings-hub";
 import { StatCard } from "@/components/page/stat-card";
 import { MeaningChip } from "@/components/ui/meaning-chip";
 import {
+  customerBalanceHeading,
+  customerBalanceStickerMinor,
+} from "@/lib/customer-balance";
+import { formatFxNative } from "@/lib/fx-money";
+import { supplierBalanceHeading } from "@/lib/supplier-balance";
+import {
   MobileCardList,
   MobileCardRow,
 } from "@/components/ui/mobile-card-list";
@@ -182,25 +188,43 @@ export function ThemePreviewGallery({ className }: { className?: string }) {
       <PreviewSection title="Balance stickers">
         <div className="space-y-3">
           <EntityBalanceSticker
-            label="You owe supplier"
+            label={supplierBalanceHeading(45_000_00)}
             caption="Current balance"
-            signedBalanceMinor={-45_000_00}
+            signedBalanceMinor={45_000_00}
           />
           <EntityBalanceSticker
-            label="Supplier owes you"
+            label={supplierBalanceHeading(-12_500_00)}
             caption="Current balance"
-            signedBalanceMinor={12_500_00}
+            signedBalanceMinor={-12_500_00}
           />
           <EntityBalanceSticker
-            label="Settled"
+            label={supplierBalanceHeading(0)}
             caption="Current balance"
             signedBalanceMinor={0}
           />
           <EntityBalanceSticker
-            label="Customer receivable"
+            label="Owed in USD"
+            caption="FX wallet"
+            signedBalanceMinor={324_000}
+            format={(minor) => formatFxNative(minor, "USD")}
+          />
+          <p className="pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Supplier detail
+          </p>
+          <EntityBalanceSticker
+            label={supplierBalanceHeading(1_195_278_24)}
             caption="Current balance"
-            signedBalanceMinor={-320_000_00}
-            format={(n) => `${(n / 100).toLocaleString("tr-TR")} ₺`}
+            signedBalanceMinor={1_195_278_24}
+            details={<p>14 posted invoices</p>}
+          />
+          <p className="pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Customer detail
+          </p>
+          <EntityBalanceSticker
+            label={customerBalanceHeading(320_000)}
+            caption="Current balance"
+            signedBalanceMinor={customerBalanceStickerMinor(320_000)}
+            details={<p>Owed: {formatFxNative(124_000, "USD")}</p>}
           />
         </div>
       </PreviewSection>

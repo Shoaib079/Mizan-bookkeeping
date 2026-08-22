@@ -103,7 +103,30 @@ describe("theme v2 token scope", () => {
     expect(container.querySelector(".theme-v2-gallery[data-theme='v2']")).toBeTruthy();
     expect(screen.getByText("Mobile visual refresh v2")).toBeTruthy();
     expect(screen.getByText("Today")).toBeTruthy();
-    expect(screen.getByText("You owe supplier")).toBeTruthy();
+  });
+});
+
+describe("preview balance sticker samples", () => {
+  it("renders direction headings and no minus on they-owe samples", () => {
+    const { container } = render(<ThemePreviewGallery />);
+
+    expect(screen.getAllByText("You owe supplier").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Supplier owes you")).toBeTruthy();
+    expect(screen.getAllByText("Settled").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Customer owes you")).toBeTruthy();
+    expect(screen.getByText("Owed in USD")).toBeTruthy();
+    expect(screen.getByText("Supplier detail")).toBeTruthy();
+    expect(screen.getByText("Customer detail")).toBeTruthy();
+    expect(screen.getByText(/1\.195\.278,24/)).toBeTruthy();
+    expect(screen.getByText(/3\.200,00/)).toBeTruthy();
+
+    const theyOweStickers = container.querySelectorAll('[data-direction="they_owe"]');
+    expect(theyOweStickers.length).toBeGreaterThanOrEqual(2);
+    for (const sticker of theyOweStickers) {
+      const amount = sticker.querySelector(".tabular-nums");
+      expect(amount?.textContent ?? "").not.toMatch(/^\s*-/);
+      expect(amount?.textContent ?? "").not.toContain("-");
+    }
   });
 });
 
