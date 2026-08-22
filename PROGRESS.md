@@ -17,13 +17,13 @@
 
 ## Current
 
-- **Mobile settings functional done:** Settings hub drill-ins, mobile sign-out, More tab, Record/void/export fixes; tag `v0.mobile-settings-functional`. **Awaiting owner review — do not push.**
+- **POS daily sales mobile parity done:** Mobile posted cards get Edit + Void via shared `PosDailySalesPostedActions`; tag `v0.pos-daily-sales-mobile-parity`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — mobile settings functional done; awaiting review)* |
-| **Last completed slice** | Mobile + settings functional audit & fix |
-| **Last tag** | `v0.mobile-settings-functional` |
+| **Active slice** | *(none — POS daily sales mobile parity done; awaiting review)* |
+| **Last completed slice** | POS daily sales mobile parity — Correct + Void |
+| **Last tag** | `v0.pos-daily-sales-mobile-parity` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Visual refresh slice after owner approves preview; else POST_LAUNCH_PLAN queue |
 

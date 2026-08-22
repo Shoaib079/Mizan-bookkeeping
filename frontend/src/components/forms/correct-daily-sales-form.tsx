@@ -16,6 +16,7 @@ import { useEntity } from "@/lib/entity-context";
 import { formatKurus, formatTry, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { withPeriodUnlockReason } from "@/lib/period-unlock";
 import { usePeriodUnlockSubmit } from "@/lib/use-period-unlock-submit";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useToast } from "@/lib/toast";
 import { useEditFormDirty } from "@/lib/use-form-dirty";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
@@ -36,6 +37,7 @@ export function CorrectDailySalesForm({
   onSaved,
 }: Props) {
   const { entityId, actorId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const { submitWithPeriodUnlock, PeriodUnlockDialog } = usePeriodUnlockSubmit();
@@ -197,7 +199,13 @@ export function CorrectDailySalesForm({
 
   return (
     <>
-    <Dialog open={open} title="Edit daily sales" onClose={onClose} dirty={dirty}>
+    <Dialog
+      open={open}
+      title="Edit daily sales"
+      onClose={onClose}
+      dirty={dirty}
+      mobilePresentation={isMobile ? "sheet" : "fullscreen"}
+    >
       <form onSubmit={onSubmit} onChange={markTouched} className="space-y-3">
         <div>
           <Label htmlFor="correct-sales-date">Date (DD.MM.YYYY)</Label>

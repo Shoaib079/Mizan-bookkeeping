@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
 import { useApiAuth } from "@/lib/api-auth";
-import { clearMizanStorage, useEntity } from "@/lib/entity-context";
+import { useEntity } from "@/lib/entity-context";
 import { entityAccentColor, entityInitial } from "@/lib/entity-visual";
 import { ENTITY_ROLES } from "@/lib/settings-types";
 import { useEntityAccess } from "@/lib/use-entity-access";

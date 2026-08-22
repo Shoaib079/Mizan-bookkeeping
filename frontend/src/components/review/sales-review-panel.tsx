@@ -7,7 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
+import { PosDailySalesPostedActions } from "@/components/sales/pos-daily-sales-posted-actions";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,6 @@ import {
 import { useEntity } from "@/lib/entity-context";
 import { canExportFiles } from "@/lib/entity-access";
 import { formatTrDate, formatTry } from "@/lib/money";
-import { posDailySalesVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
 import { isPendingReviewStatus } from "@/lib/review-status";
@@ -288,20 +287,12 @@ export function SalesReviewPanel({
                 </DataTableCell>
                 <DataTableCell align="right">
                   {row.status === "posted" ? (
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="h-8 px-3 text-xs"
-                        onClick={() => setCorrectSummary(row)}
-                      >
-                        Edit
-                      </Button>
-                      <VoidTriggerButton
-                        confirmDetail={posDailySalesVoidConfirmDetail(row)}
-                        onContinue={() => setVoidSummary(row)}
-                      />
-                    </div>
+                    <PosDailySalesPostedActions
+                      row={row}
+                      grants={grants}
+                      onCorrect={() => setCorrectSummary(row)}
+                      onVoid={() => setVoidSummary(row)}
+                    />
                   ) : isPendingReviewStatus(row.status) ? (
                     <Link
                       href={`/sales/${row.id}`}
@@ -331,18 +322,19 @@ export function SalesReviewPanel({
               amount={formatTry(row.total_kurus)}
               trailing={
                 row.status === "posted" ? (
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="h-8 px-2 text-xs"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setCorrectSummary(row);
-                      }}
-                    >
-                      Edit
-                    </Button>
+                  <div
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                  >
+                    <PosDailySalesPostedActions
+                      row={row}
+                      grants={grants}
+                      compact
+                      onCorrect={() => setCorrectSummary(row)}
+                      onVoid={() => setVoidSummary(row)}
+                    />
                   </div>
                 ) : isPendingReviewStatus(row.status) ? (
                   <span className="text-xs text-primary">Review</span>
