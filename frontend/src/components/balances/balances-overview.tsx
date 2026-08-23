@@ -1,7 +1,7 @@
 "use client";
 
 /** Dashboard snapshot cards — payables, receivables, FX, staff, partners.
- * Cash and bank totals live in the dashboard Cash & bank card beside This period. */
+ * Cash and bank totals live in the dashboard Cash & bank card (KPI row). */
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -28,6 +28,15 @@ import {
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountTree } from "@/lib/banking-types";
 import { fxHoldingsNativeSummary } from "@/lib/banking-tree-helpers";
+import {
+  OVERVIEW_FIGURE_CLASS,
+  partnerOverviewDisplay,
+  payablesOverviewDisplay,
+  receivablesOverviewDisplay,
+  staffOverviewHint,
+  staffOverviewTone,
+  type OverviewFigureTone,
+} from "@/lib/balances-overview-display";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
 import { subledgerCountLabel } from "@/lib/subledger-total";
@@ -47,7 +56,7 @@ type CardProps = {
   hint: string;
   icon: LucideIcon;
   amount?: string;
-  amountClass?: string;
+  figureTone?: OverviewFigureTone;
   loading?: boolean;
   accent: AccentBarTone;
   tint: IconTint;
@@ -60,7 +69,7 @@ function BalanceCard({
   hint,
   icon: Icon,
   amount,
-  amountClass,
+  figureTone,
   loading,
   accent,
   tint,
@@ -71,6 +80,7 @@ function BalanceCard({
       href={href}
       data-meaning-card
       data-testid="balances-overview-card"
+      data-card-title={title}
       data-accent={accent}
       className="group relative flex flex-col justify-between rounded-[var(--radius-card)] border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-muted/50"
       style={{ ["--accent-bar" as string]: ACCENT_BAR[accent] }}
@@ -85,10 +95,12 @@ function BalanceCard({
       </div>
       {amount !== undefined && (
         <div
+          data-testid="balances-overview-figure"
+          data-figure-tone={figureTone}
           className={cn(
             "mb-1 text-2xl font-semibold tabular-nums",
             amount.length > 18 && "text-lg",
-            amountClass,
+            figureTone ? OVERVIEW_FIGURE_CLASS[figureTone] : undefined,
           )}
         >
           {loading ? "…" : amount}
@@ -173,22 +185,40 @@ export function BalancesOverview({ embedded = false }: Props) {
   const staffStroke: IconStroke =
     staff.netSign > 0 ? "green" : staff.netSign < 0 ? "red" : "gray";
 
+  const payablesDisplay = payablesOverviewDisplay(payables.totalKurus);
+  const receivablesDisplay = receivablesOverviewDisplay(receivables.totalKurus);
+  const partnerHint = `Reimbursement / loans owed — ${subledgerCountLabel(partners.count, "partner")} (capital is on each partner)`;
+  const partnersDisplay = partnerOverviewDisplay(
+    partners.totalKurus,
+    partnerHint,
+  );
+  const staffTone = staffOverviewTone(staff.netSign);
+  const staffCaption = staffOverviewHint(
+    staff.netSign,
+    staffHint(
+      staff.netSign,
+      staff.count,
+      staff.fxCount,
+      staff.loadFailed,
+    ),
+  );
+
   return (
     <>
       {!embedded && (
         <p className="mb-4 text-sm text-muted-foreground">
           Grand totals for payables, receivables, and subledgers. Cash and bank
-          are on the dashboard beside This period. Open any card for detail.
+          are on the dashboard Cash & bank card. Open any card for detail.
         </p>
       )}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <BalanceCard
           href="/suppliers"
           title="Payables"
-          hint="Total owed to suppliers — open the Suppliers directory"
+          hint={payablesDisplay.hint}
           icon={Receipt}
-          amount={formatTry(payables.totalKurus)}
-          amountClass={payables.totalKurus > 0 ? "text-destructive" : undefined}
+          amount={formatTry(payablesDisplay.amountKurus)}
+          figureTone={payablesDisplay.tone}
           loading={payables.loading}
           accent="green"
           tint="mint"
@@ -197,10 +227,10 @@ export function BalancesOverview({ embedded = false }: Props) {
         <BalanceCard
           href="/customers"
           title="Receivables"
-          hint="Total owed to you — open the Customers directory"
+          hint={receivablesDisplay.hint}
           icon={HandCoins}
-          amount={formatTry(receivables.totalKurus)}
-          amountClass={receivables.totalKurus > 0 ? "text-success" : undefined}
+          amount={formatTry(receivablesDisplay.amountKurus)}
+          figureTone={receivablesDisplay.tone}
           loading={receivables.loading}
           accent="red"
           tint="blush"
@@ -212,6 +242,7 @@ export function BalancesOverview({ embedded = false }: Props) {
           hint="Held as FX (not converted to ₺ here) — open Banking → FX"
           icon={Coins}
           amount={fxNativeSummary}
+          figureTone="ink"
           loading={fxLoading}
           accent="blue"
           tint="sky"
@@ -220,21 +251,10 @@ export function BalancesOverview({ embedded = false }: Props) {
         <BalanceCard
           href="/staff"
           title="Staff balances"
-          hint={staffHint(
-            staff.netSign,
-            staff.count,
-            staff.fxCount,
-            staff.loadFailed,
-          )}
+          hint={staffCaption}
           icon={Users}
           amount={staff.amountLabel}
-          amountClass={
-            staff.netSign > 0
-              ? "text-destructive"
-              : staff.netSign < 0
-                ? "text-success"
-                : undefined
-          }
+          figureTone={staffTone}
           loading={staff.loading}
           accent={staffAccent}
           tint={staffTint}
@@ -243,12 +263,10 @@ export function BalancesOverview({ embedded = false }: Props) {
         <BalanceCard
           href="/partners"
           title="Partner balances"
-          hint={`Reimbursement / loans owed — ${subledgerCountLabel(partners.count, "partner")} (capital is on each partner)`}
+          hint={partnersDisplay.hint}
           icon={Banknote}
-          amount={formatTry(partners.totalKurus)}
-          amountClass={
-            partners.totalKurus > 0 ? "text-destructive" : undefined
-          }
+          amount={formatTry(partnersDisplay.amountKurus)}
+          figureTone={partnersDisplay.tone}
           loading={partners.loading}
           accent={partners.totalKurus > 0 ? "green" : "gray"}
           tint={partners.totalKurus > 0 ? "mint" : "gray"}

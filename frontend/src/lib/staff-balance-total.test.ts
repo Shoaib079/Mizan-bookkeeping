@@ -86,6 +86,17 @@ describe("sumFxStaffBalancesByCurrency + formatStaffHubAmount", () => {
       ),
     ).toBe("2500 TRY · 80 USD");
   });
+
+  it("formats absolute TRY and FX — never a minus on the hub card", () => {
+    expect(
+      formatStaffHubAmount(
+        -900_000,
+        new Map([["USD", -50_00]]),
+        (n) => `${n}k`,
+        (n, c) => `${n}${c}`,
+      ),
+    ).toBe("900000k · 5000USD");
+  });
 });
 
 describe("staffHubNetSign", () => {

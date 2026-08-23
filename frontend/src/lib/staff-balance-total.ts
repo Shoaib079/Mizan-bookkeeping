@@ -60,10 +60,10 @@ export function formatStaffHubAmount(
   formatFxFn: (minor: number, currency: string) => string,
 ): string {
   const parts: string[] = [];
-  if (tryTotalKurus !== 0) parts.push(formatTryFn(tryTotalKurus));
+  if (tryTotalKurus !== 0) parts.push(formatTryFn(Math.abs(tryTotalKurus)));
   for (const currency of [...fxByCurrency.keys()].sort()) {
     const minor = fxByCurrency.get(currency) ?? 0;
-    if (minor !== 0) parts.push(formatFxFn(minor, currency));
+    if (minor !== 0) parts.push(formatFxFn(Math.abs(minor), currency));
   }
   if (parts.length === 0) return formatTryFn(0);
   return parts.join(" · ");

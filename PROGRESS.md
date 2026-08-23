@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Cash & bank card — column separation + bold subtotals:** v2-only hairline + bold Cash/Banks labels. Tag `v0.dashboard-cash-bank-column-sep`. **Awaiting owner review — do not push.** Unrelated uncommitted WIP remains: dashboard KPI “This period” gated to v2 (page.tsx / tests / balances-overview copy).
+- **Balances stickers — direction figures:** absolute amounts + green/red/muted/ink by direction; accepted-live. Tag `v0.balances-direction-figures`. **Awaiting owner review — do not push.** Unrelated uncommitted WIP: dashboard KPI This period gated to v2; Cash & bank heading font-medium polish (uncommitted on top of tagged column-sep).
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — column-sep awaiting review)* |
-| **Last completed slice** | Cash & bank card — column separation + bold subtotals |
-| **Last tag** | `v0.dashboard-cash-bank-column-sep` |
+| **Active slice** | *(none — balances direction figures awaiting review)* |
+| **Last completed slice** | Balances stickers — direction-colored figures |
+| **Last tag** | `v0.balances-direction-figures` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |

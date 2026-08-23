@@ -1,4 +1,9 @@
-## 2026-08-23 — Cash & bank card: column separation + bold subtotals (v2-only)
+## 2026-08-23 — Balances stickers: direction-colored absolute figures (accepted-live)
+
+**Choice:** Dashboard / Balances hub stickers colour the **figure** by direction on **both** themes: you-owe `#16A34A`, they-owe `#DC2626`, zero/settled muted + caption **Nothing outstanding**, FX/neutral ink `#0B1526`. Amounts render as **absolute values** (never a minus). Payables/receivables captions flip with direction (e.g. negative payables → “Net advances — suppliers owe you”). Bars and icon chips unchanged.
+
+**Why:** Owner disliked grey payables/receivables figures; direction colour + captions match the sticker convention already used on supplier/customer/partner detail.
+
 
 **Choice:** Under `data-theme="v2"` only, the Cash & bank snapshot adds a hairline between Cash drawers and Bank accounts (`#E6EAF2`; vertical ≥sm with ≥24px gap; horizontal when stacked) and renders the Cash / Banks subtotal labels at 13px / weight 700 / `#3D4A63`. Live v1 card is unchanged.
 
