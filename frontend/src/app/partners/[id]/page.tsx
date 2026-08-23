@@ -177,7 +177,7 @@ export default function PartnerDetailPage() {
             {showWrite && (
               <Button
                 type="button"
-                variant="secondary"
+                variant="positive"
                 disabled={(ledger?.unpaid_profit_kurus ?? 0) <= 0}
                 onClick={() => setPayProfitOpen(true)}
                 title={

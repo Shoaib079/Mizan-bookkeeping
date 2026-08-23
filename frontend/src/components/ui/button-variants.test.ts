@@ -48,6 +48,13 @@ describe("button variants carry colour", () => {
     expect(voidButton).toContain("bg-destructive/5");
   });
 
+  it("positive is filled sticker green", () => {
+    const positiveLine =
+      source.match(/variant === "positive" &&[\s\S]{0,120}/)?.[0] ?? "";
+    expect(positiveLine).toContain("bg-[#16A34A]");
+    expect(positiveLine).toContain("text-white");
+  });
+
   it("a caller's own colour still wins", () => {
     const secondary = "bg-primary text-primary-foreground hover:bg-primary/90";
     const ghost = "text-primary hover:bg-primary/15";

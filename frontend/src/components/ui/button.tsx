@@ -2,7 +2,7 @@ import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary" | "ghost" | "destructive";
+  variant?: "primary" | "secondary" | "ghost" | "destructive" | "positive";
 };
 
 export function Button({
@@ -23,17 +23,18 @@ export function Button({
           "bg-primary text-primary-foreground hover:bg-primary/90",
         // secondary renders exactly like primary: filled, same blue, white
         // text. An outline — however tinted — was reported as "border, no
-        // colour" on five separate screens, and the tint that finally read as
-        // colour was the one that filled.
+        // colour" on five separate screens (accepted-live 2ae574a).
         //
         // The variant is kept rather than collapsed into primary because
         // callers still use it to mean "the supporting action here", and
         // because Void recolours it wholesale. Two names, one look, on
-        // purpose. Under data-theme=v2, CSS restyles secondary to white +
-        // hairline (locked owner spec).
+        // purpose. Do not let theme CSS paint secondary white again.
         variant === "secondary" &&
           "bg-primary text-primary-foreground hover:bg-primary/90",
         variant === "ghost" && "text-primary hover:bg-primary/15",
+        // Positive money actions (Pay / Allocate profit) — sticker green.
+        variant === "positive" &&
+          "bg-[#16A34A] text-white hover:bg-[#16A34A]/90",
         // For actions that destroy something and cannot be undone. Filled, for
         // the same reason secondary is: an outline did not read as a button.
         //
@@ -42,7 +43,6 @@ export function Button({
         // would stop meaning anything by the time it mattered. Right now the
         // only caller is deleting a restaurant. The variant exists so the next
         // irreversible action inherits the treatment instead of inventing one.
-        // Under data-theme=v2: red text on blush tint (locked owner spec).
         variant === "destructive" &&
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         className,

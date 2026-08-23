@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Cash & bank align + hairline (`v0.dashboard-cash-bank-align-divider`):** Columns aligned; vertical divider restored. **Awaiting owner review — do not push.**
+- **Button colours restore (`v0.button-colour-restore`):** Filled blue secondary + positive green; v2 white override gone. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Cash & bank align + hairline |
-| **Last tag** | `v0.dashboard-cash-bank-align-divider` |
+| **Last completed slice** | Button colours restore |
+| **Last tag** | `v0.button-colour-restore` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |

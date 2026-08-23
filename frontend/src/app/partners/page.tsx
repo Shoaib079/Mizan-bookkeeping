@@ -256,7 +256,7 @@ export default function PartnersPage() {
           showWrite ? (
             <Button
               type="button"
-              variant="secondary"
+              variant="positive"
               disabled={!entityId}
               onClick={() => setAllocateOpen(true)}
             >

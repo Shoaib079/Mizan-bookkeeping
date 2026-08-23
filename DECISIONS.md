@@ -1,3 +1,17 @@
+## 2026-08-24 — Button colours match sticker language (accepted-live)
+
+**Choice:** Shared `Button` colours are **accepted-live everywhere**:
+- **primary / secondary** — filled blue `#2563EB` (white text). Secondary stays a separate variant for “supporting action” semantics but looks the same fill (owner: outline / white secondary read as “no colour”).
+- **positive** — filled green `#16A34A` for Pay profit / Allocate profit (sticker green).
+- **destructive** — filled red; **ghost** — primary text; disabled — muted opacity.
+- No gradients; no theme CSS that paints secondary white.
+
+**Why (owner 2026-08-24, verbatim):** *"staff page download and give advance has no color match the app sticker colors partner page allocate profit pay profit and download lost color count cash on cash drawer download button lost color through out the app why."*
+
+**Root cause:** `v0.v2-locked-spec` forced `[data-button-variant=secondary]` to white+hairline under `data-theme=v2`; `v0.v2-only` made that the only look.
+
+**Supersedes:** v2-locked-spec secondary white+hairline / destructive blush restyles for buttons.
+
 ## 2026-08-24 — v2 is the only look (owner)
 
 **Choice:** Visual theme is **always v2**. `<html data-theme="v2">` is baked unconditionally. The New look on/off toggle, `mizan:visual-theme` localStorage, `NEXT_PUBLIC_DEFAULT_THEME`, and `NEXT_PUBLIC_THEME_TOGGLE` are **removed**. There is no v1 grace fallback.

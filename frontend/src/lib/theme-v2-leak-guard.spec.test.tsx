@@ -133,7 +133,11 @@ describe("leak mutation + CSS gate", () => {
     expect(css).toContain(
       '[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-figure]',
     );
+    // Pill radius for variants — must NOT force secondary to white (colour loss).
     expect(css).toContain('[data-theme="v2"] [data-button-variant="secondary"]');
+    expect(css).not.toMatch(
+      /\[data-button-variant="secondary"\][\s\S]{0,120}#ffffff\s*!important/,
+    );
     expect(css).toContain('[data-theme="v2"] [data-stat-figure]');
   });
 
