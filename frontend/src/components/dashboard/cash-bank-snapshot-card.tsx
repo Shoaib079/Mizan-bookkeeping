@@ -116,7 +116,10 @@ export function CashBankSnapshotCard({
     >
       <MeaningCardAccentBar />
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div
+          data-testid="cash-bank-heading"
+          className="flex items-center gap-2 text-sm font-medium text-foreground"
+        >
           <IconSquare icon={Wallet} tint="sky" stroke="blue" size="sm" />
           Cash & bank
         </div>

@@ -74,6 +74,16 @@ describe("CashBankSnapshotCard", () => {
     // v1 live: no column/stack dividers; muted subtotal labels
     expect(screen.queryByTestId("cash-bank-column-divider")).toBeNull();
     expect(screen.queryByTestId("cash-bank-stack-divider")).toBeNull();
+    // Heading matches BalanceCard / sticker titles (ink + medium), both themes
+    expect(screen.getByTestId("cash-bank-heading").className).toContain(
+      "font-medium",
+    );
+    expect(screen.getByTestId("cash-bank-heading").className).toContain(
+      "text-foreground",
+    );
+    expect(screen.getByTestId("cash-bank-heading").className).not.toContain(
+      "text-muted-foreground",
+    );
     for (const label of screen.getAllByTestId("cash-bank-subtotal-label")) {
       expect(label.className).toContain("text-muted-foreground");
       expect(label.className).not.toContain("font-bold");
@@ -172,6 +182,21 @@ describe("CashBankSnapshotCard", () => {
     });
   });
 
+  it("Cash & bank heading matches BalanceCard ink + medium weight", async () => {
+    renderCard(
+      <CashBankSnapshotCard cashKurus={10_000} bankKurus={20_000} />,
+      { themeV2: true },
+    );
+
+    await waitFor(() => {
+      const heading = screen.getByTestId("cash-bank-heading");
+      expect(heading.className).toContain("font-medium");
+      expect(heading.className).toContain("text-foreground");
+      expect(heading.className).not.toContain("text-muted-foreground");
+      expect(heading.textContent).toContain("Cash & bank");
+    });
+  });
+
   it("mutation: collapse to single column always → red", () => {
     const src = sourceDeclaring("CashBankSnapshotCard");
     expect(src).toContain("sm:grid-cols-2");
@@ -193,6 +218,11 @@ describe("CashBankSnapshotCard", () => {
     expect(src).toContain("text-[13px]");
     expect(src).toContain("SUBTOTAL_LABEL_V2");
     expect(src).toContain("SUBTOTAL_LABEL_V1");
+    expect(src).toContain("cash-bank-heading");
+    expect(src).toContain("font-medium text-foreground");
+    expect(src).not.toMatch(
+      /cash-bank-heading[\s\S]{0,200}text-muted-foreground/,
+    );
     // v2 path must not force muted on the emphasis label constant
     expect(src).toMatch(
       /SUBTOTAL_LABEL_V2\s*=\s*"[^"]*font-bold[^"]*text-\[#3D4A63\]/,

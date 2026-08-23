@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Balances stickers — direction figures:** absolute amounts + green/red/muted/ink by direction; accepted-live. Tag `v0.balances-direction-figures`. **Awaiting owner review — do not push.** Unrelated uncommitted WIP: dashboard KPI This period gated to v2; Cash & bank heading font-medium polish (uncommitted on top of tagged column-sep).
+- **Pushed:** through `v0.dashboard-v2-kpi-cash-only` (KPI v2 cash-only + Cash & bank heading ink). Working tree expected clean after that push.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — balances direction figures awaiting review)* |
-| **Last completed slice** | Balances stickers — direction-colored figures |
-| **Last tag** | `v0.balances-direction-figures` |
-| **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner review → push when approved |
+| **Active slice** | *(none)* |
+| **Last completed slice** | Dashboard KPI — v2 cash-only + Cash & bank heading |
+| **Last tag** | `v0.dashboard-v2-kpi-cash-only` |
+| **Unpushed** | no |
+| **Next up** | POST_LAUNCH_PLAN queue |

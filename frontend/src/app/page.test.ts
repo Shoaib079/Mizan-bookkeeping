@@ -15,9 +15,12 @@ describe("dashboard is status-only (recording lives on Add)", () => {
   });
 
   it("still shows period KPIs and balances", () => {
-    expect(source()).toContain("This period");
-    expect(source()).toContain("CashBankSnapshotCard");
-    expect(source()).toContain("<BalancesOverview");
-    expect(source()).toContain("<WeeklyChart");
+    const src = source();
+    expect(src).toContain("This period");
+    expect(src).toContain("CashBankSnapshotCard");
+    expect(src).toContain("v2-cash-bank-only");
+    expect(src).toContain("v1-period-and-cash");
+    expect(src).toContain("<BalancesOverview");
+    expect(src).toContain("<WeeklyChart");
   });
 });

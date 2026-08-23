@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — balances direction figures awaiting review)* |
-| **Next up**              | Owner review → push when approved; else POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Balances stickers — direction-colored figures** (`v0.balances-direction-figures`) |
-| **Last commit/tag**      | `v0.balances-direction-figures` |
+| **Active slice**         | *(none)* |
+| **Next up**              | POST_LAUNCH_PLAN queue |
+| **Last completed slice** | **Dashboard KPI — v2 cash-only + Cash & bank heading** (`v0.dashboard-v2-kpi-cash-only`) |
+| **Last commit/tag**      | `v0.dashboard-v2-kpi-cash-only` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Dashboard KPI v2 cash-only + heading ink        | `v0.dashboard-v2-kpi-cash-only`                        | v2 drops This period; Cash & bank title font-medium ink both themes; mutation v2/v1 branch → red |
 | 2026-08-23 | Balances stickers — direction figures (live)    | `v0.balances-direction-figures`                        | Absolute figures; green/red/muted/ink by direction; caption flips; mutation minus or gray non-zero → red |
 | 2026-08-23 | Cash & bank — column sep + bold subtotals (v2)  | `v0.dashboard-cash-bank-column-sep`                    | v2-only hairline between drawers/banks + Cash/Banks 13px/700/#3D4A63; v1 untouched; mutation divider/muted → red |
 | 2026-08-23 | Dashboard Cash & bank — two-column layout       | `v0.dashboard-cash-bank-two-col`                       | Compact total · drawers left / banks right; stacks on narrow; mutation single-col → red |

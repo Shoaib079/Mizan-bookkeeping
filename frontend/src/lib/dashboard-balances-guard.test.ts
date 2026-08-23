@@ -4,8 +4,6 @@ import { sourceDeclaring } from "@/test-support/source";
 
 import { navGroups } from "@/lib/app-routes";
 
-
-
 describe("balances on dashboard", () => {
   it("does not list Balances in the Overview sidebar", () => {
     const overview = navGroups.find((group) => group.label === "Overview");
@@ -17,7 +15,13 @@ describe("balances on dashboard", () => {
     const overview = sourceDeclaring("BalancesOverview");
     const snapshot = sourceDeclaring("CashBankSnapshotCard");
     expect(page).toContain("CashBankSnapshotCard");
-    expect(page).toContain("lg:grid-cols-2");
+    expect(page).toContain("dashboard-kpi-row");
+    expect(page).toContain("useNewLookTheme");
+    expect(page).toContain("v2-cash-bank-only");
+    expect(page).toContain("v1-period-and-cash");
+    // v1 keeps This period; v2 drops it (cash & bank only).
+    expect(page).toContain('label="This period"');
+    expect(page).toContain("v2Dashboard ? (");
     expect(page).toContain("cash_in_hand_kurus");
     expect(page).toContain("bank_balance_kurus");
     expect(page).toContain("cash_accounts");
@@ -33,6 +37,15 @@ describe("balances on dashboard", () => {
     expect(overview).not.toContain("bankAccounts.map");
     expect(overview).not.toContain('title="Cash"');
     expect(overview).not.toContain('title="Bank"');
+  });
+
+  it("mutation: v2 still shows This period or v1 drops cash-only branch → red", () => {
+    const page = sourceDeclaring("HomePage");
+    expect(page).toContain("v2-cash-bank-only");
+    expect(page).toMatch(/v2Dashboard\s*\?\s*\([\s\S]*?CashBankSnapshotCard/);
+    expect(page).toContain('label="This period"');
+    // Equal-width 5-col cash-left layout must not be the only path.
+    expect(page).not.toContain("lg:grid-cols-5");
   });
 
   it("redirects /balances to dashboard (same as desktop)", () => {
@@ -55,7 +68,9 @@ describe("balances on dashboard", () => {
     expect(overview).toMatch(/title=["']Payables["']/);
     expect(overview).not.toMatch(/title=["']Total owed["']/);
     expect(overview).not.toMatch(/title=["']You owe/);
-    // Direction subtitle stays — wording for who is owed.
-    expect(overview).toContain("Total owed to suppliers");
+    expect(overview).toContain("payablesOverviewDisplay");
+    expect(sourceDeclaring("payablesOverviewDisplay")).toContain(
+      "Total owed to suppliers",
+    );
   });
 });
