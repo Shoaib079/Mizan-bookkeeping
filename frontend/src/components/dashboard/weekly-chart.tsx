@@ -122,7 +122,13 @@ export function WeeklyChart({ status, daily }: Props) {
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold">Last 7 days</h2>
+      <h2 className="mb-1 text-sm font-semibold">Last 7 days</h2>
+      <p
+        data-testid="weekly-chart-period-caption"
+        className="mb-3 text-xs text-muted-foreground"
+      >
+        This month
+      </p>
 
       {status === "loading" && (
         <Skeleton className="w-full rounded-md" style={{ height: CHART_HEIGHT }} />

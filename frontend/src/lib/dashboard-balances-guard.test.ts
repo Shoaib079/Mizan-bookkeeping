@@ -10,42 +10,45 @@ describe("balances on dashboard", () => {
     expect(overview?.items.map((item) => item.href)).not.toContain("/balances");
   });
 
-  it("shows cash and bank together beside This period", () => {
+  it("shows Cash & bank as-of; This period and range controls gone", () => {
     const page = sourceDeclaring("HomePage");
     const overview = sourceDeclaring("BalancesOverview");
     const snapshot = sourceDeclaring("CashBankSnapshotCard");
     expect(page).toContain("CashBankSnapshotCard");
     expect(page).toContain("dashboard-kpi-row");
     expect(page).toContain("useNewLookTheme");
-    expect(page).toContain('data-layout="period-and-cash"');
-    // Both themes: This period + Cash & bank (accepted-live; reverses cash-only KPI).
-    expect(page).toContain('label="This period"');
+    expect(page).toContain('data-layout="as-of-cash"');
+    expect(page).not.toContain('label="This period"');
+    expect(page).not.toContain("period-and-cash");
+    expect(page).not.toContain("ReportDateRange");
+    expect(page).not.toContain("ReportDateRangeFields");
+    expect(page).not.toContain("ReportPeriodTrigger");
+    expect(page).not.toContain("periodControl=");
     expect(page).toContain("cash_in_hand_kurus");
     expect(page).toContain("bank_balance_kurus");
     expect(page).toContain("cash_accounts");
+    expect(page).toContain("currentMonthRange");
+    expect(page).toContain("CashBankSnapshotCard");
+    expect(sourceDeclaring("WeeklyChart")).toContain(
+      "weekly-chart-period-caption",
+    );
+    expect(sourceDeclaring("WeeklyChart")).toContain("This month");
     expect(snapshot).toContain("Cash & bank");
     expect(snapshot).toContain("Total balance");
     expect(snapshot).toContain("as of today");
     expect(snapshot).toContain("cash-bank-total-figure");
-    expect(snapshot).toContain("Cash drawers");
-    expect(snapshot).toContain("Bank accounts");
-    expect(snapshot).toContain("sm:grid-cols-2");
-    expect(snapshot).toContain("cash-drawer-row");
-    expect(snapshot).toContain("BankAccountBalanceRows");
     expect(page).toContain("Right now");
     expect(page).toContain("BalancesOverview");
     expect(overview).not.toContain("bankAccounts.map");
-    expect(overview).not.toContain('title="Cash"');
-    expect(overview).not.toContain('title="Bank"');
   });
 
-  it("mutation: drop This period or restore cash-only KPI layout → red", () => {
+  it("mutation: This period card reappears on dashboard → red", () => {
     const page = sourceDeclaring("HomePage");
-    expect(page).toContain('data-layout="period-and-cash"');
-    expect(page).toContain('label="This period"');
-    expect(page).toContain("lg:grid-cols-2");
+    expect(page).toContain('data-layout="as-of-cash"');
+    expect(page).not.toContain('label="This period"');
+    expect(page).not.toContain("period-and-cash");
     expect(page).not.toContain("v2-cash-bank-only");
-    expect(page).not.toContain("lg:grid-cols-5");
+    expect(page).not.toContain("net_result_kurus");
   });
 
   it("redirects /balances to dashboard (same as desktop)", () => {

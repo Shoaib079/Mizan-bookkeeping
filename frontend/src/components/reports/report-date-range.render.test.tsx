@@ -62,17 +62,16 @@ describe("ReportDateRange mobile vs desktop", () => {
   });
 });
 
-describe("dashboard Apply refetches period figures", () => {
-  it("HomePage reload is keyed on range.from/to and fetches dashboard with them", () => {
+describe("dashboard no longer owns Apply/range", () => {
+  it("HomePage pins MTD internally; no range UI or This period", () => {
     const page = sourceDeclaring("HomePage");
-    expect(page).toContain("dashboard?from=${range.from}&to=${range.to}");
-    expect(page).toContain("[entityId, range.from, range.to]");
-    expect(page).toContain('label="This period"');
-    expect(page).toContain("net_result_kurus");
-    // Shared periodProps drive v1 ReportDateRange + v2 fields/chip.
-    expect(page).toContain("periodProps");
-    expect(page).toContain(
-      "onChange: (from: string, to: string) => setRange({ from, to })",
-    );
+    expect(page).toContain("currentMonthRange()");
+    expect(page).toContain("dashboard?from=${from}&to=${to}");
+    expect(page).toContain("[entityId]");
+    expect(page).not.toContain('label="This period"');
+    expect(page).not.toContain("net_result_kurus");
+    expect(page).not.toContain("periodProps");
+    expect(page).not.toContain("ReportDateRange");
+    expect(page).not.toContain("setRange");
   });
 });

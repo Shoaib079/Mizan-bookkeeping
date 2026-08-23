@@ -1,17 +1,10 @@
 // @vitest-environment jsdom
 
 /**
- * Dashboard Apply must refetch with the new range and update This period.
+ * Dashboard is as-of-only: no Apply/range UI; Cash & bank + chart MTD caption.
  */
 
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiFetch = vi.fn();
@@ -60,11 +53,17 @@ vi.mock("@/components/onboarding-checklist", () => ({
 }));
 
 vi.mock("@/components/balances/balances-overview", () => ({
-  BalancesOverview: () => null,
+  BalancesOverview: () => (
+    <div data-testid="fake-right-now">Right now</div>
+  ),
 }));
 
 vi.mock("@/components/dashboard/weekly-chart", () => ({
-  WeeklyChart: () => null,
+  WeeklyChart: () => (
+    <div>
+      <p data-testid="weekly-chart-period-caption">This month</p>
+    </div>
+  ),
   chartStatusForRefresh: "loading" as const,
 }));
 
@@ -82,16 +81,16 @@ vi.mock("@/lib/use-mobile-shell", () => ({
 
 import HomePage from "@/app/page";
 
-function dashPayload(net: number, sales: number, expenses: number) {
+function dashPayload() {
   return {
     from_date: "2026-08-01",
     to_date: "2026-08-23",
-    net_result_kurus: net,
-    total_expenses_kurus: expenses,
+    net_result_kurus: 1_000_000,
+    total_expenses_kurus: 500_000,
     cash_in_hand_kurus: 100_000,
     bank_balance_kurus: 50_000,
     cash_accounts: [],
-    sales: { total_sales_kurus: sales },
+    sales: { total_sales_kurus: 2_000_000 },
     delivery_balance_left: [],
     confirmed_invoice_drafts: 0,
   };
@@ -112,7 +111,7 @@ afterEach(() => {
 beforeEach(() => {
   apiFetch.mockImplementation(async (path: string) => {
     if (String(path).includes("/dashboard?")) {
-      return dashPayload(1_000_000, 2_000_000, 1_000_000);
+      return dashPayload();
     }
     if (String(path).includes("/time-series")) {
       return { daily: [] };
@@ -124,49 +123,29 @@ beforeEach(() => {
   });
 });
 
-describe("dashboard date Apply", () => {
-  it("Apply with a new range refetches dashboard and updates This period net", async () => {
+describe("dashboard as-of home", () => {
+  it("v1: Cash & bank present; This period and range controls ABSENT; chart caption", async () => {
     render(<HomePage />);
 
     await waitFor(() => {
-      expect(screen.getByText("This period")).toBeTruthy();
+      expect(screen.getByTestId("cash-bank-snapshot-card")).toBeTruthy();
     });
+
+    expect(screen.queryByText("This period")).toBeNull();
+    expect(screen.queryByTestId("report-date-range")).toBeNull();
+    expect(screen.queryByTestId("report-period-chip")).toBeNull();
+    expect(screen.getByTestId("dashboard-kpi-row").getAttribute("data-layout")).toBe(
+      "as-of-cash",
+    );
+    expect(screen.getByTestId("fake-right-now")).toBeTruthy();
+    expect(screen.getByTestId("weekly-chart-period-caption").textContent).toBe(
+      "This month",
+    );
 
     await waitFor(() => {
-      const figure = document.querySelector('[data-stat-figure="true"]');
-      expect(figure?.textContent).toContain("10.000,00");
-    });
-
-    const desktop = screen.getByTestId("report-date-range-desktop");
-    const fromInput = within(desktop).getByLabelText("From");
-    const toInput = within(desktop).getByLabelText("To");
-    fireEvent.change(fromInput, { target: { value: "01.07.2026" } });
-    fireEvent.change(toInput, { target: { value: "31.07.2026" } });
-
-    apiFetch.mockImplementation(async (path: string) => {
-      const p = String(path);
-      if (p.includes("/dashboard?")) {
-        expect(p).toContain("from=2026-07-01");
-        expect(p).toContain("to=2026-07-31");
-        return dashPayload(9_900_000, 12_000_000, 2_100_000);
-      }
-      if (p.includes("/time-series")) return { daily: [] };
-      if (p.includes("/banking/accounts/tree")) return emptyTree;
-      return {};
-    });
-
-    fireEvent.click(within(desktop).getByRole("button", { name: "Apply" }));
-
-    await waitFor(() => {
-      const dashCalls = apiFetch.mock.calls.filter((c) =>
-        String(c[0]).includes("/dashboard?from=2026-07-01"),
+      expect(apiFetch.mock.calls.some((c) => String(c[0]).includes("/dashboard?"))).toBe(
+        true,
       );
-      expect(dashCalls.length).toBeGreaterThanOrEqual(1);
-    });
-
-    await waitFor(() => {
-      const figure = document.querySelector('[data-stat-figure="true"]');
-      expect(figure?.textContent).toContain("99.000,00");
     });
   });
 });

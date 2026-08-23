@@ -14,11 +14,11 @@ describe("dashboard is status-only (recording lives on Add)", () => {
     expect(source()).not.toMatch(/Daily expenses/);
   });
 
-  it("still shows period KPIs and balances", () => {
+  it("still shows as-of Cash & bank and balances", () => {
     const src = source();
-    expect(src).toContain("This period");
+    expect(src).not.toContain("This period");
     expect(src).toContain("CashBankSnapshotCard");
-    expect(src).toContain('data-layout="period-and-cash"');
+    expect(src).toContain('data-layout="as-of-cash"');
     expect(src).toContain("<BalancesOverview");
     expect(src).toContain("<WeeklyChart");
   });

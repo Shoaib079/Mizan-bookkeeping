@@ -1,9 +1,9 @@
 "use client";
 
-/** Dashboard — live KPIs from GET .../dashboard (Phase 9 Slice 8). */
+/** Dashboard — live KPIs from GET .../dashboard (Phase 9 Slice 8).
+ * As-of balances on home; period analysis lives in Reports. */
 
 import Link from "next/link";
-import { TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { BalancesOverview } from "@/components/balances/balances-overview";
@@ -15,11 +15,6 @@ import {
   chartStatusForRefresh,
   type WeeklyChartStatus,
 } from "@/components/dashboard/weekly-chart";
-import {
-  ReportDateRange,
-  ReportDateRangeFields,
-  ReportPeriodTrigger,
-} from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { useNewLookTheme } from "@/components/layout/new-look-toggle";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
@@ -60,20 +55,12 @@ function DashboardBody() {
   const v2Dashboard = themeMounted && theme === "v2";
   const { deliveryEnabled } = useQuickActions();
   const { canReadFinancialReports } = useEntityAccess();
-  const [range, setRange] = useState(currentMonthRange);
   const [data, setData] = useState<DashboardRead | null>(null);
   const [timeSeries, setTimeSeries] = useState<TimeSeriesRead | null>(null);
   const [timeSeriesStatus, setTimeSeriesStatus] =
     useState<WeeklyChartStatus>("loading");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const periodProps = {
-    from: range.from,
-    to: range.to,
-    disabled: !entityId || loading,
-    onChange: (from: string, to: string) => setRange({ from, to }),
-  };
-  const periodControl = <ReportDateRange {...periodProps} />;
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -86,10 +73,12 @@ function DashboardBody() {
     setTimeSeriesStatus(chartStatusForRefresh);
     setError(null);
 
+    const { from, to } = currentMonthRange();
+
     const tsFetch = (async () => {
       try {
         const tsRes = await apiFetch<TimeSeriesRead>(
-          `/entities/${entityId}/reports/time-series?from=${range.from}&to=${range.to}`,
+          `/entities/${entityId}/reports/time-series?from=${from}&to=${to}`,
         );
         setTimeSeries(tsRes);
         setTimeSeriesStatus("loaded");
@@ -102,21 +91,17 @@ function DashboardBody() {
 
     try {
       const dashRes = await apiFetch<DashboardRead>(
-        `/entities/${entityId}/dashboard?from=${range.from}&to=${range.to}`,
+        `/entities/${entityId}/dashboard?from=${from}&to=${to}`,
       );
       setData(dashRes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
       setData(null);
-      // The chart is a separate request and owns its own state. Blanking it
-      // here ran *after* that request had already resolved, so a dashboard
-      // failure left a chart that had loaded fine stuck as a skeleton until
-      // the next reload. Awaited only so the promise is not left dangling.
       await tsFetch;
     } finally {
       setLoading(false);
     }
-  }, [entityId, range.from, range.to]);
+  }, [entityId]);
 
   useEffect(() => {
     void reload();
@@ -138,11 +123,7 @@ function DashboardBody() {
       replaceHeader={
         v2Dashboard ? (
           <ThemeV2Only>
-            <DashboardV2Header
-              displayName={userProfile?.display_name}
-              periodDesktop={<ReportDateRangeFields {...periodProps} />}
-              periodMobile={<ReportPeriodTrigger {...periodProps} />}
-            />
+            <DashboardV2Header displayName={userProfile?.display_name} />
           </ThemeV2Only>
         ) : undefined
       }
@@ -177,41 +158,23 @@ function DashboardBody() {
           )}
         </>
       }
-      periodControl={v2Dashboard ? undefined : periodControl}
       stats={
         data && (
           <div
             data-testid="dashboard-kpi-row"
-            data-layout="period-and-cash"
-            className="grid gap-4 lg:grid-cols-2"
+            data-layout="as-of-cash"
+            className={
+              canReadFinancialReports
+                ? "grid gap-4"
+                : "grid gap-4 lg:grid-cols-2"
+            }
           >
             {canReadFinancialReports ? (
-              <>
-                <StatCard
-                  href="/reports"
-                  icon={TrendingUp}
-                  label="This period"
-                  caption="Net result"
-                  amountKurus={data.net_result_kurus}
-                  tone={data.net_result_kurus >= 0 ? "good" : "bad"}
-                  lines={[
-                    {
-                      label: "Sales",
-                      amountKurus: data.sales.total_sales_kurus,
-                    },
-                    {
-                      label: "Expenses",
-                      amountKurus: data.total_expenses_kurus,
-                      tone: "bad",
-                    },
-                  ]}
-                />
-                <CashBankSnapshotCard
-                  cashKurus={data.cash_in_hand_kurus}
-                  bankKurus={data.bank_balance_kurus}
-                  cashAccounts={data.cash_accounts}
-                />
-              </>
+              <CashBankSnapshotCard
+                cashKurus={data.cash_in_hand_kurus}
+                bankKurus={data.bank_balance_kurus}
+                cashAccounts={data.cash_accounts}
+              />
             ) : (
               <>
                 <StatCard
@@ -234,7 +197,7 @@ function DashboardBody() {
             <OverviewSection
               title="Right now"
               hint={
-                "Payables, receivables, FX, staff, and partners — open a card for detail. Cash and bank are above beside This period."
+                "Payables, receivables, FX, staff, and partners — open a card for detail. Cash and bank are above."
               }
             >
               <BalancesOverview embedded />

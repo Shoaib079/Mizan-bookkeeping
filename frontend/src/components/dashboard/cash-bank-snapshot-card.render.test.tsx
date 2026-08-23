@@ -202,8 +202,9 @@ describe("CashBankSnapshotCard", () => {
   it("HomePage mounts one shared CashBankSnapshotCard for both themes", () => {
     const page = sourceDeclaring("HomePage");
     expect(page).toContain("CashBankSnapshotCard");
-    expect(page).toContain('data-layout="period-and-cash"');
+    expect(page).toContain('data-layout="as-of-cash"');
     expect(page).not.toContain("v2-cash-bank-only");
+    expect(page).not.toContain('label="This period"');
     // No alternate v2 snapshot component.
     expect(page).not.toMatch(/CashBank.*V2|V2CashBank/);
   });

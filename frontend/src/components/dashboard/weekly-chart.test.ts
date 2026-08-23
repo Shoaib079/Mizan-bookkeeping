@@ -18,6 +18,8 @@ describe("WeeklyChart", () => {
     const source = sourceDeclaring("WeeklyChart");
     expect(source).not.toContain("return null");
     expect(source).toContain("Last 7 days");
+    expect(source).toContain("weekly-chart-period-caption");
+    expect(source).toContain("This month");
   });
 
   it("shows loading skeleton when status is loading", () => {

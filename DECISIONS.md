@@ -1,3 +1,11 @@
+## 2026-08-24 — Dashboard is as-of-only; period analysis in Reports
+
+**Choice:** Home dashboard no longer shows a **This period** sticker or any date-range controls (From/To/Apply/This month/mobile period chip). Cash & bank (as-of) and Right now remain. The weekly chart stays for now, pinned to month-to-date internally with a muted **This month** caption (no controls) — removable later. v2 greeting header is greeting + display name only (no today's date). Reports pages keep their own ranges.
+
+**Why (owner 2026-08-24, verbatim):** *"remove date completely do not like the look and have this period sticker removed i do not need it and then ship v2."*
+
+**Supersedes:** 2026-08-23 “Dashboard Apply visibility… This period restored on v2” (period-and-cash KPI pair).
+
 ## 2026-08-23 — Single page title: no muted duplicate above H1 (accepted-live)
 
 **Choice:** Desktop shell no longer prints the page title as a muted trail above `PageHeader`'s bold H1. The trail is **breadcrumb only** (section context when it exists); when there is no crumb, nothing appears above the H1. `PageHeader` stays one H1 with no eyebrow slot. Applies to **both** themes. Mobile top bar (title + restaurant subtitle on dashboard) and v2 dashboard greeting header are unchanged.
@@ -6,13 +14,11 @@
 
 **Accepted-live:** production v1 and sandbox v2.
 
-## 2026-08-23 — Dashboard Apply visibility + Cash & bank total + mobile period chip (accepted-live)
+## 2026-08-23 — Dashboard Apply visibility + Cash & bank total + mobile period chip — **PARTLY SUPERSEDED**
 
-**Choice:** On **both** themes (v1 and New look): (1) home KPI row is again **This period + Cash & bank** side by side (`period-and-cash`) — reversing `v0.dashboard-v2-kpi-cash-only` so Apply on a new range visibly updates period figures; (2) Cash & bank **Total balance** is its own two rows (13px semibold label + muted “as of today”; 20px / weight 800 figure full width, never truncated inline); (3) mobile (&lt;sm) date control is one chip (`DD.MM.YYYY – DD.MM.YYYY`) opening the existing period sheet (From/To/Apply + This month); desktop (≥sm) keeps the full fields. Display/UX only — no posting or API shape change.
+**Superseded 2026-08-24** for the **This period** KPI + dashboard date-range controls (see “Dashboard is as-of-only”). **Still in force:** Cash & bank **Total balance** two-row layout (label + “as of today”; full-width figure, never truncated inline) on the shared card.
 
-**Why:** Owner: Apply felt broken; total truncated on the title row; mobile From/To/Apply stacked too tall. Root cause of the Apply complaint was as-of-only KPI under v2, not a dead handler (see BUGLOG 2026-08-23).
-
-**Accepted-live:** applies to production v1 and sandbox v2 together.
+**Historical choice:** On both themes, home KPI was This period + Cash & bank (`period-and-cash`); mobile period chip; desktop From/To/Apply.
 
 ## 2026-08-23 — Balances stickers: direction-colored absolute figures (accepted-live)
 
