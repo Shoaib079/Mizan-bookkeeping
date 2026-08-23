@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — dashboard cash drawers awaiting review)* |
+| **Active slice**         | *(none — cash/bank two-column layout awaiting review)* |
 | **Next up**              | Owner review → push when approved; else POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Dashboard Cash & bank — itemize drawers** (`v0.dashboard-cash-drawers`) |
-| **Last commit/tag**      | `v0.dashboard-cash-drawers` |
+| **Last completed slice** | **Dashboard Cash & bank — two-column layout** (`v0.dashboard-cash-bank-two-col`) |
+| **Last commit/tag**      | `v0.dashboard-cash-bank-two-col` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Dashboard Cash & bank — two-column layout       | `v0.dashboard-cash-bank-two-col`                       | Compact total · drawers left / banks right; stacks on narrow; mutation single-col → red |
 | 2026-08-23 | Dashboard Cash & bank — itemize drawers         | `v0.dashboard-cash-drawers`                            | Per-drawer rows + Cash/Banks subtotals + Total cash & bank; API cash_accounts; mutation aggregate → red |
 | 2026-08-22 | Transfer rich descriptions                       | `v0.transfer-rich-descriptions`                        | Transfer · from → to at read+write; GL enrich; Note optional; cash-flow exclude unchanged; mutation bare Account transfer → red |
 | 2026-08-22 | Ledger rich descriptions — staff/FX/partner     | `v0.ledger-rich-descriptions`                          | Compose who/period/currency at read+write; GL enrich; optional note; mutation bare → red |

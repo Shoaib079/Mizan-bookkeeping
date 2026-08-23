@@ -14,7 +14,6 @@ import { apiFetch } from "@/lib/api";
 import type { MoneyAccountTree } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
-import { cn } from "@/lib/utils";
 
 export type CashAccountBalance = {
   id: string;
@@ -28,51 +27,29 @@ type Props = {
   cashAccounts?: CashAccountBalance[];
 };
 
-function MoneyRow({
+function SubtotalRow({
   label,
   amountKurus,
   href,
-  emphasis,
 }: {
   label: string;
   amountKurus: number;
-  href?: string;
-  emphasis?: "headline" | "subtotal" | "default";
+  href: string;
 }) {
-  const amountClass =
-    emphasis === "headline"
-      ? "text-lg font-bold tabular-nums"
-      : emphasis === "subtotal"
-        ? "text-sm font-semibold tabular-nums"
-        : "text-sm font-semibold tabular-nums";
-  const labelClass =
-    emphasis === "headline"
-      ? "font-semibold text-foreground"
-      : emphasis === "subtotal"
-        ? "text-muted-foreground"
-        : "text-sm font-medium text-primary";
-
-  const amount = (
-    <span className={amountClass}>{formatTry(amountKurus)}</span>
-  );
-  const name = href ? (
-    <Link href={href} className={cn(labelClass, "hover:underline")}>
-      {label}
-    </Link>
-  ) : (
-    <span className={labelClass}>{label}</span>
-  );
-
   return (
-    <div className="flex items-baseline justify-between gap-4">
-      {name}
-      {href ? (
-        <Link href={href} className="hover:underline">
-          {amount}
-        </Link>
-      ) : (
-        amount
-      )}
+    <div className="flex items-baseline justify-between gap-3">
+      <Link
+        href={href}
+        className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+      >
+        {label}
+      </Link>
+      <Link
+        href={href}
+        className="text-sm font-semibold tabular-nums hover:underline"
+      >
+        {formatTry(amountKurus)}
+      </Link>
     </div>
   );
 }
@@ -118,24 +95,34 @@ export function CashBankSnapshotCard({
       style={{ ["--accent-bar" as string]: ACCENT_BAR.blue }}
     >
       <MeaningCardAccentBar />
-      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-        <IconSquare icon={Wallet} tint="sky" stroke="blue" size="lg" />
-        Cash & bank
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <IconSquare icon={Wallet} tint="sky" stroke="blue" size="sm" />
+          Cash & bank
+        </div>
+        <p
+          data-testid="cash-bank-total"
+          className="min-w-0 truncate text-right text-sm"
+        >
+          <span className="text-muted-foreground">Total cash & bank</span>
+          <span className="text-muted-foreground"> · </span>
+          <span className="font-bold tabular-nums text-foreground">
+            {formatTry(combined)}
+          </span>
+        </p>
       </div>
-      <div className="mt-3 space-y-3 text-sm">
-        <MoneyRow
-          label="Total cash & bank"
-          amountKurus={combined}
-          emphasis="headline"
-        />
 
-        <div data-testid="cash-group">
+      <div
+        data-testid="cash-bank-columns"
+        className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4"
+      >
+        <div data-testid="cash-group" className="min-w-0">
           <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Cash
+            Cash drawers
           </div>
           {cashAccounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No cash drawers yet — add one under Banking → Cash drawer.
+            <p className="border-t border-border/80 pt-1.5 text-xs text-muted-foreground">
+              No cash drawers yet.
             </p>
           ) : (
             <div className="divide-y divide-border border-t border-border/80">
@@ -144,7 +131,7 @@ export function CashBankSnapshotCard({
                   key={account.id}
                   data-testid="cash-drawer-row"
                   data-drawer-name={account.name}
-                  className="flex items-center justify-between gap-3 py-1.5"
+                  className="flex items-center justify-between gap-2 py-1"
                 >
                   <Link
                     href={`/banking/accounts/${account.id}`}
@@ -159,17 +146,16 @@ export function CashBankSnapshotCard({
               ))}
             </div>
           )}
-          <div className="mt-1.5 border-t border-border/80 pt-1.5">
-            <MoneyRow
+          <div className="mt-1 border-t border-border/80 pt-1">
+            <SubtotalRow
               label="Cash"
               amountKurus={cashKurus}
               href="/banking/cash"
-              emphasis="subtotal"
             />
           </div>
         </div>
 
-        <div data-testid="bank-group">
+        <div data-testid="bank-group" className="min-w-0">
           <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Bank accounts
           </div>
@@ -178,19 +164,18 @@ export function CashBankSnapshotCard({
             variant="compact"
             className="border-t border-border/80"
           />
-          <div className="mt-1.5 border-t border-border/80 pt-1.5">
-            <MoneyRow
+          <div className="mt-1 border-t border-border/80 pt-1">
+            <SubtotalRow
               label="Banks"
               amountKurus={bankKurus}
               href="/banking/banks"
-              emphasis="subtotal"
             />
           </div>
         </div>
       </div>
-      <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-        Each drawer and bank shows its book balance — open an account for
-        statements, activity, and reconciliation.
+
+      <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
+        Book balances — open an account for statements and reconciliation.
       </p>
     </div>
   );

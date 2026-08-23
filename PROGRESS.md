@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Dashboard Cash & bank — itemize drawers:** per-drawer rows + Cash/Banks subtotals + Total cash & bank; API `cash_accounts`. Tag `v0.dashboard-cash-drawers`. **Awaiting owner review — do not push.**
+- **Dashboard Cash & bank — two-column layout:** compact Total · drawers left / banks right. Tag `v0.dashboard-cash-bank-two-col`. **Awaiting owner review — do not push.** (Prior itemize-drawers tag also unpushed locally.)
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — dashboard cash drawers awaiting review)* |
-| **Last completed slice** | Dashboard Cash & bank — itemize drawers |
-| **Last tag** | `v0.dashboard-cash-drawers` |
+| **Active slice** | *(none — cash/bank two-column layout awaiting review)* |
+| **Last completed slice** | Dashboard Cash & bank — two-column layout |
+| **Last tag** | `v0.dashboard-cash-bank-two-col` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |

@@ -35,7 +35,7 @@ vi.mock("@/lib/entity-context", () => ({
 afterEach(cleanup);
 
 describe("CashBankSnapshotCard", () => {
-  it("renders each drawer row, cash/bank subtotals, and combined headline", async () => {
+  it("desktop: cash + banks side-by-side with compact total and both subtotals", async () => {
     render(
       <CashBankSnapshotCard
         cashKurus={140_000}
@@ -47,25 +47,27 @@ describe("CashBankSnapshotCard", () => {
       />,
     );
 
-    expect(screen.getByText("Total cash & bank")).toBeTruthy();
-    expect(screen.getByText("1.650,00 ₺")).toBeTruthy(); // 165000 combined
+    const columns = screen.getByTestId("cash-bank-columns");
+    expect(columns.className).toContain("sm:grid-cols-2");
+    expect(columns.className).toContain("grid-cols-1");
 
-    const drawerRows = screen.getAllByTestId("cash-drawer-row");
-    expect(drawerRows).toHaveLength(2);
-    expect(screen.getByText("Main Drawer")).toBeTruthy();
-    expect(screen.getByText("Bar Drawer")).toBeTruthy();
-    expect(screen.getByText("1.000,00 ₺")).toBeTruthy();
-    expect(screen.getByText("400,00 ₺")).toBeTruthy();
+    const total = screen.getByTestId("cash-bank-total");
+    expect(total.textContent).toContain("Total cash & bank");
+    expect(total.textContent).toContain("·");
+    expect(total.textContent).toContain("1.650,00 ₺");
 
-    expect(screen.getByTestId("cash-group").textContent).toContain("Cash");
-    expect(screen.getByTestId("bank-group").textContent).toContain("Banks");
+    expect(screen.getAllByTestId("cash-drawer-row")).toHaveLength(2);
+    expect(screen.getByText("Cash drawers")).toBeTruthy();
+    expect(screen.getByText("Bank accounts")).toBeTruthy();
+    expect(screen.getByTestId("cash-group").textContent).toMatch(/Cash/);
+    expect(screen.getByTestId("bank-group").textContent).toMatch(/Banks/);
 
     await waitFor(() => {
       expect(screen.getByText("Garanti")).toBeTruthy();
     });
   });
 
-  it("single-drawer entity still renders cleanly (no empty cash group)", () => {
+  it("mobile card: stacks on narrow (grid-cols-1) and two columns from sm", () => {
     render(
       <CashBankSnapshotCard
         cashKurus={50_000}
@@ -76,19 +78,20 @@ describe("CashBankSnapshotCard", () => {
       />,
     );
 
+    const columns = screen.getByTestId("cash-bank-columns");
+    expect(columns.className).toMatch(/grid-cols-1/);
+    expect(columns.className).toMatch(/sm:grid-cols-2/);
+    expect(screen.getByTestId("cash-bank-total")).toBeTruthy();
     expect(screen.getAllByTestId("cash-drawer-row")).toHaveLength(1);
-    expect(screen.getByText("Main Drawer")).toBeTruthy();
-    expect(screen.queryByText(/No cash drawers yet/)).toBeNull();
-    expect(screen.getByText("Total cash & bank")).toBeTruthy();
   });
 
-  it("mutation: collapse cash to one aggregate row when >1 drawer → red", () => {
+  it("mutation: collapse to single column always → red", () => {
     const src = sourceDeclaring("CashBankSnapshotCard");
-    expect(src).toContain("cash-drawer-row");
-    expect(src).toContain("cashAccounts.map");
-    // Must map each drawer — a single aggregate Cash line without rows fails.
+    expect(src).toContain("sm:grid-cols-2");
+    expect(src).toContain("cash-bank-columns");
+    // Must keep a two-column breakpoint — always one column fails.
     expect(src).not.toMatch(
-      /cashAccounts\.length\s*>\s*1[\s\S]{0,120}formatTry\(cashKurus\)/,
+      /cash-bank-columns[\s\S]{0,120}className="[^"]*grid-cols-1(?![^"]*sm:grid-cols-2)/,
     );
   });
 });

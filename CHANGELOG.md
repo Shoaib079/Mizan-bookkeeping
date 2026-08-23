@@ -8,6 +8,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-23
 
+- **Dashboard Cash & bank — two-column layout (`v0.dashboard-cash-bank-two-col`).** Same sticker: compact **Total cash & bank · {amount}** at top; Cash drawers left / Bank accounts right (`sm:grid-cols-2`, stacks on narrow). Subtotals kept. Display-only — no API/posting change. Mutation: always single column → red. **Do not push until review.**
 - **Dashboard Cash & bank — itemize drawers (`v0.dashboard-cash-drawers`).** Cash & bank card lists every active cash drawer (name + book balance) like banks, plus Cash / Banks subtotals and a bold **Total cash & bank** headline (cash + bank). Dashboard API adds `cash_accounts: [{id, name, balance_kurus}]`; existing totals kept. Same card on desktop + mobile home; Balances does not share it. Read/display only — no posting. Vitest + pytest; mutation collapse multi-drawer cash to one aggregate → red. **Do not push until review.**
 
 ## 2026-08-22
