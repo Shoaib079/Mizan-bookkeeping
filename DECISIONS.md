@@ -337,7 +337,7 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 - **Frontend:** **Vercel** (Next.js). Netlify → Render → Vercel; only Vercel is current.
 - **Auth:** Clerk. **Backups:** Cloudflare R2 (nightly `pg_dump`).
 
-**History:** Backend was briefly targeted at Render (`render.yaml`, the "Render API" language in DEPLOY.md / GO_LIVE_RUNBOOK.md / older DECISIONS entries) — that is **stale**. `render.yaml` is a leftover and is NOT the deploy path. The frontend moved off Render to Vercel when Render credits ran out. Wherever any doc says "Render (API)" or "Render pre-deploy," read **Railway**.
+**History:** Backend was briefly targeted at Render (`render.yaml`, the "Render API" language in DEPLOY.md / archived `docs/archive/ops/GO_LIVE_RUNBOOK.md` / older DECISIONS entries) — that is **stale**. `render.yaml` is a leftover and is NOT the deploy path. The frontend moved off Render to Vercel when Render credits ran out. Wherever any doc says "Render (API)" or "Render pre-deploy," read **Railway**.
 
 **Prod status (2026-07):** Neon at migration `072` (head) — backend fully current. Take a fresh R2 backup before any future in-place data migration (e.g. the 071 enum-normalize pattern that rewrites `accounts` + `journal_entry_lines`).
 
@@ -353,7 +353,7 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 - Render services are `autoDeploy: false` → API deploys are MANUAL. A GitHub push runs CI only, not a deploy.
 - The stale "Railway CORS_ORIGINS" hint in `frontend/src/lib/api.ts` should read Render.
 
-~~**Deploy reality (2026-07):** last successful prod deploy is `68a262a` — ~72 commits behind `main`.~~ **Resolved.** Railway auto-deploys from `main`; the backlog is shipped. See `PRE_DEPLOY_CHECKLIST.md` for current state.
+~~**Deploy reality (2026-07):** last successful prod deploy is `68a262a` — ~72 commits behind `main`.~~ **Resolved.** Railway auto-deploys from `main`; the backlog is shipped. See archived `docs/archive/ops/PRE_DEPLOY_CHECKLIST.md` for the one-time cutover checklist; living ops guide is `DEPLOY.md`.
 
 ## 2026-06-25 — Delivery monthly gross sales + platform-linked commission (Decisions §9; migration `059`)
 

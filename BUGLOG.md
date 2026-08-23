@@ -232,7 +232,7 @@ The data was never wrong; `balance_minor` was correct all along, and the staff *
 4. `service.py:586` dead-end now directs to Void (reverses payment + advance-applied together).
 5. `SalaryPeriodStatusRead.total_owed_minor` exposes total owed (incl. extra-days + the about-to-accrue month) so the dialog preview mirrors the backend; `staff-salary.ts` previews updated.
 6. Extra-days ledger rows are now **voidable in the UI** (correct via void + re-enter; edit stays off because days×rate metadata isn't rebuilt by an amount edit).
-Brief superseded: `CURSOR_BRIEF_staff_advance_extra_days.md`.
+Brief superseded: `docs/archive/money/CURSOR_BRIEF_staff_advance_extra_days.md`.
 
 **Guarding test:** `tests/test_staff_apply_advance.py` (7 tests incl. the **Latif reproduction**: 13.440 extra-days owed + 13.440 advance → apply → both zero, balance unchanged; report-#2 reproduction: 15.000 cash / 38.000 owed / 13.515 advance → advance untouched). Updated to the new design: `test_staff.py`, `test_staff_period_payment.py`, `test_subledger_void.py`, `frontend/src/lib/staff-salary.test.ts`. **Owner: run `cd backend && .venv/bin/pytest -q` before merge — money-critical.**
 

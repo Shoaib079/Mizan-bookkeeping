@@ -284,7 +284,7 @@ Bank fees (havale/EFT ücreti, BSMV, periyodik bakım, hesap işletim ücreti, k
 
 ---
 
-## 🧭 UX Reorg — "one home for everything" (from `UX_AUDIT_PROPOSAL.md`)
+## 🧭 UX Reorg — "one home for everything" (from archived `docs/archive/ux/UX_AUDIT_PROPOSAL.md`)
 
 **Status: DONE (`v0.73.5`–`v0.73.7`, UX1–UX7). Do not rebuild.** Kept below as reference only.
 
