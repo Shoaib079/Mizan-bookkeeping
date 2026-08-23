@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Single page title (`v0.single-page-title`):** AppShell trail breadcrumb-only; no muted title duplicate above H1. **Pushed** with prior awaiting slices.
+- **Silent membership poll (`v0.silent-membership-poll`):** 15s flicker fixed (silent entity refresh + grant equality). **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none)* |
-| **Last completed slice** | Single page title |
-| **Last tag** | `v0.single-page-title` |
-| **Unpushed** | no |
-| **Next up** | POST_LAUNCH_PLAN queue |
+| **Active slice** | *(none — awaiting review)* |
+| **Last completed slice** | Silent membership poll |
+| **Last tag** | `v0.silent-membership-poll` |
+| **Unpushed** | yes — do not push until owner review + sign-off |
+| **Next up** | Owner review → push; then POST_LAUNCH_PLAN queue |

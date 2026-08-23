@@ -47,6 +47,15 @@ const DEFAULT_DEV_GRANTS: string[] = grantsForRole(DEFAULT_DEV_ROLE);
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 800;
 
+function grantsEqual(a: readonly string[], b: readonly string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export type ReloadAccessOptions = {
   /** Skip loading spinner — used for background membership sync polls. */
   silent?: boolean;
@@ -107,9 +116,13 @@ export function EntityAccessProvider({ children }: { children: React.ReactNode }
             if (settledRef.current && previous !== res.role) {
               notifyRoleChanged(previous, res.role);
             }
-            return res.role;
+            return previous === res.role ? previous : res.role;
           });
-          setGrants(res.grants.length > 0 ? res.grants : grantsForRole(res.role));
+          const nextGrants =
+            res.grants.length > 0 ? res.grants : grantsForRole(res.role);
+          setGrants((previous) =>
+            grantsEqual(previous, nextGrants) ? previous : nextGrants,
+          );
           settledRef.current = true;
           setMembershipSettled(true);
           if (!silent) setLoading(false);

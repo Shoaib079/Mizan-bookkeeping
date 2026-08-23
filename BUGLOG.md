@@ -2,6 +2,18 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-08-23 — App flickered every ~15 seconds (membership poll)
+
+**Symptom:** Whole UI flashed / flickered about every 15 seconds after the app was already loaded.
+
+**Root cause:** `SessionAccessGuard` (`v0.live-membership-sync`) polls every `MEMBERSHIP_SYNC_POLL_MS` (15s) and called `refreshEntities()` with **no silent option**. `refreshEntities` always did `setEntitiesLoading(true)` then `false` (`entity-context.tsx`). Dashboard (and other chrome) render “Loading restaurants…” whenever `entitiesLoading` is true — so each poll tick remounted that banner and refreshed entity-context consumers. Secondary: `/members/me` silent reload still called `setGrants` with a **new array** every tick even when contents matched, changing EntityAccess context identity.
+
+**Regression chain:** `v0.live-membership-sync` (`f346e23`) added `reloadAccess({ silent: true })` so the *access* spinner stayed off, but left `await refreshEntities()` loud. That half-fix never got a guard test for “unchanged poll → no loading flip”, so the flash shipped and stayed.
+
+**Fix:** `refreshEntities({ silent: true })` from the poll (no loading flip; list state replaced only on real entity-list diff). Grants/role updates use equality so context identity is stable when membership is unchanged. Role-change toast and revoke sign-out semantics unchanged.
+
+**Guarding tests:** `session-access-guard.silent-poll.render.test.tsx` (N unchanged ticks → no loading banner, no child remount, stable consumer renders; role change still toasts; mutation non-silent refresh / missing grantsEqual → red).
+
 ## 2026-08-23 — Dashboard Apply looked like it did nothing
 
 **Symptom:** Owner changed the dashboard date range and pressed Apply; nothing on the main KPI area appeared to change (especially under New look).

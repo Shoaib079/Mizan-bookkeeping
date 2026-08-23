@@ -59,7 +59,7 @@ function SessionAccessGuardClerk() {
     syncingRef.current = true;
     try {
       await reloadAccess({ silent: true });
-      await refreshEntities();
+      await refreshEntities({ silent: true });
     } finally {
       syncingRef.current = false;
     }

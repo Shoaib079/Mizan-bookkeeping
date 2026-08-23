@@ -36,6 +36,12 @@ describe("EntityAccessProvider (shared role context)", () => {
     expect(access()).toContain("notifySessionRevoked");
   });
 
+  it("supports silent reload that skips the loading spinner", () => {
+    expect(access()).toContain("silent");
+    expect(access()).toContain("if (!silent) setLoading(true)");
+    expect(access()).toContain("grantsEqual");
+  });
+
   it("tracks membershipSettled after successful /members/me", () => {
     expect(access()).toContain("membershipSettled");
     expect(access()).toContain("setMembershipSettled(true)");

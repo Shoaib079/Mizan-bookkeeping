@@ -65,10 +65,24 @@ type EntityContextValue = {
   entitiesLoading: boolean;
   entitiesLoaded: boolean;
   entitiesError: boolean;
-  refreshEntities: () => Promise<void>;
+  refreshEntities: (options?: RefreshEntitiesOptions) => Promise<void>;
   userProfile: UserProfile | null;
   refreshUserProfile: () => Promise<void>;
 };
+
+export type RefreshEntitiesOptions = {
+  /** Skip the loading flag — background membership polls must not flash UI. */
+  silent?: boolean;
+};
+
+function entitiesListEqual(a: Entity[], b: Entity[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i].id !== b[i].id || a[i].name !== b[i].name) return false;
+  }
+  return true;
+}
 
 const EntityContext = createContext<EntityContextValue | null>(null);
 
@@ -125,42 +139,52 @@ export function EntityProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("mizan.actorId", id);
   }, []);
 
-  const refreshEntities = useCallback(async () => {
-    setEntitiesLoading(true);
-    setEntitiesError(false);
-    try {
-      const res = await fetchEntitiesWithRetry(() =>
-        apiFetch<{ items: Entity[] }>("/entities?limit=50"),
-      );
-      setEntities(res.items);
-      setEntitiesError(false);
-      if (clerkEnabled && res.items.length === 0) {
-        notifySessionRevoked("removed");
+  const refreshEntities = useCallback(
+    async (options?: RefreshEntitiesOptions) => {
+      const silent = options?.silent ?? false;
+      if (!silent) {
+        setEntitiesLoading(true);
+        setEntitiesError(false);
       }
-      const stored = localStorage.getItem("mizan.entityId");
-      const resolved = resolveEntityIdFromList(
-        readStoredEntityId(),
-        res.items,
-        stored,
-      );
-      const nextId =
-        resolved && maySetEntityId(resolved)
-          ? resolved
-          : getEntitySwitchPolicy().lockedEntityId ?? resolved ?? "";
-      setEntityIdState((current) =>
-        nextId && current !== nextId ? nextId : current || nextId,
-      );
-      if (nextId && maySetEntityId(nextId)) {
-        localStorage.setItem("mizan.entityId", nextId);
+      try {
+        const res = await fetchEntitiesWithRetry(() =>
+          apiFetch<{ items: Entity[] }>("/entities?limit=50"),
+        );
+        setEntities((previous) =>
+          entitiesListEqual(previous, res.items) ? previous : res.items,
+        );
+        if (!silent) setEntitiesError(false);
+        if (clerkEnabled && res.items.length === 0) {
+          notifySessionRevoked("removed");
+        }
+        const stored = localStorage.getItem("mizan.entityId");
+        const resolved = resolveEntityIdFromList(
+          readStoredEntityId(),
+          res.items,
+          stored,
+        );
+        const nextId =
+          resolved && maySetEntityId(resolved)
+            ? resolved
+            : getEntitySwitchPolicy().lockedEntityId ?? resolved ?? "";
+        setEntityIdState((current) =>
+          nextId && current !== nextId ? nextId : current || nextId,
+        );
+        if (nextId && maySetEntityId(nextId)) {
+          localStorage.setItem("mizan.entityId", nextId);
+        }
+        setEntitiesLoaded(true);
+      } catch {
+        if (!silent) {
+          setEntitiesError(true);
+          setEntitiesLoaded(true);
+        }
+      } finally {
+        if (!silent) setEntitiesLoading(false);
       }
-      setEntitiesLoaded(true);
-    } catch {
-      setEntitiesError(true);
-      setEntitiesLoaded(true);
-    } finally {
-      setEntitiesLoading(false);
-    }
-  }, [clerkEnabled]);
+    },
+    [clerkEnabled],
+  );
 
   const refreshUserProfile = useCallback(async () => {
     if (!clerkEnabled || !isAuthReady) return;
