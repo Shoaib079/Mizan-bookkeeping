@@ -1,15 +1,14 @@
 "use client";
 
-/** Syncs sandbox/env visual theme onto `<html data-theme>`. */
+/** Ensures `<html data-theme="v2">` after hydrate (matches SSR bake). */
 
 import { useEffect } from "react";
 
-import { applyVisualTheme, resolveVisualTheme } from "@/lib/theme-v2";
+import { applyVisualTheme } from "@/lib/theme-v2";
 
 export function ThemeRoot() {
   useEffect(() => {
-    applyVisualTheme(resolveVisualTheme());
+    applyVisualTheme();
   }, []);
-
   return null;
 }

@@ -16,7 +16,6 @@ import {
   type WeeklyChartStatus,
 } from "@/components/dashboard/weekly-chart";
 import { AppShell } from "@/components/layout/app-shell";
-import { useNewLookTheme } from "@/components/layout/new-look-toggle";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { apiFetch } from "@/lib/api";
 import { currentMonthRange } from "@/lib/date-range";
@@ -30,7 +29,6 @@ import {
 } from "@/components/page/overview-page";
 import { StatCard } from "@/components/page/stat-card";
 import { Button } from "@/components/ui/button";
-import { ThemeV2Only } from "@/components/ui/theme-v2-gate";
 import { useQuickActions } from "@/components/quick-actions";
 
 export default function HomePage() {
@@ -51,8 +49,6 @@ function DashboardBody() {
     refreshEntities,
     userProfile,
   } = useEntity();
-  const { theme, mounted: themeMounted } = useNewLookTheme();
-  const v2Dashboard = themeMounted && theme === "v2";
   const { deliveryEnabled } = useQuickActions();
   const { canReadFinancialReports } = useEntityAccess();
   const [data, setData] = useState<DashboardRead | null>(null);
@@ -121,11 +117,7 @@ function DashboardBody() {
       loading={loading}
       error={error}
       replaceHeader={
-        v2Dashboard ? (
-          <ThemeV2Only>
-            <DashboardV2Header displayName={userProfile?.display_name} />
-          </ThemeV2Only>
-        ) : undefined
+        <DashboardV2Header displayName={userProfile?.display_name} />
       }
       banner={
         <>

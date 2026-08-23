@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
 /**
- * Theme leak hardening — accepted-live chrome is intentional on v1;
- * non-accepted v2-only chrome must not appear without data-theme=v2.
+ * Accepted-live chrome (left bar + IconSquare) always present.
+ * Non-accepted polish stays under [data-theme="v2"] in CSS.
+ * ThemeV2Only / ThemeV2OnlyMarker are gone (v2 is the only look).
  */
 
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Building2, Wallet } from "lucide-react";
 
@@ -13,11 +14,7 @@ import { CashBankSnapshotCard } from "@/components/dashboard/cash-bank-snapshot-
 import { EntityBalanceSticker } from "@/components/entity-balance-sticker";
 import { HubTileCard } from "@/components/page/hub-page";
 import { StatCard } from "@/components/page/stat-card";
-import {
-  ACCEPTED_LIVE_CHROME,
-  THEME_V2_ATTR,
-  THEME_V2_ONLY_ATTR,
-} from "@/lib/theme-v2";
+import { ACCEPTED_LIVE_CHROME, THEME_V2_ATTR } from "@/lib/theme-v2";
 import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 vi.mock("@/lib/api", () => ({
@@ -44,20 +41,15 @@ function expectAcceptedChrome(root: ParentNode) {
   expect(root.querySelector("[data-icon-square]")).toBeTruthy();
 }
 
-function expectNoV2Only(root: ParentNode) {
-  expect(root.querySelector(`[${THEME_V2_ONLY_ATTR}]`)).toBeNull();
-}
-
-describe("accepted-live chrome without data-theme=v2", () => {
-  it("StatCard has accepted chrome and zero non-accepted v2-only markers", async () => {
+describe("accepted-live chrome", () => {
+  it("StatCard has accepted chrome", () => {
     const { container } = render(
       <StatCard label="Sales" icon={Wallet} amountKurus={100_00} />,
     );
     expectAcceptedChrome(container);
-    await waitFor(() => expectNoV2Only(container));
   });
 
-  it("HubTileCard has accepted chrome and zero v2-only markers", async () => {
+  it("HubTileCard has accepted chrome", () => {
     const { container } = render(
       <HubTileCard
         tile={{
@@ -70,10 +62,9 @@ describe("accepted-live chrome without data-theme=v2", () => {
       />,
     );
     expectAcceptedChrome(container);
-    await waitFor(() => expectNoV2Only(container));
   });
 
-  it("EntityBalanceSticker has accepted chrome and zero v2-only markers", async () => {
+  it("EntityBalanceSticker has accepted chrome", () => {
     const { container } = render(
       <EntityBalanceSticker
         label="You owe supplier"
@@ -81,34 +72,21 @@ describe("accepted-live chrome without data-theme=v2", () => {
       />,
     );
     expectAcceptedChrome(container);
-    await waitFor(() => expectNoV2Only(container));
   });
 
-  it("CashBankSnapshotCard has accepted chrome and zero v2-only markers", async () => {
+  it("CashBankSnapshotCard has accepted chrome", () => {
     const { container } = render(
       <CashBankSnapshotCard cashKurus={10_00} bankKurus={20_00} />,
     );
     expectAcceptedChrome(container);
-    await waitFor(() => expectNoV2Only(container));
   });
 });
 
-describe("with data-theme=v2 wrapper — accepted + gated chrome", () => {
-  it("StatCard under v2 shows accepted chrome and ThemeV2OnlyMarker", async () => {
+describe("shared meaning cards under data-theme=v2", () => {
+  it("StatCard / HubTileCard / sticker / snapshot keep accepted chrome; no ThemeV2OnlyMarker", () => {
     const { container } = render(
       <div data-theme={THEME_V2_ATTR}>
         <StatCard label="Sales" icon={Wallet} amountKurus={100_00} />
-      </div>,
-    );
-    expectAcceptedChrome(container);
-    await waitFor(() => {
-      expect(container.querySelector(`[${THEME_V2_ONLY_ATTR}]`)).toBeTruthy();
-    });
-  });
-
-  it("HubTileCard / sticker / snapshot under v2 show ThemeV2OnlyMarker (meaning-card chrome)", async () => {
-    const { container } = render(
-      <div data-theme={THEME_V2_ATTR}>
         <HubTileCard
           tile={{
             key: "cash",
@@ -122,14 +100,7 @@ describe("with data-theme=v2 wrapper — accepted + gated chrome", () => {
       </div>,
     );
     expectAcceptedChrome(container);
-    await waitFor(() => {
-      // MeaningCardAccentBar gates ThemeV2OnlyMarker on each meaning card —
-      // not a Cash & bank layout fork.
-      expect(
-        container.querySelectorAll(`[${THEME_V2_ONLY_ATTR}]`).length,
-      ).toBeGreaterThanOrEqual(3);
-    });
-    // Layout parity: no v2-only column dividers on the shared snapshot.
+    expect(container.querySelector("[data-theme-v2-only]")).toBeNull();
     expect(
       container.querySelector('[data-testid="cash-bank-column-divider"]'),
     ).toBeNull();
@@ -137,30 +108,27 @@ describe("with data-theme=v2 wrapper — accepted + gated chrome", () => {
 });
 
 describe("leak mutation + CSS gate", () => {
-  it("mutation: leak non-accepted v2-only attr into v1 StatCard → red; restore → green", () => {
+  it("mutation: hardcode data-theme-v2-only on StatCard → red; restore → green", () => {
     const src = sourceDeclaring("StatCard");
-    // Accepted chrome always present
     expect(src).toContain("MeaningCardAccentBar");
     expect(src).toContain("IconSquare");
-    // Must not hardcode the v2-only attr on the shell (bypass the gate)
     expect(src).not.toMatch(/data-theme-v2-only/);
     expect(src).not.toMatch(/THEME_V2_ONLY_ATTR/);
+    expect(src).not.toContain("ThemeV2OnlyMarker");
 
     const leaked = src.replace(
       "data-meaning-card",
-      `data-meaning-card ${THEME_V2_ONLY_ATTR}=""`,
+      'data-meaning-card data-theme-v2-only=""',
     );
-    expect(leaked).toContain(THEME_V2_ONLY_ATTR);
-    expect(src).not.toContain(`${THEME_V2_ONLY_ATTR}=""`);
+    expect(leaked).toContain("data-theme-v2-only");
+    expect(src).not.toContain('data-theme-v2-only=""');
   });
 
   it("non-accepted sticker/button/segment polish stays under [data-theme=v2] in CSS", () => {
     const css = sourceAt("app/globals.css");
-    // Accepted bar is unscoped (intentional live baseline)
     expect(css).toMatch(
       /\/\* Accepted-live meaning bars[\s\S]*?\[data-meaning-card\]\s*>\s*\[data-accent-bar\][\s\S]*?width:\s*4px/,
     );
-    // Non-accepted typography / button restyles remain theme-scoped
     expect(css).toContain(
       '[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-figure]',
     );
@@ -168,13 +136,16 @@ describe("leak mutation + CSS gate", () => {
     expect(css).toContain('[data-theme="v2"] [data-stat-figure]');
   });
 
-  it("layout bakes data-theme=v2 unless DEFAULT_THEME=v1", () => {
+  it("layout bakes data-theme=v2 unconditionally; no DEFAULT_THEME / THEME_TOGGLE", () => {
     const src = sourceDeclaring("RootLayout");
-    expect(src).toContain("NEXT_PUBLIC_DEFAULT_THEME");
-    expect(src).toContain('=== "v1"');
     expect(src).toContain("data-theme");
-    expect(src).not.toMatch(
-      /THEME_TOGGLE[\s\S]*=== "true"[\s\S]*DEFAULT_THEME[\s\S]*=== "v2"/,
-    );
+    expect(src).toContain("THEME_V2_ATTR");
+    expect(src).not.toContain("NEXT_PUBLIC_DEFAULT_THEME");
+    expect(src).not.toContain("NEXT_PUBLIC_THEME_TOGGLE");
+  });
+
+  it("ThemeV2Only / ThemeV2OnlyMarker / new-look-toggle are gone", () => {
+    expect(() => sourceAt("components/ui/theme-v2-gate.tsx")).toThrow();
+    expect(() => sourceAt("components/layout/new-look-toggle.tsx")).toThrow();
   });
 });

@@ -1,10 +1,7 @@
 "use client";
 
-/** v2-only dashboard chrome: greeting + display name only.
- * Restaurant identity lives in the top bar / account menu — not here.
- * Period analysis lives in Reports (dashboard is as-of-only). */
+/** Dashboard chrome: greeting + display name (v2 is the only look). */
 
-import { ThemeV2OnlyMarker } from "@/components/ui/theme-v2-gate";
 import { dashboardGreetingLine } from "@/lib/dashboard-greeting";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +20,6 @@ export function DashboardV2Header({ displayName, className, now }: Props) {
       data-testid="dashboard-v2-header"
       className={cn("mb-5", className)}
     >
-      <ThemeV2OnlyMarker />
       <div data-testid="dashboard-v2-header-row">
         <h1
           data-testid="dashboard-v2-greeting"

@@ -23,10 +23,8 @@ export const viewport = {
   viewportFit: "cover" as const,
 };
 
-const htmlThemeAttr =
-  process.env.NEXT_PUBLIC_DEFAULT_THEME === "v1"
-    ? {}
-    : ({ "data-theme": THEME_V2_ATTR } as const);
+/** v2 is the only look — always bake data-theme on `<html>`. */
+const htmlThemeAttr = { "data-theme": THEME_V2_ATTR } as const;
 
 export default function RootLayout({
   children,

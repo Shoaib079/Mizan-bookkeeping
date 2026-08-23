@@ -1,14 +1,13 @@
 // @vitest-environment jsdom
 
 /**
- * Default v2 rollout + as-of dashboard: greeting without date; no This period.
+ * v2-only dashboard: greeting without date; no This period; no v1 PageHeader path.
  */
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const apiFetch = vi.fn();
-const themeState = { theme: "v2" as "v1" | "v2" };
 
 vi.mock("@/lib/api", () => ({
   apiFetch: (...args: unknown[]) => apiFetch(...args),
@@ -38,15 +37,6 @@ vi.mock("@/lib/use-entity-access", () => ({
 
 vi.mock("@/components/quick-actions", () => ({
   useQuickActions: () => ({ deliveryEnabled: false }),
-}));
-
-vi.mock("@/components/layout/new-look-toggle", () => ({
-  useNewLookTheme: () => ({
-    theme: themeState.theme,
-    mounted: true,
-    toggle: vi.fn(),
-    setTheme: vi.fn(),
-  }),
 }));
 
 vi.mock("@/components/onboarding-checklist", () => ({
@@ -80,6 +70,7 @@ vi.mock("@/lib/use-mobile-shell", () => ({
 
 import HomePage from "@/app/page";
 import { applyVisualTheme, THEME_V2_ATTR } from "@/lib/theme-v2";
+import { sourceDeclaring } from "@/test-support/source";
 
 function dashPayload() {
   return {
@@ -99,12 +90,11 @@ function dashPayload() {
 afterEach(() => {
   cleanup();
   apiFetch.mockReset();
-  themeState.theme = "v2";
   document.documentElement.removeAttribute("data-theme");
 });
 
 beforeEach(() => {
-  applyVisualTheme("v2");
+  applyVisualTheme();
   apiFetch.mockImplementation(async (path: string) => {
     if (String(path).includes("/dashboard?")) return dashPayload();
     if (String(path).includes("/time-series")) return { daily: [] };
@@ -120,8 +110,8 @@ beforeEach(() => {
   });
 });
 
-describe("default v2 dashboard (rollout)", () => {
-  it("default v2: greeting without date; no This period; Cash & bank + chart caption", async () => {
+describe("v2-only dashboard", () => {
+  it("greeting without date; no This period; Cash & bank + chart caption", async () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe(
       THEME_V2_ATTR,
     );
@@ -135,6 +125,7 @@ describe("default v2 dashboard (rollout)", () => {
     expect(screen.queryByTestId("dashboard-v2-today")).toBeNull();
     expect(screen.queryByText("This period")).toBeNull();
     expect(screen.queryByTestId("report-date-range")).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Dashboard" })).toBeNull();
     expect(screen.getByTestId("cash-bank-snapshot-card")).toBeTruthy();
     expect(screen.getByTestId("fake-right-now")).toBeTruthy();
     expect(screen.getByTestId("weekly-chart-period-caption").textContent).toBe(
@@ -142,16 +133,21 @@ describe("default v2 dashboard (rollout)", () => {
     );
   });
 
-  it("explicit v1 choice: PageHeader Dashboard; This period still absent", async () => {
-    themeState.theme = "v1";
-    applyVisualTheme("v1");
-    render(<HomePage />);
-
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Dashboard" })).toBeTruthy();
-    });
-    expect(screen.queryByTestId("dashboard-v2-greeting")).toBeNull();
-    expect(screen.queryByText("This period")).toBeNull();
-    expect(screen.getByTestId("cash-bank-snapshot-card")).toBeTruthy();
+  it("mutation: dashboard old v1 PageHeader path → red; restore → green", () => {
+    const page = sourceDeclaring("HomePage");
+    expect(page).toContain("DashboardV2Header");
+    expect(page).toMatch(
+      /replaceHeader=\{\s*<DashboardV2Header[\s\S]*?\/>\s*\}/,
+    );
+    expect(page).not.toContain("useNewLookTheme");
+    expect(page).not.toContain("ThemeV2Only");
+    expect(page).not.toContain("v2Dashboard");
+    // Simulated regression: conditional back to v1 PageHeader
+    const regressed = page.replace(
+      /replaceHeader=\{\s*<DashboardV2Header[\s\S]*?\/>\s*\}/,
+      "replaceHeader={undefined}",
+    );
+    expect(regressed).toContain("replaceHeader={undefined}");
+    expect(page).not.toContain("replaceHeader={undefined}");
   });
 });

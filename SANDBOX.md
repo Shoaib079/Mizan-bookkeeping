@@ -56,13 +56,6 @@ macOS may block inbound connections the first time. If the phone cannot load the
 - Frontend uses `NEXT_PUBLIC_API_URL=/backend-api` (same-origin proxy to `127.0.0.1:8000`). Prefer http://\<LAN-IP\>:3000 on the phone — not `:8000`.
 - If you add `CORS_ORIGINS` for `http://\<LAN-IP\>:3000`, restart uvicorn after editing `backend/.env`.
 
-## Visual refresh (sandbox)
+## Visual theme
 
-In `frontend/.env.local` (not committed):
-
-```
-NEXT_PUBLIC_DEFAULT_THEME=v2
-NEXT_PUBLIC_THEME_TOGGLE=true
-```
-
-Restart `npm run dev` after changing. Production leaves both unset → v1. Use **New look on/off** in the shell to A/B.
+The app always renders under `data-theme="v2"` (the only look). There is no New look toggle and no `NEXT_PUBLIC_DEFAULT_THEME` / `NEXT_PUBLIC_THEME_TOGGLE` env. Dark mode (separate ThemeToggle) is unchanged. Owner-only `/preview` remains for the component gallery.

@@ -39,15 +39,6 @@ vi.mock("@/components/quick-actions", () => ({
   useQuickActions: () => ({ deliveryEnabled: false }),
 }));
 
-vi.mock("@/components/layout/new-look-toggle", () => ({
-  useNewLookTheme: () => ({
-    theme: "v1",
-    mounted: true,
-    toggle: vi.fn(),
-    setTheme: vi.fn(),
-  }),
-}));
-
 vi.mock("@/components/onboarding-checklist", () => ({
   OnboardingChecklist: () => null,
 }));

@@ -13,7 +13,6 @@ import { MobileTopBar } from "@/components/layout/mobile-top-bar";
 import { PageBackLink } from "@/components/layout/page-back-link";
 import { TransactionPeekProvider } from "@/components/ledger/transaction-drawer";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
-import { NewLookToggle } from "@/components/layout/new-look-toggle";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuickActions } from "@/components/quick-actions";
@@ -140,7 +139,6 @@ function AppShellInner({
           reviewTotal={reviewCounts.total}
           onReviewPage={onReviewPage}
         />
-        <NewLookToggle className="mx-3.5 my-1.5 w-[calc(100%-1.75rem)] justify-center" />
         <main
           key={entityId}
           className={cn(
@@ -239,7 +237,6 @@ function AppShellInner({
                 Record
               </Link>
             )}
-            <NewLookToggle />
             <ThemeToggle />
             <AccountMenu />
           </div>

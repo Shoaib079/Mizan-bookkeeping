@@ -1,10 +1,16 @@
-## 2026-08-24 — v2 look is the default (owner rollout)
+## 2026-08-24 — v2 is the only look (owner)
 
-**Choice:** `data-theme="v2"` is the **default for everyone** (production included) when there is no explicit stored choice. `NEXT_PUBLIC_DEFAULT_THEME=v1` remains an emergency force-v1. The New look toggle stays as a **grace fallback** to v1 (localStorage); toggle UI is on unless `NEXT_PUBLIC_THEME_TOGGLE=false`. Toggle removal is a later cleanup.
+**Choice:** Visual theme is **always v2**. `<html data-theme="v2">` is baked unconditionally. The New look on/off toggle, `mizan:visual-theme` localStorage, `NEXT_PUBLIC_DEFAULT_THEME`, and `NEXT_PUBLIC_THEME_TOGGLE` are **removed**. There is no v1 grace fallback.
 
-**Why (owner 2026-08-24, verbatim):** *"…and then ship v2."*
+**Why (owner 2026-08-24, verbatim):** *"i have new look off and on on the dashboard on live app get rid of it always new look on shince v2 has been shipped to live."*
 
-**Supersedes:** sandbox-only gate requiring BOTH `DEFAULT_THEME=v2` AND `THEME_TOGGLE=true` before baking/applying v2 (DECISIONS 2026-08-22 gating rule for production default).
+**Supersedes:** 2026-08-24 “v2 look is the default” (grace fallback + toggle + emergency DEFAULT_THEME=v1).
+
+## 2026-08-24 — v2 look is the default (owner rollout) — **SUPERSEDED**
+
+**Superseded 2026-08-24** by “v2 is the only look” — toggle and v1 fallback removed.
+
+**Historical choice:** `data-theme="v2"` default with New look toggle as grace fallback to v1; `DEFAULT_THEME=v1` emergency.
 
 ## 2026-08-24 — Dashboard is as-of-only; period analysis in Reports
 
@@ -43,11 +49,11 @@
 
 ## 2026-08-22 — Accepted-live theme chrome + gating rule
 
-**Choice:** After `v0.v2-meaning-bars-everywhere` reached production, the owner **accepted the live look as-is** (muted left accent bars + tinted Lucide `IconSquare` on meaning cards). That chrome is now the **intentional v1 baseline** — shared with v2, not gated behind `data-theme="v2"`. Remaining v2-only polish (sticker white/heading tokens, KPI type sizes, button/segment/tab restyles, full canvas token remap) stays under `[data-theme="v2"]` only.
+**Choice:** After `v0.v2-meaning-bars-everywhere` reached production, the owner **accepted the live look as-is** (muted left accent bars + tinted Lucide `IconSquare` on meaning cards). That chrome is now the **intentional baseline** — shared everywhere. Remaining v2 polish (sticker white/heading tokens, KPI type sizes, button/segment/tab restyles, full canvas token remap) lives under `[data-theme="v2"]` (which is always on — see “v2 is the only look”).
 
-**Gating rule (updated 2026-08-24):** Default look is **v2** for everyone — see “v2 look is the default”. Non-accepted exclusive markers still use `ThemeV2Only` / `ThemeV2OnlyMarker` (`data-theme-v2-only`). Historical sandbox pair-gate (DEFAULT_THEME + THEME_TOGGLE) no longer blocks production default.
+**Gating rule (updated 2026-08-24):** v2 is the **only** look. `ThemeV2Only` / `ThemeV2OnlyMarker` and the New look toggle are removed. Historical sandbox pair-gate and grace fallback no longer apply.
 
-**Why:** Component chrome had been mounted unconditionally while only some tokens were theme-scoped — IconSquare hex fallbacks painted on live; env layout could bake theme from DEFAULT alone. Accepting what shipped avoids a live visual rollback; the gate stops the next unapproved leak.
+**Why:** Component chrome had been mounted unconditionally while only some tokens were theme-scoped — IconSquare hex fallbacks painted on live; env layout could bake theme from DEFAULT alone. Accepting what shipped avoids a live visual rollback; v2-only then removed the dual-theme machinery.
 
 ## 2026-08-21 — Partner capital + loans: Edit (correctable), not void-only
 

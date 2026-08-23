@@ -16,7 +16,8 @@ describe("balances on dashboard", () => {
     const snapshot = sourceDeclaring("CashBankSnapshotCard");
     expect(page).toContain("CashBankSnapshotCard");
     expect(page).toContain("dashboard-kpi-row");
-    expect(page).toContain("useNewLookTheme");
+    expect(page).toContain("DashboardV2Header");
+    expect(page).not.toContain("useNewLookTheme");
     expect(page).toContain('data-layout="as-of-cash"');
     expect(page).not.toContain('label="This period"');
     expect(page).not.toContain("period-and-cash");

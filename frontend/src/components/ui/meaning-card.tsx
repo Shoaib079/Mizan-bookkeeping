@@ -1,12 +1,6 @@
 "use client";
 
-/** Shared muted left accent bar for meaning cards.
- *
- * Accepted-live (owner 2026-08-22): bar paints on v1 and v2 alike.
- * Non-accepted v2-only chrome mounts via ThemeV2OnlyMarker (gated).
- */
-
-import { ThemeV2OnlyMarker } from "@/components/ui/theme-v2-gate";
+/** Shared muted left accent bar for meaning cards (accepted-live). */
 
 export const ACCENT_BAR = {
   green: "var(--accent-bar-green, #4E9E77)",
@@ -18,12 +12,7 @@ export const ACCENT_BAR = {
 
 export type AccentBarTone = keyof typeof ACCENT_BAR;
 
-/** Absolute bar + v2-only sentinel — direct children of [data-meaning-card]. */
+/** Absolute bar — direct child of [data-meaning-card]. */
 export function MeaningCardAccentBar() {
-  return (
-    <>
-      <span data-accent-bar aria-hidden />
-      <ThemeV2OnlyMarker />
-    </>
-  );
+  return <span data-accent-bar aria-hidden />;
 }
