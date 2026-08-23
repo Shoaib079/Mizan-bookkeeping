@@ -25,14 +25,14 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none — awaiting review; do not push)* |
-| **Next up**              | Owner review → push; then POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Silent membership poll** (`v0.silent-membership-poll`) |
-| **Last commit/tag**      | `v0.silent-membership-poll` |
+| **Next up**              | Per-menu period report for group/agency sales (deferred) |
+| **Last completed slice** | **GS-FX docs reconcile** (`v0.gs-fx-docs-reconcile`) |
+| **Last commit/tag**      | `v0.gs-fx-docs-reconcile` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
 
-**Still deferred, unchanged:** per-menu period report for group/agency sales; A6 ⌘K palette gaps (staff/partners/transaction search); A7 Agency/Customers naming; TR localization; a create-manual-journal form (deliberately absent — see FINANCIAL_AUDIT F5). ~~GS-FX forex-only group sales~~ **DONE** (`v0.gs-fx-forex-only-group-sales`).
+**Still deferred, unchanged:** per-menu period report for group/agency sales; A6 ⌘K palette gaps (staff/partners/transaction search); A7 Agency/Customers naming; TR localization; a create-manual-journal form (deliberately absent — see FINANCIAL_AUDIT F5). **GS-FX is DONE** — `v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount` + migration `097` (see **Do not rebuild**).
 
 > **2026-07-27 session (pytest green, 3 commits unpushed):** **"Income to bank"** — the inflow catch-all; without it bank interest, refunds and payouts could never be classified and an account could never reconcile. **Month close** — a readiness checklist where only unclassified bank lines block, then a soft lock (staff blocked; owner writes with a logged reason and the month is flagged). Card-clearing residual is **aged against month end**, so last weekend's card money reads as normal and only older money is flagged. **Close-time snapshot (F3)** — a closed month's P&L and balance sheet stop moving; `view=live` and a stated drift when someone amends. **Year-end close (F4)** — one 31 December entry moves the result into Retained Earnings, which also fills the account partner profit distribution had always drawn on empty. **Cash-flow category override (F5)** and a **late-night date hint (F6)**. Migrations `083`, `084`. See CHANGELOG / DECISIONS / FINANCIAL_AUDIT 2026-07-27.
 
@@ -76,6 +76,7 @@
 | Review sales date range + status filter + Excel export                           | `v0.review-sales-date-export`                     | done           | Re-add uncapped export; drop `from`/`to`/`review` query params; split pending/posted tables without filter tabs                                            |
 | Agency group sales v2 — backend: menus, itemized FX/TRY sale, 4300, edit/void, dashboard | `v0.agency-group-sales-be`                  | done           | Re-add 4000 for group revenue; duplicate migration `076`; bypass posting boundary for group sales; edit in-place instead of void-and-repost               |
 | Agency group sales v2 — frontend: menu catalog, itemized sale, edit/void, FX payment | `v0.agency-group-sales-fe`                     | done           | Re-build v1 credit-sale form only; omit group-menus/group-sales routes; skip native-amount FX payment path                                                 |
+| GS-FX — forex-only (rateless) group sales + forex-native discount | `v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount` (migration `097`) | done | Re-book rateless FX sale into TRY/GL at sale; require `fx_rate_used` for forex menus; drop zero-cost RECEIPT / nullable `fx_ledger_entries.journal_entry_id`; re-post forex-only discount via 5800 |
 | Group-sale discount write-off (`5800 Sales Discounts`) + net-payment void gate + list void/edit | `v0.group-sales-followups`         | done           | Re-post discount as revenue reduction (use 5800 contra); count payment *rows* in void gate (use NET); `5800` excluded from manual expense picker; void must reverse linked discounts |
 | Staff advance / overpayment returned in cash (`ADVANCE_RETURNED`)                | `v0.staff-advance-return`                         | done           | Dr cash / Cr `1300`; TRY only; guard return ≤ outstanding advance; outstanding calc subtracts returns; reuses `STAFF_ADVANCE` journal source |
 | Partner-funded TRY salary (owe partner on 2150)                                  | `v0.partner-funded-salary`                        | done           | Re-book salary via expense-fronted/`5100`; second `5100` on pay; cash/bank on partner-funded pay; separate repayment product; Edit on this source; staff-only or partner-only void; grow oversized staff/partners posting modules |
@@ -1903,7 +1904,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 ### Audit remediation — Partner / Staff / Supplier + exports (2026-08-20)
 
-Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). **One slice at a time; owner go between slices.** Do not start the next until the current is committed, tagged, and signed off. GS-FX remains deferred until this queue (or owner re-prioritises).
+Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). **One slice at a time; owner go between slices.** Do not start the next until the current is committed, tagged, and signed off. **GS-FX is DONE** (`v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount`, migration `097`) — see **Do not rebuild**.
 
 | # | Slice | Impact | Scope |
 |---|-------|--------|-------|
@@ -1931,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | GS-FX docs reconcile                            | `v0.gs-fx-docs-reconcile`                              | Docs-only: mark GS-FX DONE across ROADMAP/PROGRESS/POST_LAUNCH/CHANGELOG/README; Do not rebuild + Next up = per-menu period report |
 | 2026-08-23 | Silent membership poll                          | `v0.silent-membership-poll`                            | Fix 15s flicker: silent refreshEntities + grants equal; role/revoke semantics kept |
 | 2026-08-23 | Single page title                               | `v0.single-page-title`                                 | AppShell trail breadcrumb-only; no muted title above H1; accepted-live both themes |
 | 2026-08-23 | Dashboard Apply + Total + mobile period         | `v0.dashboard-apply-total-mobile-range`                | Root-cause Apply (v2 as-of-only KPI); restore This period both themes; Total balance two-row; mobile period chip; accepted-live |

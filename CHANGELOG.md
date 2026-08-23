@@ -8,6 +8,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-23
 
+- **GS-FX docs reconcile (`v0.gs-fx-docs-reconcile`).** Docs-only: mark forex-only group sales **DONE** across ROADMAP/PROGRESS/POST_LAUNCH/CHANGELOG/README (`v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount`, migration `097`); Do not rebuild row; Next up = per-menu period report; DECISIONS pointer in README_START_HERE. Blended-average-cost caveat untouched. **Do not push until review.**
 - **Silent membership poll — stop 15s flicker (`v0.silent-membership-poll`).** Root cause: SessionAccessGuard called loud `refreshEntities()` every 15s → `entitiesLoading` flip → “Loading restaurants…” flash (BUGLOG). Poll now uses `refreshEntities({ silent: true })` + grant/role deep-equal so context identity is stable when membership is unchanged. Role toast / revoke sign-out unchanged. Vitest: unchanged ticks no remount/loading; role change still toasts; mutation non-silent poll → red. **Do not push until review.**
 - **Single page title — drop muted trail duplicate (`v0.single-page-title`).** AppShell trail is breadcrumb-only (no longer appends `title`), so Overview pages no longer show muted “Dashboard” / “Record” above the bold H1. PageHeader stays one H1 (no eyebrow). Section crumbs that differ from the H1 (e.g. Money out above Staff) kept for owner review. v2 greeting + mobile top bar unchanged. Accepted-live both themes. Vitest: PageHeader one H1 + mutation eyebrow → red; trail must not append title; sample pages single title path. Display-only. **Do not push until review.**
 - **Dashboard Apply + Total balance + mobile period chip (`v0.dashboard-apply-total-mobile-range`).** Root-cause: Apply was wired; v2 cash-only KPI hid period figures so Apply looked dead (BUGLOG). Restored This period + Cash & bank on **both** themes (accepted-live; reverses cash-only KPI). Cash & bank: two-row Total balance + “as of today”, full-width figure, no truncate. Mobile (&lt;sm): period chip → existing sheet; desktop unchanged. Vitest: Apply refetch + figure update; two-row total; chip vs fields; mutation truncated inline total / stacked mobile fields / cash-only layout → red. Display-only. **Do not push until review.**
@@ -552,7 +553,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 - **Balances is one door, not five:** sidebar section collapsed to **Overview + Cash & bank**; `/balances` renders a real overview (payables/receivables totals + cards into the directories); **Staff & Partners directories gained inline balance columns** so all four directories are self-sufficient; redundant directory→balances footer links removed. Nav registry + 65 nav tests updated/green.
 - **Whole-row click** on the four directory tables (`DataTableRow href`, keyboard-accessible, modifier/inner-control safe).
 
-**Deferred (design captured, NOT built):** forex-only group sales (TRY recognised at forex conversion) — see DECISIONS 2026-07-13 + POST_LAUNCH_PLAN § GS-FX.
+**GS-FX (design captured 2026-07-13; later BUILT):** forex-only group sales — **DONE** `v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount` (migration `097`); see DECISIONS 2026-07-13 / 2026-08-22 + POST_LAUNCH_PLAN § GS-FX.
 
 ## 2026-07-11
 

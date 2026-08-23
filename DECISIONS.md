@@ -309,7 +309,7 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 
 ## 2026-07-13 — Forex-only group sales (design agreed; **IMPLEMENTED** `v0.gs-fx-forex-only-group-sales`)
 
-**Status:** ✅ **IMPLEMENTED** 2026-08-22 (`v0.gs-fx-forex-only-group-sales`). Design agreed with owner 2026-07-13; built in dedicated test-covered session per POST_LAUNCH_PLAN § GS-FX. Rated forex group sales (with `fx_rate_used`) unchanged — existing GL path.
+**Status:** ✅ **IMPLEMENTED** 2026-08-22 (`v0.gs-fx-forex-only-group-sales`; migration `097`; follow-on discount `v0.gs-fx-forex-native-discount`). Design agreed with owner 2026-07-13; built in dedicated test-covered session per POST_LAUNCH_PLAN § GS-FX. Rated forex group sales (with `fx_rate_used`) unchanged — existing GL path.
 
 **Owner need:** When a group/agency booking is agreed in a foreign currency (e.g. "5,000 USD"), the owner thinks and settles in that currency and keeps the forex record separate. Entering a TRY rate + TRY amount + TRY total at sale time is confusing and, to the owner, useless *at that moment*. Quote: *"even if i do not record TRY and it does not show in GL or financials is also fine for me bcz i am keeping forex record separate and when i sell the forex i will have them in financials."*
 
@@ -318,16 +318,16 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 - **Forex payment against it:** reduces the forex receivable (native balance) and the forex **enters the FX wallet at ZERO TRY cost**. **No TRY/GL posting** on the AR side (otherwise AR goes negative in TRY against a receivable that was never booked).
 - **Conversion (FX sale → TRY):** existing average-cost FX engine — zero-cost forex means the **full TRY proceeds surface as income at conversion**. This is exactly "the TRY hits my financials when I sell the forex." Cash-basis-style deferral of revenue recognition to conversion, by design.
 
-**Why this is a real multi-path change (not a field toggle) — all must move together:**
-1. **Sale entry** — `GroupSaleCreate` validator + `compute_group_sale` allow forex with *no* `fx_rate_used`/`total_kurus`; new `post_forex_only_credit_sale` (subledger row, `amount_kurus=0`, `journal_entry_id=None`, no GL).
-2. **Void** — `_reverse_group_sale_gl` currently hard-requires `journal_entry_id` ("Group sale missing journal links"); needs a forex-only branch (void the subledger row, no GL reversal).
-3. **Discount / write-off** — `post_group_sale_discount` posts Dr 5800 / Cr AR in TRY; forex-only needs a forex discount path (or block).
-4. **Forex payment posting** — must skip TRY/GL for forex-only sales and deposit forex to the wallet at zero cost.
-5. **FX wallet cost basis** — support a **zero-cost lot** on receipt; conversion then yields proceeds-as-income.
+**Why this was a real multi-path change (not a field toggle) — all shipped together:**
+1. **Sale entry** — `GroupSaleCreate` validator + `compute_group_sale` allow forex with *no* `fx_rate_used`/`total_kurus`; `post_forex_only_credit_sale` (subledger row, `amount_kurus=0`, `journal_entry_id=None`, no GL).
+2. **Void** — forex-only branch voids the subledger row when there is no `journal_entry_id` (no GL reversal).
+3. **Discount / write-off** — forex-native path in `v0.gs-fx-forex-native-discount` (TRY/rated-FX still use Dr 5800 / Cr AR).
+4. **Forex payment posting** — skips TRY/GL for forex-only sales and deposits forex to the wallet at zero cost.
+5. **FX wallet cost basis** — **zero-cost lot** on receipt (migration `097`); conversion yields proceeds-as-income.
 
 **Known caveat (tell the owner):** if one FX wallet holds *both* purchased forex (real TRY cost) and sale-received forex (zero cost), the average-cost math **blends** them, so a later conversion smears the two attributions. Acceptable for most restaurants; flag if precise per-lot attribution is ever needed (would require lot-level tracking).
 
-**Why deferred:** touches the double-entry engine, revenue-recognition timing, and FX cost basis on a **live** app; money-critical FX-engine changes must ship with tests written alongside and run green before touching real books. *(Deferred requirement satisfied 2026-08-22 — see tag above.)*
+**Build history:** Originally deferred because it touches the double-entry engine, revenue-recognition timing, and FX cost basis on a **live** app; shipped 2026-08-22 with tests (`test_gs_fx.py` / `test_gs_fx_discount.py`) — see tags above.
 
 ## 2026-08-22 — Forex-native discount on forex-only group sales (**IMPLEMENTED** `v0.gs-fx-forex-native-discount`)
 

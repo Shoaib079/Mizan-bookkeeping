@@ -69,7 +69,7 @@ Live app (staging-mode): Frontend **Vercel** · API **Railway** (`mizan-api`) ·
 | — | **BSF-3** | Supplier suggestion from bank description | **Done** |
 | — | **BSF-4** | Per-supplier auto-post toggle | **Done** |
 | — | P5 / ~~P8~~ | Delete company UI · ~~Groceries path~~ | P8 done; P5 queued |
-| **GS-FX** | Forex-only group sales (TRY at conversion) | **DONE** `v0.gs-fx-forex-only-group-sales` — see slice below + DECISIONS 2026-07-13 |
+| **GS-FX** | Forex-only group sales (TRY at conversion) | **DONE** `v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount` (migration `097`) — see slice below + DECISIONS 2026-07-13 / 2026-08-22 |
 | — | P4, P7 | Backup prune, lint | Optional |
 
 **Rule:** one slice at a time, in the numbered order. Phase 13 slices assume the app is LIVE — every backend addition must be entity-scoped (RLS) and date-range bounded like the rest.
@@ -111,23 +111,25 @@ Frontend polish (small usage tracking — localStorage per entity, or a light ba
 
 ## 🔨 Build queue (each = one slice)
 
-### GS-FX — Forex-only group sales (TRY recognition deferred to conversion)  *(DONE `v0.gs-fx-forex-only-group-sales`)*
+### GS-FX — Forex-only group sales (TRY recognition at conversion)  *(DONE `v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount`, migration `097`)*
 
-**Why:** Owner books agency groups in forex (e.g. 5,000 USD), thinks/settles in forex, and keeps the forex record separate. Entering a TRY rate/amount at sale time is confusing and not useful to them. Full model + rationale + caveat: **DECISIONS.md 2026-07-13 — "Forex-only group sales"**. Owner agreed the model 2026-07-13 and chose to defer to a dedicated, test-covered session (money-critical FX-engine change; the working session couldn't run backend pytest).
+**Status:** ✅ **BUILT** 2026-08-22. Do not rebuild — see ROADMAP **Do not rebuild** + tags above. Follow-on forex-native discount: `v0.gs-fx-forex-native-discount`.
+
+**Why (historical):** Owner books agency groups in forex (e.g. 5,000 USD), thinks/settles in forex, and keeps the forex record separate. Entering a TRY rate/amount at sale time is confusing and not useful to them. Full model + rationale + caveat: **DECISIONS.md 2026-07-13 — "Forex-only group sales"** (+ 2026-08-22 forex-native discount).
 
 **Model (see DECISIONS for detail):** a forex group sale with **no rate** records a **forex-only subledger receivable** (no GL, `amount_kurus=0`, `journal_entry_id=NULL`); a forex payment against it posts **no TRY/GL** and deposits the forex into the FX wallet at **zero TRY cost**; the **full TRY value is recognized as income at conversion** via the existing average-cost engine.
 
-**All five paths must ship together (a partial change corrupts AR):**
-1. **Sale entry** — relax `GroupSaleCreate.check_fx_rate` + `compute_group_sale` to allow forex with no `fx_rate_used`/`total_kurus` (→ `total_kurus=0`, forex tracked); new `receivables_posting.post_forex_only_credit_sale` (subledger row, no GL).
-2. **Void** — `_reverse_group_sale_gl` currently hard-fails without `journal_entry_id`; add a forex-only branch (void the subledger row, no GL reversal).
-3. **Discount/write-off** — `post_group_sale_discount` (Dr 5800 / Cr AR, TRY) needs a forex path or an explicit block for forex-only sales.
+**Shipped together (all paths):**
+1. **Sale entry** — `GroupSaleCreate` / `compute_group_sale` allow forex with no `fx_rate_used`/`total_kurus` (`total_kurus=0`); `post_forex_only_credit_sale` (subledger row, no GL).
+2. **Void** — forex-only branch voids the subledger row (no GL reversal when no journal).
+3. **Discount/write-off** — forex-native discount path (`v0.gs-fx-forex-native-discount`); rated-FX still uses 5800.
 4. **Forex payment posting** — skip TRY/GL for forex-only sales; deposit forex to the wallet at zero cost.
-5. **FX wallet cost basis** — support a zero-cost receipt lot; conversion then surfaces proceeds as income.
-6. **Frontend** — make the sale-date rate optional on `group-sale-form.tsx` (forex path); show "TRY recorded at conversion" helper text; balances/remaining already forex-aware.
+5. **FX wallet cost basis** — zero-cost receipt lot (migration `097` nullable `fx_ledger_entries.journal_entry_id`); conversion surfaces proceeds as income.
+6. **Frontend** — optional sale-date rate on `group-sale-form.tsx`; "TRY at FX conversion" helper; Apply discount for all sale types.
 
-**Caveat to surface in UI/owner note:** a wallet holding both purchased (real-cost) and sale-received (zero-cost) forex blends under average cost — conversion attribution smears. Acceptable for now; lot-level tracking only if precise attribution is ever needed.
+**Caveat (unchanged in DECISIONS):** a wallet holding both purchased (real-cost) and sale-received (zero-cost) forex blends under average cost — conversion attribution smears. Acceptable for now; lot-level tracking only if precise attribution is ever needed.
 
-**Gate:** write backend tests alongside (forex-only sale posts no GL; forex payment posts no GL + zero-cost wallet receipt; conversion recognizes full proceeds; void/discount forex-only; existing TRY group sales unchanged). **Owner runs full pytest before merge — money-critical.** Do not merge on an untested branch.
+**Gate (met):** `test_gs_fx.py` + `test_gs_fx_discount.py` — forex-only sale/payment/void/discount; conversion proceeds; TRY group sales unchanged.
 
 ### IC — Invoice classification & e-Fatura routing  *(PRIORITY — before FP/FS)*
 

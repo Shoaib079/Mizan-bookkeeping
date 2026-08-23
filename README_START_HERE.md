@@ -9,10 +9,11 @@ Single map for a fresh agent or human after `v0.docs-archive-cleanup`. This file
 ## 2. Canon (read every session)
 
 1. **`Restaurant_Bookkeeping_App_Decisions.md`** — WHAT to build (requirements; single source of truth).
-2. **`CURSOR_RULES.md`** — HOW to build (slices, completion gate, git, recovery, bugs, tests).
-3. **`ROADMAP.md`** — WHERE we are (phase/slice status + “Do not rebuild” table).
-4. **`PROGRESS.md`** — exact resume point (last tag, next up); primary handoff file.
-5. **`CHANGELOG.md`** — every change, plain English, dated (newest first).
+2. **`DECISIONS.md`** — locked product/accounting decisions (dated; includes GS-FX and other post-spec locks).
+3. **`CURSOR_RULES.md`** — HOW to build (slices, completion gate, git, recovery, bugs, tests).
+4. **`ROADMAP.md`** — WHERE we are (phase/slice status + “Do not rebuild” table).
+5. **`PROGRESS.md`** — exact resume point (last tag, next up); primary handoff file.
+6. **`CHANGELOG.md`** — every change, plain English, dated (newest first).
 
 ## 3. Structure & look
 

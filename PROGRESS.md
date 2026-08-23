@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Silent membership poll (`v0.silent-membership-poll`):** 15s flicker fixed (silent entity refresh + grant equality). **Awaiting owner review — do not push.**
+- **GS-FX docs reconcile (`v0.gs-fx-docs-reconcile`):** Docs-only status fix — GS-FX is **DONE** (`v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount`, migration `097`). **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Silent membership poll |
-| **Last tag** | `v0.silent-membership-poll` |
+| **Last completed slice** | GS-FX docs reconcile |
+| **Last tag** | `v0.gs-fx-docs-reconcile` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner review → push; then POST_LAUNCH_PLAN queue |
+| **Next up** | Per-menu period report for group/agency sales (deferred) |
