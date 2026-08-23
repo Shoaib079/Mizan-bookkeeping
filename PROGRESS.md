@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Vitest triage (`v0.vitest-stale-assertion-triage`):** four stale assertions updated; full `npx vitest run` green (1357). **Awaiting owner review — do not push.**
+- **README_START_HERE refresh (`v0.readme-start-here-refresh`):** nine-section entry map after archive cleanup. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Vitest triage — restore full green suite |
-| **Last tag** | `v0.vitest-stale-assertion-triage` |
+| **Last completed slice** | README_START_HERE refresh |
+| **Last tag** | `v0.readme-start-here-refresh` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner review → push; then README_START_HERE refresh |
+| **Next up** | Owner review → push; then POST_LAUNCH_PLAN queue |

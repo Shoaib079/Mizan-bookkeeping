@@ -1,46 +1,63 @@
-# Restaurant Bookkeeping App — project folder
+# Start here — Mizan bookkeeping
 
-Everything we worked out, in one place. Read in this order.
+Single map for a fresh agent or human after `v0.docs-archive-cleanup`. This file is a **map**, not a manual — open the linked doc for the real content.
 
-## The core documents
-1. **`Restaurant_Bookkeeping_App_Decisions.md`** — **WHAT to build.** The single source of truth: the accounting model, double-recording safeguards, multi-restaurant separation, suppliers/payables, banking, POS + delivery sales intake, cash, forex, staff, KDV, roles, reports, the roadmap (§27), and risks.
-2. **`CURSOR_RULES.md`** — **HOW to build it (process).** The rulebook for the AI builder: work in slices, completion gate, no dead code, git commit/tag/push, the mandatory crash-recovery protocol, the root-cause bug protocol, meaningful tests, and the record-keeping logs.
-3. **`ROADMAP.md`** — **WHERE we are.** Phase-by-phase, slice-by-slice build tracker (mirrors Decisions §27). Updated after every slice — current status, what's done, what's next.
-4. **`PROGRESS.md`** — the exact resume point (phase, last tag, next up); the primary handoff file for a new session.
-5. **`CHANGELOG.md`** — every change, plain English, dated.
-6. **`ARCHITECTURE.md`** — **HOW it's structured (so it never becomes a monolith).** Feature-based modules, the isolated accounting core + single posting boundary, adapters for messy inputs, and the anti-`app.py` rules.
-7. **`DESIGN_SYSTEM.md`** — **HOW it looks.** The locked visual system: white background, **blue** accent, Inter type, Lucide icons, components, the app shell, and the page archetypes (including the Reports card-library layout). **§0** has copy-paste Cursor prompts: standing theme rule (structure first) and theme-refinement-only.
+## 1. Start here
 
-## Enforcement & memory
-- **`AGENT_GUARDRAILS.md`** — what catches you if you don't follow the rules: full green-light commands, file-size ratchet, expensive lessons. Read with `CURSOR_RULES.md`.
-- **`HARDENING_PLAN.md`** — the 12 recurring bug classes, the hardening scoreboard, and the owed items (Phases 1-4). Read before fixing any bug.
-- **`PROGRESS.md`** — the exact resume point (phase, last tag, next up); the primary handoff file for a new session.
-- **`CHANGELOG.md`** — every change, plain English, dated.
-- **`STAFF_ONE_ACCOUNT_PLAN.md`** — parked (owner 2026-08-18): Part 1 shipped; 1300→2250 merge deferred — re-decide before building.
+**Every session:** run the Recovery Protocol in `CURSOR_RULES.md` §5 before any code change. Agents do not keep chat memory. **Git commits/tags win** if docs disagree with git — then fix the docs.
 
-## Where the reasoning lives (read before changing accounting behaviour)
-- **`FINANCIAL_AUDIT.md`** — an outside review of the accounting engine, finding by finding, each marked resolved / mitigated / deliberately open. **F2 (no output VAT) is the only substantive one still open**, and it's a knowing choice: these books are a management view, not a tax basis.
-- **`DECISIONS.md`** — the significant technical choices and *why*, including the things deliberately **not** built (forex-only group sales, fixed assets and depreciation, a create-manual-journal form). Read it before "fixing" something that looks missing — it may be missing on purpose.
-- **`BUGLOG.md`** — every real bug: symptom, root cause, fix, guarding test. Several of these are subtle and were expensive to find once.
-- **`TESTS.md`** — what each test file guards, and the registry-completeness rules that will fail the suite if a new `JournalEntrySource` isn't classified everywhere.
-- **`POST_LAUNCH_PLAN.md`** — what's next after launch (master build order + invoice classification spec).
-- Historical audits / Phase-2 sketch / theme briefs / `app_preview.html` — **archived — see `docs/archive/INDEX.md`**.
+## 2. Canon (read every session)
 
-## Operations
-- **`DEPLOY.md`** — how the app is deployed (Neon + Railway + Vercel + Cloudflare R2).
-- **`DEV.md`** — local development setup.
-- **`OPS_RESTORE.md`** — backup/restore drill and runbook.
+1. **`Restaurant_Bookkeeping_App_Decisions.md`** — WHAT to build (requirements; single source of truth).
+2. **`CURSOR_RULES.md`** — HOW to build (slices, completion gate, git, recovery, bugs, tests).
+3. **`ROADMAP.md`** — WHERE we are (phase/slice status + “Do not rebuild” table).
+4. **`PROGRESS.md`** — exact resume point (last tag, next up); primary handoff file.
+5. **`CHANGELOG.md`** — every change, plain English, dated (newest first).
 
-## Ideas for later
-- **`FUTURE_IDEAS.md`** — pocket backlog of features to add as the business grows (deeper accounting, bank feeds, recipe costing, receipt AI learning, etc.). Not part of the current slice until promoted into the Decisions doc. Cautionary lessons from the previous app are in **`ARCHITECTURE.md`**, not here.
+## 3. Structure & look
 
-## Archive
-- Old theme briefs, static previews, one-time go-live checklists, and resolved audit records — **archived — see `docs/archive/INDEX.md`**. Do not rebuild from them.
+- **`ARCHITECTURE.md`** — feature modules, one posting boundary, anti-monolith rules.
+- **`DESIGN_SYSTEM.md`** — locked visual language (white canvas, blue accent, components); §0 theme prompts.
+- **`DESIGN_ARCHETYPES.md`** — page-shape contract (overview, hub, list, detail, report, …).
 
-## When you're ready to build
-Hand a coding agent (e.g. Cursor) the core docs together: Decisions (what), CURSOR_RULES (how), ROADMAP (where we are), ARCHITECTURE, and DESIGN_SYSTEM. It then has the full picture — and follows the recovery + test rules from day one.
+## 4. Guards
 
-## After a crash, new chat, or fresh session
-Every new session MUST run the **Recovery Protocol** in `CURSOR_RULES.md` §5 before any code changes — agents do not retain prior conversation. **`ROADMAP.md`** (current phase/slice) and **`PROGRESS.md`** (exact resume point) are the handoff files; git commits and tags are the ground truth for what is actually saved.
+- **`AGENT_GUARDRAILS.md`** — full green-light commands, file-size ratchet, expensive lessons.
+- **`HARDENING_PLAN.md`** — 12 bug classes, scoreboard, owed items; read before fixing bugs.
+- **`FILE_SIZE_BASELINE.json`** — ratchet baseline (do not grow oversized files).
+- **`TESTS.md`** — what each suite guards; registry-completeness rules.
+- **`BUGLOG.md`** — real bugs: symptom → root cause → fix → guarding test.
+- **`REVIEWER_BRIEF.md`** — brief for an independent reviewer (not day-to-day build).
 
-*Golden rule: if anything changes, update the relevant document first, so the files and the app never drift apart.*
+## 5. Money & audit
+
+- **`FINANCIAL_AUDIT.md`** — engine findings; **F2 (no output VAT) deliberately open** (management books, not tax basis).
+- **`STAFF_ONE_ACCOUNT_PLAN.md`** — parked money plan; **never delete**.
+- **`MENU_PLAN.md`** — menu/costing plan referenced by app code; keep at root.
+- **`docs/OPENING_BALANCES.md`** — opening-balance rules and flows.
+
+## 6. Queue
+
+- **`POST_LAUNCH_PLAN.md`** — active post-launch build queue (master order + invoice classification).
+- **`FUTURE_IDEAS.md`** — parked ideas until promoted into the Decisions doc.
+
+## 7. Ops
+
+- **`DEV.md`** — local machine (Homebrew Postgres, venv pytest; never Docker for tests).
+- **`SANDBOX.md`** — owner A/B preview + v2 theme harness (**sandbox-only**; production stays v1 until owner-approved rollout).
+- **`DEPLOY.md`** — production stack: Neon + Railway + Vercel (+ R2 backups).
+- **`OPS_RESTORE.md`** — backup/restore runbook and drill.
+
+## 8. Archive
+
+- **`docs/archive/INDEX.md`** — map of historical plans, audits, theme briefs, and archived `docs/archive/design/app_preview.html`.
+- Read archived files for context only. **Never rebuild from them.** Living truth: `ROADMAP.md` “Do not rebuild”, `CHANGELOG.md`, and **git**.
+
+## 9. How work happens
+
+- **One agent, one slice, one repo** at a time — no concurrent agents on the same tree.
+- Finish the **completion gate** (Characterize → … → ROADMAP → commit/tag) before the next slice.
+- **Owner sign-off** on money-critical work before merge/push when required.
+- Every finished slice updates **`ROADMAP.md`** and **`CHANGELOG.md`** (and **`PROGRESS.md`** for handoff).
+
+*If the map and the files drift, fix the map — or the file it points to — in the same change.*
