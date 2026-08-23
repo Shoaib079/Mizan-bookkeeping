@@ -1,6 +1,6 @@
 "use client";
 
-/** Shared Cash & bank dashboard card — identical on v1 and v2 (no theme fork). */
+/** Shared Cash & bank dashboard card — two aligned columns + hairline. */
 
 import Link from "next/link";
 import { Wallet } from "lucide-react";
@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/api";
 import type { MoneyAccountTree } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 export type CashAccountBalance = {
   id: string;
@@ -28,6 +29,12 @@ type Props = {
   bankKurus: number;
   cashAccounts?: CashAccountBalance[];
 };
+
+/** Shared column header + account-row rhythm (cash and bank match). */
+const COL_HEADER =
+  "mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground";
+const ACCOUNT_ROW =
+  "flex items-center justify-between gap-3 py-1.5";
 
 function SubtotalRow({
   label,
@@ -91,7 +98,7 @@ export function CashBankSnapshotCard({
   const combined = cashKurus + bankKurus;
 
   return (
-    // Same shell as StatCard — meaning card + blue bar + sky icon (accepted-live both themes).
+    // Same shell as StatCard — meaning card + blue bar + sky icon (accepted-live).
     <div
       data-meaning-card
       data-testid="cash-bank-snapshot-card"
@@ -131,24 +138,31 @@ export function CashBankSnapshotCard({
 
       <div
         data-testid="cash-bank-columns"
-        className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4"
+        className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] sm:gap-x-6"
       >
-        <div data-testid="cash-group" className="min-w-0">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <div
+          data-testid="cash-group"
+          className="flex min-h-0 min-w-0 flex-col"
+        >
+          <div
+            data-testid="cash-bank-col-header"
+            data-side="cash"
+            className={COL_HEADER}
+          >
             Cash drawers
           </div>
           {cashAccounts.length === 0 ? (
-            <p className="border-t border-border/80 pt-1.5 text-xs text-muted-foreground">
+            <p className="flex-1 border-t border-border/80 pt-1.5 text-xs text-muted-foreground">
               No cash drawers yet.
             </p>
           ) : (
-            <div className="divide-y divide-border border-t border-border/80">
+            <div className="flex-1 divide-y divide-border border-t border-border/80">
               {cashAccounts.map((account) => (
                 <div
                   key={account.id}
                   data-testid="cash-drawer-row"
                   data-drawer-name={account.name}
-                  className="flex items-center justify-between gap-2 py-1"
+                  className={ACCOUNT_ROW}
                 >
                   <Link
                     href={`/banking/accounts/${account.id}`}
@@ -163,7 +177,7 @@ export function CashBankSnapshotCard({
               ))}
             </div>
           )}
-          <div className="mt-1 border-t border-border/80 pt-1">
+          <div className="mt-auto border-t border-border/80 pt-1">
             <SubtotalRow
               label="Cash"
               amountKurus={cashKurus}
@@ -172,16 +186,35 @@ export function CashBankSnapshotCard({
           </div>
         </div>
 
-        <div data-testid="bank-group" className="min-w-0">
-          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <div
+          data-testid="cash-bank-column-divider"
+          aria-hidden
+          className="hidden w-px self-stretch bg-[#E6EAF2] sm:block"
+        />
+
+        <div
+          data-testid="cash-bank-stack-divider"
+          aria-hidden
+          className="h-px w-full bg-[#E6EAF2] sm:hidden"
+        />
+
+        <div
+          data-testid="bank-group"
+          className="flex min-h-0 min-w-0 flex-col"
+        >
+          <div
+            data-testid="cash-bank-col-header"
+            data-side="bank"
+            className={COL_HEADER}
+          >
             Bank accounts
           </div>
           <BankAccountBalanceRows
             accounts={bankAccounts}
             variant="compact"
-            className="border-t border-border/80"
+            className={cn("flex-1 border-t border-border/80")}
           />
-          <div className="mt-1 border-t border-border/80 pt-1">
+          <div className="mt-auto border-t border-border/80 pt-1">
             <SubtotalRow
               label="Banks"
               amountKurus={bankKurus}

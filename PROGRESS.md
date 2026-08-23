@@ -18,12 +18,12 @@
 
 ## Current
 
-- **v2 only (`v0.v2-only`):** New look toggle gone; v2 is the only look. **Awaiting owner review — do not push.**
+- **Cash & bank align + hairline (`v0.dashboard-cash-bank-align-divider`):** Columns aligned; vertical divider restored. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | v2 only — remove New look toggle |
-| **Last tag** | `v0.v2-only` |
+| **Last completed slice** | Cash & bank align + hairline |
+| **Last tag** | `v0.dashboard-cash-bank-align-divider` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |

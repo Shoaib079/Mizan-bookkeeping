@@ -101,9 +101,10 @@ describe("shared meaning cards under data-theme=v2", () => {
     );
     expectAcceptedChrome(container);
     expect(container.querySelector("[data-theme-v2-only]")).toBeNull();
+    // Column hairline is shared chrome (not a theme fork).
     expect(
       container.querySelector('[data-testid="cash-bank-column-divider"]'),
-    ).toBeNull();
+    ).toBeTruthy();
   });
 });
 
