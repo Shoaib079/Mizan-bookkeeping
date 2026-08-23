@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Dashboard Cash & bank — two-column layout:** compact Total · drawers left / banks right. Tag `v0.dashboard-cash-bank-two-col`. **Awaiting owner review — do not push.** (Prior itemize-drawers tag also unpushed locally.)
+- **Cash & bank card — column separation + bold subtotals:** v2-only hairline + bold Cash/Banks labels. Tag `v0.dashboard-cash-bank-column-sep`. **Awaiting owner review — do not push.** Unrelated uncommitted WIP remains: dashboard KPI “This period” gated to v2 (page.tsx / tests / balances-overview copy).
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — cash/bank two-column layout awaiting review)* |
-| **Last completed slice** | Dashboard Cash & bank — two-column layout |
-| **Last tag** | `v0.dashboard-cash-bank-two-col` |
+| **Active slice** | *(none — column-sep awaiting review)* |
+| **Last completed slice** | Cash & bank card — column separation + bold subtotals |
+| **Last tag** | `v0.dashboard-cash-bank-column-sep` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |

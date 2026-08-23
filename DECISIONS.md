@@ -1,6 +1,10 @@
-# DECISIONS
+## 2026-08-23 — Cash & bank card: column separation + bold subtotals (v2-only)
 
-Significant technical choices and rationale (see CURSOR_RULES.md §8). Product decisions live in Restaurant_Bookkeeping_App_Decisions.md.
+**Choice:** Under `data-theme="v2"` only, the Cash & bank snapshot adds a hairline between Cash drawers and Bank accounts (`#E6EAF2`; vertical ≥sm with ≥24px gap; horizontal when stacked) and renders the Cash / Banks subtotal labels at 13px / weight 700 / `#3D4A63`. Live v1 card is unchanged.
+
+**Why:** Owner asked for clearer column separation and bolder Cash/Banks labels on the screenshot card, and gated the polish as New look only (“nothing in live”).
+
+**Not accepted-live:** contrary to an early draft of the slice brief that said both themes; owner override keeps production v1 as-is until a later acceptance.
 
 ## 2026-08-22 — Accepted-live theme chrome + gating rule
 
