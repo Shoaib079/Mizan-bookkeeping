@@ -35,6 +35,9 @@ const COL_HEADER =
   "mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground";
 const ACCOUNT_ROW =
   "flex items-center justify-between gap-3 py-1.5";
+/** Accepted-live Cash / Banks subtotal labels (owner-approved; restored after parity muted them). */
+const SUBTOTAL_LABEL =
+  "text-[13px] font-bold text-[#3D4A63] hover:text-foreground hover:underline";
 
 function SubtotalRow({
   label,
@@ -51,7 +54,7 @@ function SubtotalRow({
         href={href}
         data-testid="cash-bank-subtotal-label"
         data-label={label}
-        className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+        className={SUBTOTAL_LABEL}
       >
         {label}
       </Link>

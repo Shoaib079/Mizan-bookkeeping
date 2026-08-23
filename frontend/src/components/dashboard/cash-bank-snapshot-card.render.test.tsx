@@ -73,6 +73,13 @@ describe("CashBankSnapshotCard", () => {
     );
     expect(screen.getAllByTestId("cash-drawer-row")).toHaveLength(2);
 
+    for (const label of screen.getAllByTestId("cash-bank-subtotal-label")) {
+      expect(label.className).toContain("text-[13px]");
+      expect(label.className).toContain("font-bold");
+      expect(label.className).toContain("text-[#3D4A63]");
+      expect(label.className).not.toContain("text-muted-foreground");
+    }
+
     const columns = screen.getByTestId("cash-bank-columns");
     expect(columns.className).toContain(
       "sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]",
@@ -122,6 +129,20 @@ describe("CashBankSnapshotCard", () => {
     const row = screen.getByTestId("cash-drawer-row");
     expect(row.className).toContain("py-1.5");
     expect(row.className).toContain("gap-3");
+  });
+
+  it("mutation: subtotal label renders muted → red", () => {
+    const src = sourceDeclaring("CashBankSnapshotCard");
+    expect(src).toContain("SUBTOTAL_LABEL");
+    expect(src).toContain("text-[13px]");
+    expect(src).toContain("font-bold");
+    expect(src).toContain("text-[#3D4A63]");
+    expect(src).toMatch(
+      /cash-bank-subtotal-label[\s\S]{0,120}className=\{SUBTOTAL_LABEL\}/,
+    );
+    expect(src).not.toMatch(
+      /cash-bank-subtotal-label[\s\S]{0,160}text-muted-foreground/,
+    );
   });
 
   it("mutation: divider removed → red; restore → green", () => {

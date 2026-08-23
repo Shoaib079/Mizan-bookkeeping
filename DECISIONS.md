@@ -40,11 +40,19 @@
 
 **Why:** Owner disliked grey payables/receivables figures; direction colour + captions match the sticker convention already used on supplier/customer/partner detail.
 
+## 2026-08-24 — Cash & bank: hairline + bold subtotals (shared)
+
+**Choice:** Cash & bank card uses a **shared** vertical hairline (`#E6EAF2`) between Cash drawers and Bank accounts (plus horizontal separator when stacked &lt;sm), and **Cash / Banks** subtotal labels are **13px / weight 700 / `#3D4A63`**. Not a theme fork.
+
+**Why:** Owner asked to align columns and restore the line (`v0.dashboard-cash-bank-align-divider`); review closed the muted-subtotal regression from the parity sweep (owner-approved bold labels).
+
+**Supersedes:** 2026-08-23 “Cash & bank card: column separation + bold subtotals (v2-only)” and the `v0.dashboard-cash-bank-v2-parity` removal of hairline + bold labels.
+
 ## 2026-08-23 — Cash & bank card: column separation + bold subtotals (v2-only) — **SUPERSEDED**
 
-**Superseded 2026-08-23** by `v0.dashboard-cash-bank-v2-parity`: Cash & bank is one shared card on v1 and v2 (two-row total already accepted-live; v2-only hairline + bold Cash/Banks labels removed so shipping New look cannot diverge). Only the dashboard greeting header remains v2-only.
+**Superseded 2026-08-24** by “Cash & bank: hairline + bold subtotals (shared)” (`v0.dashboard-cash-bank-align-divider` + follow-up restore). The vertical hairline is **restored** (shared); Cash/Banks subtotals are **bold dark slate** again (shared). Parity’s “no dividers / muted labels” no longer applies.
 
-**Historical choice (no longer in code):** Under `data-theme="v2"` only, hairline between Cash drawers and Bank accounts and bold Cash / Banks subtotal labels. Live v1 was unchanged at the time.
+**Historical choice:** Under `data-theme="v2"` only, hairline + bold Cash/Banks; then parity made one shared card and dropped both. Live greeting header was still the only v2 dashboard chrome at the time.
 
 
 ## 2026-08-22 — Accepted-live theme chrome + gating rule
