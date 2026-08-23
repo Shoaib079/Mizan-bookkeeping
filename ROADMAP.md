@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none — awaiting review; do not push)* |
-| **Next up**              | Owner review → push; then POST_LAUNCH_PLAN queue |
+| **Active slice**         | *(none)* |
+| **Next up**              | POST_LAUNCH_PLAN queue |
 | **Last completed slice** | **Single page title** (`v0.single-page-title`) |
-| **Last commit/tag**      | `v0.single-page-title` |
+| **Last commit/tag**      | `v0.single-page-title` (pushed) |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.

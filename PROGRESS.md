@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Single page title (`v0.single-page-title`):** AppShell trail breadcrumb-only; no muted title duplicate above H1. **Awaiting owner review — do not push.**
+- **Single page title (`v0.single-page-title`):** AppShell trail breadcrumb-only; no muted title duplicate above H1. **Pushed** with prior awaiting slices.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — awaiting review)* |
+| **Active slice** | *(none)* |
 | **Last completed slice** | Single page title |
 | **Last tag** | `v0.single-page-title` |
-| **Unpushed** | yes — do not push until owner review + sign-off |
-| **Next up** | Owner review → push; then POST_LAUNCH_PLAN queue |
+| **Unpushed** | no |
+| **Next up** | POST_LAUNCH_PLAN queue |
