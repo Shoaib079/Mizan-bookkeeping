@@ -5,11 +5,19 @@ import type { NextConfig } from "next";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(__dirname);
 
+/** Comma-separated host[:port] list from frontend/.env.local (phone sandbox). */
+const sandboxDevOrigins = (process.env.SANDBOX_DEV_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: appRoot,
-  // Allow phone/tablet on LAN to load dev assets (e.g. http://192.168.1.x:3000).
-  allowedDevOrigins: ["192.168.1.125", "192.168.1.125:3000"],
+  // Dev-only: phone/tablet on LAN (set SANDBOX_DEV_ORIGINS in .env.local).
+  ...(sandboxDevOrigins.length > 0
+    ? { allowedDevOrigins: sandboxDevOrigins }
+    : {}),
   // Reduce parallel static generation — avoids ENFILE on macOS with low maxfiles.
   experimental: {
     cpus: 1,

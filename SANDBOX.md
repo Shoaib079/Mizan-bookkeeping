@@ -54,6 +54,7 @@ macOS may block inbound connections the first time. If the phone cannot load the
 ## Notes
 
 - Frontend uses `NEXT_PUBLIC_API_URL=/backend-api` (same-origin proxy to `127.0.0.1:8000`). Prefer http://\<LAN-IP\>:3000 on the phone — not `:8000`.
+- Phone-sandbox LAN origin for Next `allowedDevOrigins` lives in `frontend/.env.local` as `SANDBOX_DEV_ORIGINS` (gitignored), not in `next.config.ts`.
 - If you add `CORS_ORIGINS` for `http://\<LAN-IP\>:3000`, restart uvicorn after editing `backend/.env`.
 
 ## Visual theme
