@@ -127,4 +127,4 @@ Guarding tests: `frontend/src/lib/year-end.test.ts` (`lateNightDateHint` block).
 
 ## Limits of this review
 
-Static analysis + executed pure-logic checks only; the Postgres-backed suite (RLS, immutability triggers, E2E posting) was not re-run here. Findings F1 was verified by running the code; F2–F6 verified by reading the actual posting/report paths. A full re-run of `pytest` locally (and adding it to CI, per PRE_DEPLOY_CHECKLIST) remains the ground truth for regressions.
+Static analysis + executed pure-logic checks only; the Postgres-backed suite (RLS, immutability triggers, E2E posting) was not re-run here. Findings F1 was verified by running the code; F2–F6 verified by reading the actual posting/report paths. A full re-run of `pytest` locally (and CI) remains the ground truth for regressions. One-time cutover notes lived in archived `docs/archive/ops/PRE_DEPLOY_CHECKLIST.md`.

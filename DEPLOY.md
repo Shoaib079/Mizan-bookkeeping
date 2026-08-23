@@ -5,7 +5,8 @@
 > (backend API, `mizan-api`) + Vercel (frontend) + Cloudflare R2 (backups)** — see
 > the authoritative entry in `DECISIONS.md` (2026-07) and archived
 > `docs/archive/ops/PRE_DEPLOY_CHECKLIST.md`.
-> Wherever this doc says "Render (API)" read **Railway**; `render.yaml` is stale.
+> Wherever this doc says "Render (API)" read **Railway**. The old `render.yaml`
+> blueprint was removed (owner-approved cleanup); Railway is the API host.
 > Railway runs `alembic upgrade head` as its pre-deploy command; migrations reach
 > Neon automatically on deploy. **`migrate_production.sh` then runs pending ledger
 > repairs** (void+repost recipes such as `profit_allocation_v3`, idempotent). API
@@ -18,7 +19,7 @@ Plain-English steps to provision and go live with Mizan. **Staging first** — r
 | Layer | Provider | Notes |
 |-------|----------|-------|
 | Frontend | **Vercel** | Next.js 15 in `frontend/` — see `vercel.json` + `next.config.ts` |
-| API + workers | **Render** (or Railway) | FastAPI web + Celery worker + Celery beat — see `render.yaml` |
+| API + workers | **Railway** | FastAPI web + Celery worker + Celery beat — see `backend/Dockerfile` |
 | Postgres | **Neon**, Supabase, or managed Postgres | `DATABASE_URL` + `DATABASE_ADMIN_URL` |
 | Redis | **Upstash** or managed Redis | Celery broker + result backend |
 | Off-site backups | **Cloudflare R2** or S3 | `BACKUP_S3_*` env vars |
@@ -30,7 +31,7 @@ Plain-English steps to provision and go live with Mizan. **Staging first** — r
 
 1. **Staging dry-run first.** Deploy a prod-like **staging** environment and run migrate + verify + smoke there before touching production.
 2. Copy `.env.production.example` into your host secret stores — **never commit real secrets**.
-3. Accounts needed: Vercel, Render (or Railway), managed Postgres, Redis, S3-compatible storage, Clerk.
+3. Accounts needed: Vercel, Railway, managed Postgres, Redis, S3-compatible storage, Clerk.
 
 ---
 
@@ -69,7 +70,7 @@ What this does:
 
 **Staging:** run the same two scripts against your staging database before pointing production traffic.
 
-Render: `render.yaml` runs both scripts as `preDeployCommand` on the API service when env vars are set.
+Railway runs `alembic upgrade head` (and then `migrate_production.sh` repairs) as the API pre-deploy command when env vars are set.
 
 ---
 
@@ -94,18 +95,18 @@ Legacy cron service **Mizan-backups** is **slept** (Celery beat owns nightly). D
 
 ---
 
-## 4. Backend (Render)
+## 4. Backend (Railway)
 
-1. Connect this GitHub repo to Render.
-2. Apply the blueprint from `render.yaml` (or create three services manually from `backend/Dockerfile`):
+1. Connect this GitHub repo to Railway (project hosts API + workers).
+2. Create three services from `backend/Dockerfile` (or the Railway service definitions you already use):
    - **mizan-api** — web service; health check `/health`; readiness `/health/ready`
    - **mizan-celery-worker** — `celery -A app.workers.celery_app worker --loglevel=info`
    - **mizan-celery-beat** — `celery -A app.workers.celery_app beat --loglevel=info`
-3. Attach a **persistent disk** (10 GB+) mounted at `/app/data` on **api** and **worker** (uploads + local backup cache).
-4. Paste env vars from `.env.production.example`. Mark secrets as **sync: false** in Render.
+3. Attach a **persistent volume** for uploads/backups on **api** and **worker** as needed.
+4. Paste env vars from `.env.production.example`. Keep secrets in the Railway dashboard — never commit them.
 5. Set `CORS_ORIGINS` to your Vercel URL(s), comma-separated — **not** the localhost default, e.g.  
    `https://app.example.com,https://mizan.vercel.app`
-6. Deploy **staging** first; note the public API URL (e.g. `https://mizan-api.onrender.com`).
+6. Deploy **staging** first; note the public API URL.
 
 **Production boot guards (fail fast):**
 
@@ -294,7 +295,7 @@ Wire these **before production go-live** so the first real bug is visible.
 
 1. Create a project at [sentry.io](https://sentry.io) (or your Sentry org) — platform **FastAPI**.
 2. Copy the **DSN** from Project Settings → Client Keys.
-3. On Render **mizan-api** → Environment → add `SENTRY_DSN` (secret, sync: false in `render.yaml`).
+3. On Railway **mizan-api** → Variables → add `SENTRY_DSN` (secret).
 4. Redeploy the API. Trigger a test error in staging (optional) and confirm it appears in Sentry.
 5. Enable Sentry **alert rules** (e.g. new issue → email/Slack) for production.
 
@@ -308,7 +309,7 @@ Production (`APP_ENV=production`) emits **JSON logs** on stderr (level, message,
 
 | Layer | Check | Notes |
 |-------|-------|-------|
-| **Render (API)** | `GET /health/ready` | Already configured in `render.yaml` (`healthCheckPath`). Render restarts the service when readiness fails (DB down). |
+| **Railway (API)** | `GET /health/ready` | Configure the Railway health check on `/health/ready`. Railway restarts the service when readiness fails (DB down). |
 | **External uptime** | `GET /health/ready` on your public API URL | Optional but recommended — UptimeRobot, Better Stack, Pingdom, etc. Alert when non-200 or timeout. Interval 1–5 min. |
 | **Vercel (frontend)** | — | Next.js SSR — Vercel handles infrastructure monitoring. |
 
@@ -462,7 +463,7 @@ Steps verified: `POST /entities` (chart + cash drawer) → opening balances vali
 | `frontend/vercel.json` | Vercel framework + build config |
 | `frontend/next.config.ts` | Next.js config: security headers, redirects, cache rules |
 | `backend/Dockerfile` | Production uvicorn image; non-root `app` user; `postgresql-client` |
-| `render.yaml` | Web + Celery worker + beat; pre-deploy migrate + verify |
+| Railway dashboard / service settings | Web + Celery worker + beat; pre-deploy migrate + verify (old `render.yaml` removed) |
 | `.env.production.example` | Full env catalog |
 | `backend/scripts/migrate_production.sh` | `alembic upgrade head` (no drop) + pending ledger repairs |
 | `backend/scripts/verify_production_db.sh` | RLS + trigger integrity check |

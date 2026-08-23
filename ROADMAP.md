@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Dashboard KPI — v2 cash-only + Cash & bank heading** (`v0.dashboard-v2-kpi-cash-only`) |
-| **Last commit/tag**      | `v0.dashboard-v2-kpi-cash-only` |
+| **Active slice**         | *(none — docs archive cleanup awaiting review)* |
+| **Next up**              | Owner review → push; then README_START_HERE refresh slice |
+| **Last completed slice** | **Docs consolidation — archive + delete stale scrap** (`v0.docs-archive-cleanup`) |
+| **Last commit/tag**      | `v0.docs-archive-cleanup` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1588,7 +1588,7 @@ Take the tested app to a real, secure production environment and put real data i
 | 0a. UX refinements (top bar, New-menu trim, tips de-special-case)       | **done** (`v0.70.1-ux-refinements`)                 | Remove Daily sales (+ Add expense) from top bar; remove Cash tip + Card sales batch from New menu; tips = any expense (drop forced 5700, full category picker). Migration `051`.                                                                                                  |
 | 0b. Modern account menu + switch safeguards                             | **done** (`v0.70.2-restaurant-switcher-safeguards`) | Top-right account menu (avatar, name+email, account/settings, **Clerk sign out**); restaurant switch moved here with always-visible per-restaurant colour badge, confirm-on-switch, unsaved-work warning, "Recording for: X" on entry forms. Reduces wrong-restaurant entry risk. |
 | 0c. Member management: add existing user to another restaurant by email | **done** (`v0.70.3-member-add-by-email`)            | `POST /entities/{id}/members` accepts email (+ optional display_name) — reuses existing user or creates one, then membership; friendly 409 when already a member. `member-form.tsx` single POST.                                                                                  |
-| 1. Hosting & infrastructure                                             | **done** (`v0.71.0-hosting-infrastructure`)         | Deployment scaffolding: `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`. Owner provisions Postgres, Redis, backend, Netlify, S3.                                                                                      |
+| 1. Hosting & infrastructure                                             | **done** (`v0.71.0-hosting-infrastructure`)         | Deployment scaffolding: `netlify.toml`, `backend/Dockerfile`, `render.yaml` (since removed), `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`. Owner provisions Postgres, Redis, backend, Netlify, S3.                                                                                      |
 | 2. Production provisioning                                              | **done** (`v0.71.1-prod-provisioning`)              | Migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards                                                                                                                                                                                            |
 | 3. Backups live                                                         | **done** (`v0.71.2-backup-restore-drill`)           | Restore drill scripts, CI pg tools, Celery failure logging, owner runbook                                                                                                                                                                                                         |
 | 4. Observability                                                        | **done** (`v0.71.3-observability`)                  | Sentry (optional DSN), JSON logs, request logging, rate limit, health/uptime docs                                                                                                                                                                                                 |
@@ -1703,7 +1703,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 - [x] `netlify.toml` — monorepo `base=frontend`, Next.js build, security headers, optional API proxy pattern documented
 - [x] `backend/Dockerfile` — production uvicorn image (multi-stage; `postgresql-client` for backups)
-- [x] `render.yaml` — web service (API), Celery worker, Celery beat; env placeholders; health check `/health`; persistent disk for uploads/backups
+- [x] `render.yaml` (since removed) — web service (API), Celery worker, Celery beat; env placeholders; health check `/health`; persistent disk for uploads/backups
 - [x] `CORS_ORIGINS` env in `config.py` + `main.py` — comma-separated origins; default localhost dev; dev still works
 - [x] `.env.production.example` — full env catalog (DB, Redis, Clerk, S3 backup, CORS, `APP_ENV=production`, `IDEMPOTENCY_ENFORCEMENT=true`)
 - [x] `DEPLOY.md` — plain-English owner guide; staging-first note; volume requirement for uploads
@@ -1731,7 +1731,7 @@ Take the tested app to a real, secure production environment and put real data i
 - [x] `verify_production_database()` — RLS on all `RLS_TABLES` + ledger/audit/period-lock immutability triggers
 - [x] `GET /health/ready` — DB ping; 503 when unreachable; `/health` liveness unchanged
 - [x] `scripts/smoke_staging.sh` — curl `/health`, `/health/ready`; manual Clerk checklist
-- [x] `render.yaml` — `preDeployCommand` migrate + verify on API deploy
+- [x] `render.yaml` (since removed) — `preDeployCommand` migrate + verify on API deploy
 - [x] `validate_launch_settings()` — rejects `sk_test_` / `pk_test_` Clerk keys and localhost CORS when `APP_ENV=production`
 - [x] `DEPLOY.md` — full Slice 12.2 staging-first runbook
 - [x] Tests: `test_db_provisioning.py`, `test_health.py`, `test_launch_settings.py`; full pytest green
@@ -1780,7 +1780,7 @@ Take the tested app to a real, secure production environment and put real data i
 
 - [x] Optional `SENTRY_DSN` in `config.py` + `.env.production.example`; `sentry-sdk[fastapi]` init when DSN set; app boots without DSN
 - [x] Production JSON logs on stderr (`APP_ENV=production`); dev/test human-readable; request logging middleware (method, path, status, duration — no bodies/secrets)
-- [x] Render health check on `/health/ready` verified in `render.yaml`; `DEPLOY.md` §12 — Sentry, uptime monitor, Render alerts
+- [x] Render health check on `/health/ready` verified in `render.yaml` (since removed); `DEPLOY.md` §12 — Sentry, uptime monitor, Render alerts
 - [x] In-memory rate limit — 60 req/min per IP in production; skip `/health`, `/health/ready`, `/docs`; 429 with clear message; multi-instance limitation documented
 - [x] Tests: `test_observability.py` (Sentry init, JSON formatter, rate limit 429, health skip); full pytest green
 
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Docs archive cleanup                            | `v0.docs-archive-cleanup`                              | Historical plans → docs/archive + INDEX; delete render.yaml + pytest-out; living pointers fixed; money/CORE untouched |
 | 2026-08-23 | Dashboard KPI v2 cash-only + heading ink        | `v0.dashboard-v2-kpi-cash-only`                        | v2 drops This period; Cash & bank title font-medium ink both themes; mutation v2/v1 branch → red |
 | 2026-08-23 | Balances stickers — direction figures (live)    | `v0.balances-direction-figures`                        | Absolute figures; green/red/muted/ink by direction; caption flips; mutation minus or gray non-zero → red |
 | 2026-08-23 | Cash & bank — column sep + bold subtotals (v2)  | `v0.dashboard-cash-bank-column-sep`                    | v2-only hairline between drawers/banks + Cash/Banks 13px/700/#3D4A63; v1 untouched; mutation divider/muted → red |
@@ -2086,7 +2087,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 | 2026-06-27 | Phase 12 Slice 12.4 — observability             | `v0.71.3-observability`                                | Sentry optional DSN, JSON logs, request logging, rate limit middleware, DEPLOY §12; 611 pytest                                                                                                                                                                |
 | 2026-06-27 | Phase 12 Slice 12.3 — backup restore drill      | `v0.71.2-backup-restore-drill`                         | verify/drill scripts, CI postgresql-client, Celery failure logs, DEPLOY/OPS runbook; 605 pytest                                                                                                                                                               |
 | 2026-06-27 | Phase 12 Slice 12.2 — production provisioning   | `v0.71.1-prod-provisioning`                            | migrate/verify scripts, `/health/ready`, smoke script, Render preDeploy, launch guards, DEPLOY runbook; 605 pytest                                                                                                                                            |
-| 2026-06-27 | Phase 12 Slice 12.1 — hosting & infrastructure  | `v0.71.0-hosting-infrastructure`                       | `netlify.toml`, `backend/Dockerfile`, `render.yaml`, `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`; 596 pytest                                                                                                                                       |
+| 2026-06-27 | Phase 12 Slice 12.1 — hosting & infrastructure  | `v0.71.0-hosting-infrastructure`                       | `netlify.toml`, `backend/Dockerfile`, `render.yaml` (since removed), `CORS_ORIGINS`, `.env.production.example`, `DEPLOY.md`; 596 pytest                                                                                                                                       |
 | 2026-06-27 | Phase 12 Slice 0c — member add-by-email         | `v0.70.3-member-add-by-email`                          | Email-based member invite; reuse existing user across restaurants; 592 pytest                                                                                                                                                                                 |
 | 2026-06-25 | Alembic migration grants fix                    | `v0.67.2-alembic-migration-grants`                     | `alembic upgrade head` uses schema owner; auto-grant `mizan_app`; 547 pytest                                                                                                                                                                                  |
 | 2026-06-25 | Phase 11 Slice 11.1 — default cash drawer       | `v0.68.0-default-money-accounts`                       | `ensure_default_cash_drawer` on chart seed; Banking hint; OB default drawer; 549 pytest                                                                                                                                                                       |

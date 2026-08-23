@@ -337,7 +337,7 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 - **Frontend:** **Vercel** (Next.js). Netlify → Render → Vercel; only Vercel is current.
 - **Auth:** Clerk. **Backups:** Cloudflare R2 (nightly `pg_dump`).
 
-**History:** Backend was briefly targeted at Render (`render.yaml`, the "Render API" language in DEPLOY.md / archived `docs/archive/ops/GO_LIVE_RUNBOOK.md` / older DECISIONS entries) — that is **stale**. `render.yaml` is a leftover and is NOT the deploy path. The frontend moved off Render to Vercel when Render credits ran out. Wherever any doc says "Render (API)" or "Render pre-deploy," read **Railway**.
+**History:** Backend was briefly targeted at Render (old `render.yaml` blueprint, the "Render API" language in DEPLOY.md / archived `docs/archive/ops/GO_LIVE_RUNBOOK.md` / older DECISIONS entries) — that is **stale**. `render.yaml` was **removed** (owner-approved docs cleanup); it is NOT the deploy path. The frontend moved off Render to Vercel when Render credits ran out. Wherever any doc says "Render (API)" or "Render pre-deploy," read **Railway**.
 
 **Prod status (2026-07):** Neon at migration `072` (head) — backend fully current. Take a fresh R2 backup before any future in-place data migration (e.g. the 071 enum-normalize pattern that rewrites `accounts` + `journal_entry_lines`).
 
@@ -405,7 +405,7 @@ A void's **reversal** is a separate entry that also lands in the month, so it ap
 
 ## 2026-06-27 — Production hosting stack (Phase 12 Slice 12.1)
 
-**Choice:** Split hosting by layer — **Netlify** for Next.js frontend (`netlify.toml`, monorepo `base=frontend`); **Render** for FastAPI web + Celery worker + Celery beat (`render.yaml`, `backend/Dockerfile`). Managed **Postgres** (Neon/Supabase) and **Upstash Redis** via env URLs. **S3-compatible** storage (R2/S3) for off-site backup bundles only; **uploads stay on persistent disk** mounted at `/app/data/uploads` on the API host (no cheap Netlify Blobs adapter for runtime uploads).
+**Choice:** Split hosting by layer — **Netlify** for Next.js frontend (`netlify.toml`, monorepo `base=frontend`); **Render** for FastAPI web + Celery worker + Celery beat (`render.yaml` then; **file since removed** — API is Railway, `backend/Dockerfile`). Managed **Postgres** (Neon/Supabase) and **Upstash Redis** via env URLs. **S3-compatible** storage (R2/S3) for off-site backup bundles only; **uploads stay on persistent disk** mounted at `/app/data/uploads` on the API host (no cheap Netlify Blobs adapter for runtime uploads).
 
 **CORS:** `CORS_ORIGINS` comma-separated env replaces hardcoded localhost in `main.py` — required for browser calls from Netlify to Render.
 
