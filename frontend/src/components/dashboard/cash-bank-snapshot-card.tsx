@@ -79,6 +79,9 @@ export function CashBankSnapshotCard({
     MoneyAccountTree["banks"]["accounts"]
   >([]);
 
+  // `theme` comes from shared subscribeVisualTheme (not local-only hook state),
+  // so New look toggle re-runs this and refreshes v2 chrome without remount.
+  // closest() also covers preview/test wrappers with local data-theme.
   useLayoutEffect(() => {
     setV2(Boolean(rootRef.current?.closest(`[data-theme="${THEME_V2_ATTR}"]`)));
   }, [theme]);

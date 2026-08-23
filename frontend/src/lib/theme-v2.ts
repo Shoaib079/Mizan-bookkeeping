@@ -89,11 +89,27 @@ export function writeStoredVisualTheme(theme: AppVisualTheme): void {
 }
 
 /** Apply or clear `data-theme="v2"` on `<html>`. */
+type VisualThemeListener = (theme: AppVisualTheme) => void;
+const visualThemeListeners = new Set<VisualThemeListener>();
+
+/** Subscribe to theme changes applied via `applyVisualTheme` (shared across hooks). */
+export function subscribeVisualTheme(
+  listener: VisualThemeListener,
+): () => void {
+  visualThemeListeners.add(listener);
+  return () => {
+    visualThemeListeners.delete(listener);
+  };
+}
+
 export function applyVisualTheme(theme: AppVisualTheme): void {
   if (typeof document === "undefined") return;
   if (theme === "v2") {
     document.documentElement.setAttribute("data-theme", THEME_V2_ATTR);
   } else {
     document.documentElement.removeAttribute("data-theme");
+  }
+  for (const listener of visualThemeListeners) {
+    listener(theme);
   }
 }

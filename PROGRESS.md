@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Docs consolidation (`v0.docs-archive-cleanup`):** historical docs under `docs/archive/`; deleted `render.yaml` + `pytest-out.txt`. **Awaiting owner review — do not push.** Next slice after push: full README_START_HERE refresh.
+- **Dashboard v2 header (`v0.dashboard-v2-header`):** greeting + restaurant chip left, ReportDateRange right under New look; v1 unchanged. Includes shared `subscribeVisualTheme` so theme toggle updates consumers. **Awaiting owner review — do not push.** Docs archive (`v0.docs-archive-cleanup`) still unpushed ahead of origin too.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — docs archive awaiting review)* |
-| **Last completed slice** | Docs consolidation — archive + delete stale scrap |
-| **Last tag** | `v0.docs-archive-cleanup` |
+| **Active slice** | *(none — awaiting review)* |
+| **Last completed slice** | Dashboard v2 header — greeting + chip + date range |
+| **Last tag** | `v0.dashboard-v2-header` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push; then README_START_HERE refresh |

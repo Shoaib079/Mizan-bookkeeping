@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { BalancesOverview } from "@/components/balances/balances-overview";
 import { CashBankSnapshotCard } from "@/components/dashboard/cash-bank-snapshot-card";
+import { DashboardV2Header } from "@/components/dashboard/dashboard-v2-header";
 
 import {
   WeeklyChart,
@@ -30,6 +31,7 @@ import {
 } from "@/components/page/overview-page";
 import { StatCard } from "@/components/page/stat-card";
 import { Button } from "@/components/ui/button";
+import { ThemeV2Only } from "@/components/ui/theme-v2-gate";
 import { useQuickActions } from "@/components/quick-actions";
 
 export default function HomePage() {
@@ -48,6 +50,7 @@ function DashboardBody() {
     entitiesLoaded,
     entitiesError,
     refreshEntities,
+    userProfile,
   } = useEntity();
   const { theme, mounted: themeMounted } = useNewLookTheme();
   const v2Dashboard = themeMounted && theme === "v2";
@@ -60,6 +63,15 @@ function DashboardBody() {
     useState<WeeklyChartStatus>("loading");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeRestaurant = entities.find((e) => e.id === entityId);
+  const periodControl = (
+    <ReportDateRange
+      from={range.from}
+      to={range.to}
+      disabled={!entityId || loading}
+      onChange={(from, to) => setRange({ from, to })}
+    />
+  );
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -121,6 +133,18 @@ function DashboardBody() {
       title="Dashboard"
       loading={loading}
       error={error}
+      replaceHeader={
+        v2Dashboard ? (
+          <ThemeV2Only>
+            <DashboardV2Header
+              displayName={userProfile?.display_name}
+              restaurantId={entityId}
+              restaurantName={activeRestaurant?.name}
+              periodControl={periodControl}
+            />
+          </ThemeV2Only>
+        ) : undefined
+      }
       banner={
         <>
           <OnboardingChecklist />
@@ -152,14 +176,7 @@ function DashboardBody() {
           )}
         </>
       }
-      periodControl={
-        <ReportDateRange
-          from={range.from}
-          to={range.to}
-          disabled={!entityId || loading}
-          onChange={(from, to) => setRange({ from, to })}
-        />
-      }
+      periodControl={v2Dashboard ? undefined : periodControl}
       stats={
         data && (
           <div

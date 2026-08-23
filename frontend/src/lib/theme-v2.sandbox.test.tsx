@@ -14,6 +14,7 @@ import {
   envDefaultTheme,
   isThemeToggleEnabled,
   resolveVisualThemeFrom,
+  subscribeVisualTheme,
   THEME_V2_ATTR,
 } from "@/lib/theme-v2";
 
@@ -79,6 +80,18 @@ describe("env default theme helpers", () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe(THEME_V2_ATTR);
     applyVisualTheme("v1");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("applyVisualTheme notifies subscribeVisualTheme listeners", () => {
+    const seen: string[] = [];
+    const unsub = subscribeVisualTheme((t) => {
+      seen.push(t);
+    });
+    applyVisualTheme("v2");
+    applyVisualTheme("v1");
+    unsub();
+    applyVisualTheme("v2");
+    expect(seen).toEqual(["v2", "v1"]);
   });
 });
 

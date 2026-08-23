@@ -9,7 +9,11 @@
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
-import { THEME_V2_ATTR, THEME_V2_ONLY_ATTR } from "@/lib/theme-v2";
+import {
+  subscribeVisualTheme,
+  THEME_V2_ATTR,
+  THEME_V2_ONLY_ATTR,
+} from "@/lib/theme-v2";
 
 function isInsideThemeV2(node: Element | null): boolean {
   return Boolean(node?.closest(`[data-theme="${THEME_V2_ATTR}"]`));
@@ -21,7 +25,9 @@ export function ThemeV2OnlyMarker() {
   const [active, setActive] = useState(false);
 
   useLayoutEffect(() => {
-    setActive(isInsideThemeV2(ref.current));
+    const sync = () => setActive(isInsideThemeV2(ref.current));
+    sync();
+    return subscribeVisualTheme(sync);
   }, []);
 
   return (
@@ -40,7 +46,9 @@ export function ThemeV2Only({ children }: { children: ReactNode }) {
   const [active, setActive] = useState(false);
 
   useLayoutEffect(() => {
-    setActive(isInsideThemeV2(ref.current));
+    const sync = () => setActive(isInsideThemeV2(ref.current));
+    sync();
+    return subscribeVisualTheme(sync);
   }, []);
 
   return (

@@ -9,6 +9,7 @@ import {
   envDefaultTheme,
   isThemeToggleEnabled,
   resolveVisualTheme,
+  subscribeVisualTheme,
   writeStoredVisualTheme,
   type AppVisualTheme,
 } from "@/lib/theme-v2";
@@ -25,6 +26,9 @@ export function useNewLookTheme() {
     setThemeState(next);
     applyVisualTheme(next);
     setMounted(true);
+    // Shared bus: New look toggle lives in another hook instance; without this,
+    // siblings keep stale theme until remount (Cash & bank dividers / KPI layout).
+    return subscribeVisualTheme(setThemeState);
   }, []);
 
   const setTheme = useCallback((next: AppVisualTheme) => {

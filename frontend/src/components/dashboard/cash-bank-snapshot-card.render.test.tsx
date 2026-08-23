@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CashBankSnapshotCard } from "@/components/dashboard/cash-bank-snapshot-card";
-import { THEME_V2_ATTR } from "@/lib/theme-v2";
+import { applyVisualTheme, THEME_V2_ATTR } from "@/lib/theme-v2";
 import { sourceDeclaring } from "@/test-support/source";
 
 vi.mock("@/lib/api", () => ({
@@ -33,7 +33,10 @@ vi.mock("@/lib/entity-context", () => ({
   useEntity: () => ({ entityId: "ent-1", actorId: "act-1" }),
 }));
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  document.documentElement.removeAttribute("data-theme");
+});
 
 function renderCard(
   ui: React.ReactElement,
@@ -178,6 +181,39 @@ describe("CashBankSnapshotCard", () => {
         expect(label.className).toContain("text-[13px]");
         expect(label.className).toContain("text-[#3D4A63]");
         expect(label.className).not.toContain("text-muted-foreground");
+      }
+    });
+  });
+
+  it("live New look: applyVisualTheme updates dividers/labels without remount", async () => {
+    // Regression: useNewLookTheme was local state; toggle updated html but not this card.
+    renderCard(
+      <CashBankSnapshotCard cashKurus={10_000} bankKurus={20_000} />,
+    );
+
+    expect(screen.queryByTestId("cash-bank-column-divider")).toBeNull();
+    expect(
+      screen.getAllByTestId("cash-bank-subtotal-label")[0]?.className,
+    ).toContain("text-muted-foreground");
+
+    applyVisualTheme("v2");
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cash-bank-column-divider")).toBeTruthy();
+      for (const label of screen.getAllByTestId("cash-bank-subtotal-label")) {
+        expect(label.className).toContain("font-bold");
+        expect(label.className).toContain("text-[#3D4A63]");
+        expect(label.className).not.toContain("text-muted-foreground");
+      }
+    });
+
+    applyVisualTheme("v1");
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("cash-bank-column-divider")).toBeNull();
+      for (const label of screen.getAllByTestId("cash-bank-subtotal-label")) {
+        expect(label.className).toContain("text-muted-foreground");
+        expect(label.className).not.toContain("font-bold");
       }
     });
   });

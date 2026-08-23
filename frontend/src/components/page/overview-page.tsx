@@ -23,6 +23,8 @@ type Props = {
   actions?: React.ReactNode;
   overflowActions?: OverflowMenuItem[];
 
+  /** When set, replaces the default PageHeader (v2 dashboard greeting chrome). */
+  replaceHeader?: React.ReactNode;
   /** Anything above the figures — onboarding checklist, entity prompts. */
   banner?: React.ReactNode;
   /** Date range picker. Sits alone so it reads as the page's control. */
@@ -43,6 +45,7 @@ export function OverviewPage({
   primaryAction,
   actions,
   overflowActions,
+  replaceHeader,
   banner,
   periodControl,
   stats,
@@ -55,13 +58,15 @@ export function OverviewPage({
 
   return (
     <div className={className}>
-      <PageHeader
-        title={title}
-        meta={meta}
-        primaryAction={primaryAction}
-        actions={actions}
-        overflowActions={overflowActions}
-      />
+      {replaceHeader ?? (
+        <PageHeader
+          title={title}
+          meta={meta}
+          primaryAction={primaryAction}
+          actions={actions}
+          overflowActions={overflowActions}
+        />
+      )}
 
       {banner}
 
