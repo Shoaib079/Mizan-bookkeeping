@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none — awaiting review; do not push)* |
 | **Next up**              | Owner review → push; then POST_LAUNCH_PLAN queue |
-| **Last completed slice** | **Dashboard Apply + Total balance + mobile period chip** (`v0.dashboard-apply-total-mobile-range`) |
-| **Last commit/tag**      | `v0.dashboard-apply-total-mobile-range` |
+| **Last completed slice** | **Single page title** (`v0.single-page-title`) |
+| **Last commit/tag**      | `v0.single-page-title` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1931,6 +1931,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Single page title                               | `v0.single-page-title`                                 | AppShell trail breadcrumb-only; no muted title above H1; accepted-live both themes |
 | 2026-08-23 | Dashboard Apply + Total + mobile period         | `v0.dashboard-apply-total-mobile-range`                | Root-cause Apply (v2 as-of-only KPI); restore This period both themes; Total balance two-row; mobile period chip; accepted-live |
 | 2026-08-23 | README_START_HERE refresh                       | `v0.readme-start-here-refresh`                         | Nine-section entry map after docs archive; verified links; map-only |
 | 2026-08-23 | Vitest stale-assertion triage                   | `v0.vitest-stale-assertion-triage`                     | Update 4 stale guards (theme symbolic reads, FX Note label, sticker minus regex, partner enriched salary desc); full vitest green; no app behavior change |

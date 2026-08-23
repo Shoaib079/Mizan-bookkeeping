@@ -1,3 +1,11 @@
+## 2026-08-23 — Single page title: no muted duplicate above H1 (accepted-live)
+
+**Choice:** Desktop shell no longer prints the page title as a muted trail above `PageHeader`'s bold H1. The trail is **breadcrumb only** (section context when it exists); when there is no crumb, nothing appears above the H1. `PageHeader` stays one H1 with no eyebrow slot. Applies to **both** themes. Mobile top bar (title + restaurant subtitle on dashboard) and v2 dashboard greeting header are unchanged.
+
+**Why:** Owner saw “Dashboard / Dashboard” (muted + bold) and the same duplication on Record and other pages — one bold title is enough.
+
+**Accepted-live:** production v1 and sandbox v2.
+
 ## 2026-08-23 — Dashboard Apply visibility + Cash & bank total + mobile period chip (accepted-live)
 
 **Choice:** On **both** themes (v1 and New look): (1) home KPI row is again **This period + Cash & bank** side by side (`period-and-cash`) — reversing `v0.dashboard-v2-kpi-cash-only` so Apply on a new range visibly updates period figures; (2) Cash & bank **Total balance** is its own two rows (13px semibold label + muted “as of today”; 20px / weight 800 figure full width, never truncated inline); (3) mobile (&lt;sm) date control is one chip (`DD.MM.YYYY – DD.MM.YYYY`) opening the existing period sheet (From/To/Apply + This month); desktop (≥sm) keeps the full fields. Display/UX only — no posting or API shape change.

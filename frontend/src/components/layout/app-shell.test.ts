@@ -12,6 +12,27 @@ describe("AppShell entity-switch reset", () => {
   });
 });
 
+describe("AppShell page trail — never duplicates the H1", () => {
+  it("trail is breadcrumb only; does not append title beside PageHeader", () => {
+    const src = source();
+    expect(src).toContain("const trail = breadcrumb");
+    expect(src).toContain('data-testid="page-shell-trail"');
+    expect(src).not.toContain(
+      "const trail = [breadcrumb, title].filter(Boolean).join",
+    );
+  });
+
+  it("mutation: trail appends title again → red", () => {
+    const src = source();
+    expect(src).not.toMatch(
+      /trail\s*=\s*\[breadcrumb,\s*title\]/,
+    );
+    expect(src).not.toMatch(
+      /\[breadcrumb,\s*title\]\.filter\(Boolean\)\.join/,
+    );
+  });
+});
+
 describe("AppShell mobile shell (C4)", () => {
   it("renders MobileTopBar and MobileBottomTabs when isMobile", () => {
     expect(source()).toContain("MobileTopBar");

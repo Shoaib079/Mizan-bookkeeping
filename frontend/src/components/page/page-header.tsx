@@ -53,6 +53,7 @@ export function PageHeader({
 
   return (
     <header
+      data-testid="page-header"
       className={cn(
         "mb-5 border-b border-border pb-4",
         className,
@@ -60,8 +61,11 @@ export function PageHeader({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
+          {/* One bold title only — no muted eyebrow above the H1 (accepted-live). */}
           <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-xl font-semibold">{title}</h1>
+            <h1 data-testid="page-header-title" className="truncate text-xl font-semibold">
+              {title}
+            </h1>
             {titleAction}
           </div>
           {meta && (

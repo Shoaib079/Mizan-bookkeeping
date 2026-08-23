@@ -104,11 +104,10 @@ function AppShellInner({
       ? "Dashboard"
       : title;
 
-  // Every page carries its own PageHeader now (slice 7), so the shell no
-  // longer draws a heading — it contributes the trail that leads to one. The
-  // handshake that used to negotiate this (page-title-slot.tsx) is gone with
-  // it: there is nothing left to negotiate.
-  const trail = [breadcrumb, title].filter(Boolean).join(" / ");
+  // Every page carries its own PageHeader (bold H1). The shell may show a
+  // section crumb *above* that title — never the title again. Appending
+  // `title` here used to print "Dashboard" twice (muted trail + H1).
+  const trail = breadcrumb;
 
   const mainChrome = (
     <>
@@ -116,9 +115,14 @@ function AppShellInner({
         <NavHistoryTracker />
       </Suspense>
       {!isMobile && <PageBackLink />}
-      {!isMobile && !hideTrail && trail && (
-        <p className="mb-1 text-xs text-muted-foreground">{trail}</p>
-      )}
+      {!isMobile && !hideTrail && trail ? (
+        <p
+          data-testid="page-shell-trail"
+          className="mb-1 text-xs text-muted-foreground"
+        >
+          {trail}
+        </p>
+      ) : null}
       <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
         <TransactionPeekProvider>{children}</TransactionPeekProvider>
       </ReviewCountsProvider>
