@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Dashboard v2 header final (`v0.dashboard-v2-header-final`):** Greeting left + today's date right (same line); restaurant name/dot removed; desktop range beside date; mobile chip below. **Awaiting owner review — do not push.**
+- **Dashboard Cash & bank v2 parity (`v0.dashboard-cash-bank-v2-parity`):** Shared card both themes; v2-only divider/bold labels removed. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Dashboard v2 header final |
-| **Last tag** | `v0.dashboard-v2-header-final` |
+| **Last completed slice** | Dashboard Cash & bank v2 parity |
+| **Last tag** | `v0.dashboard-cash-bank-v2-parity` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |

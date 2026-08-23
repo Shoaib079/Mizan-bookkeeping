@@ -20,13 +20,12 @@
 
 **Why:** Owner disliked grey payables/receivables figures; direction colour + captions match the sticker convention already used on supplier/customer/partner detail.
 
-## 2026-08-23 — Cash & bank card: column separation + bold subtotals (v2-only)
+## 2026-08-23 — Cash & bank card: column separation + bold subtotals (v2-only) — **SUPERSEDED**
 
-**Choice:** Under `data-theme="v2"` only, the Cash & bank snapshot adds a hairline between Cash drawers and Bank accounts (`#E6EAF2`; vertical ≥sm with ≥24px gap; horizontal when stacked) and renders the Cash / Banks subtotal labels at 13px / weight 700 / `#3D4A63`. Live v1 card is unchanged.
+**Superseded 2026-08-23** by `v0.dashboard-cash-bank-v2-parity`: Cash & bank is one shared card on v1 and v2 (two-row total already accepted-live; v2-only hairline + bold Cash/Banks labels removed so shipping New look cannot diverge). Only the dashboard greeting header remains v2-only.
 
-**Why:** Owner asked for clearer column separation and bolder Cash/Banks labels on the screenshot card, and gated the polish as New look only (“nothing in live”).
+**Historical choice (no longer in code):** Under `data-theme="v2"` only, hairline between Cash drawers and Bank accounts and bold Cash / Banks subtotal labels. Live v1 was unchanged at the time.
 
-**Not accepted-live:** contrary to an early draft of the slice brief that said both themes; owner override keeps production v1 as-is until a later acceptance.
 
 ## 2026-08-22 — Accepted-live theme chrome + gating rule
 

@@ -106,7 +106,7 @@ describe("with data-theme=v2 wrapper — accepted + gated chrome", () => {
     });
   });
 
-  it("HubTileCard / sticker / snapshot under v2 show v2-only marker", async () => {
+  it("HubTileCard / sticker / snapshot under v2 show ThemeV2OnlyMarker (meaning-card chrome)", async () => {
     const { container } = render(
       <div data-theme={THEME_V2_ATTR}>
         <HubTileCard
@@ -123,10 +123,16 @@ describe("with data-theme=v2 wrapper — accepted + gated chrome", () => {
     );
     expectAcceptedChrome(container);
     await waitFor(() => {
+      // MeaningCardAccentBar gates ThemeV2OnlyMarker on each meaning card —
+      // not a Cash & bank layout fork.
       expect(
         container.querySelectorAll(`[${THEME_V2_ONLY_ATTR}]`).length,
       ).toBeGreaterThanOrEqual(3);
     });
+    // Layout parity: no v2-only column dividers on the shared snapshot.
+    expect(
+      container.querySelector('[data-testid="cash-bank-column-divider"]'),
+    ).toBeNull();
   });
 });
 
