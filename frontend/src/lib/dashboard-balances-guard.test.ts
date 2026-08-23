@@ -17,16 +17,16 @@ describe("balances on dashboard", () => {
     expect(page).toContain("CashBankSnapshotCard");
     expect(page).toContain("dashboard-kpi-row");
     expect(page).toContain("useNewLookTheme");
-    expect(page).toContain("v2-cash-bank-only");
-    expect(page).toContain("v1-period-and-cash");
-    // v1 keeps This period; v2 drops it (cash & bank only).
+    expect(page).toContain('data-layout="period-and-cash"');
+    // Both themes: This period + Cash & bank (accepted-live; reverses cash-only KPI).
     expect(page).toContain('label="This period"');
-    expect(page).toContain("v2Dashboard ? (");
     expect(page).toContain("cash_in_hand_kurus");
     expect(page).toContain("bank_balance_kurus");
     expect(page).toContain("cash_accounts");
     expect(snapshot).toContain("Cash & bank");
-    expect(snapshot).toContain("Total cash & bank");
+    expect(snapshot).toContain("Total balance");
+    expect(snapshot).toContain("as of today");
+    expect(snapshot).toContain("cash-bank-total-figure");
     expect(snapshot).toContain("Cash drawers");
     expect(snapshot).toContain("Bank accounts");
     expect(snapshot).toContain("sm:grid-cols-2");
@@ -39,12 +39,12 @@ describe("balances on dashboard", () => {
     expect(overview).not.toContain('title="Bank"');
   });
 
-  it("mutation: v2 still shows This period or v1 drops cash-only branch → red", () => {
+  it("mutation: drop This period or restore cash-only KPI layout → red", () => {
     const page = sourceDeclaring("HomePage");
-    expect(page).toContain("v2-cash-bank-only");
-    expect(page).toMatch(/v2Dashboard\s*\?\s*\([\s\S]*?CashBankSnapshotCard/);
+    expect(page).toContain('data-layout="period-and-cash"');
     expect(page).toContain('label="This period"');
-    // Equal-width 5-col cash-left layout must not be the only path.
+    expect(page).toContain("lg:grid-cols-2");
+    expect(page).not.toContain("v2-cash-bank-only");
     expect(page).not.toContain("lg:grid-cols-5");
   });
 

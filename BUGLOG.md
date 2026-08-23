@@ -2,6 +2,16 @@
 
 Bugs: symptom, root cause, fix, guarding test (see CURSOR_RULES.md §8).
 
+## 2026-08-23 — Dashboard Apply looked like it did nothing
+
+**Symptom:** Owner changed the dashboard date range and pressed Apply; nothing on the main KPI area appeared to change (especially under New look).
+
+**Root cause:** Apply was wired correctly (`ReportDateRange` → `setRange` → `reload` → `GET .../dashboard?from=&to=` keyed on `range.from`/`range.to`). Two display facts stacked into “nothing happened”: (1) under `v0.dashboard-v2-kpi-cash-only`, New look showed only **Cash & bank** (as-of balances), so a successful refetch could not change the visible headline figures; (2) **Cash & bank** and **Right now** correctly ignore the period — only **This period** (and the weekly chart) are range-scoped. Owner was watching as-of cards while the period card was absent on v2.
+
+**Fix:** Restore **This period + Cash & bank** on both themes (`data-layout="period-and-cash"`). Cash & bank total becomes a full-width two-row block (label + figure) with an “as of today” hint so as-of vs period is obvious. Mobile (&lt;sm) uses the existing period chip/sheet instead of stacked From/To/Apply.
+
+**Guarding tests:** `page.dashboard-range.render.test.tsx` (Apply → new from/to fetch + This period figure updates); `report-date-range.render.test.tsx` (mobile chip / desktop fields + mutation); `cash-bank-snapshot-card.render.test.tsx` (two-row total, no truncate; mutation inline truncated total → red); `dashboard-balances-guard.test.ts` (period-and-cash both themes; cash-only layout → red).
+
 ## 2026-08-22 — Live showed unapproved v2 chrome (left bars + icon squares)
 
 **Symptom:** After `v0.v2-meaning-bars-everywhere` was pushed, production showed the new meaning-card look (muted left accent bars, tinted Lucide icon squares) even though the standing rule was “production stays v1 until approval” and production was not supposed to have theme env.

@@ -1,3 +1,11 @@
+## 2026-08-23 — Dashboard Apply visibility + Cash & bank total + mobile period chip (accepted-live)
+
+**Choice:** On **both** themes (v1 and New look): (1) home KPI row is again **This period + Cash & bank** side by side (`period-and-cash`) — reversing `v0.dashboard-v2-kpi-cash-only` so Apply on a new range visibly updates period figures; (2) Cash & bank **Total balance** is its own two rows (13px semibold label + muted “as of today”; 20px / weight 800 figure full width, never truncated inline); (3) mobile (&lt;sm) date control is one chip (`DD.MM.YYYY – DD.MM.YYYY`) opening the existing period sheet (From/To/Apply + This month); desktop (≥sm) keeps the full fields. Display/UX only — no posting or API shape change.
+
+**Why:** Owner: Apply felt broken; total truncated on the title row; mobile From/To/Apply stacked too tall. Root cause of the Apply complaint was as-of-only KPI under v2, not a dead handler (see BUGLOG 2026-08-23).
+
+**Accepted-live:** applies to production v1 and sandbox v2 together.
+
 ## 2026-08-23 — Balances stickers: direction-colored absolute figures (accepted-live)
 
 **Choice:** Dashboard / Balances hub stickers colour the **figure** by direction on **both** themes: you-owe `#16A34A`, they-owe `#DC2626`, zero/settled muted + caption **Nothing outstanding**, FX/neutral ink `#0B1526`. Amounts render as **absolute values** (never a minus). Payables/receivables captions flip with direction (e.g. negative payables → “Net advances — suppliers owe you”). Bars and icon chips unchanged.

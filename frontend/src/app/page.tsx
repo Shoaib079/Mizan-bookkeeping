@@ -181,46 +181,36 @@ function DashboardBody() {
         data && (
           <div
             data-testid="dashboard-kpi-row"
-            data-layout={v2Dashboard ? "v2-cash-bank-only" : "v1-period-and-cash"}
-            className={
-              v2Dashboard ? "grid gap-4" : "grid gap-4 lg:grid-cols-2"
-            }
+            data-layout="period-and-cash"
+            className="grid gap-4 lg:grid-cols-2"
           >
             {canReadFinancialReports ? (
-              v2Dashboard ? (
+              <>
+                <StatCard
+                  href="/reports"
+                  icon={TrendingUp}
+                  label="This period"
+                  caption="Net result"
+                  amountKurus={data.net_result_kurus}
+                  tone={data.net_result_kurus >= 0 ? "good" : "bad"}
+                  lines={[
+                    {
+                      label: "Sales",
+                      amountKurus: data.sales.total_sales_kurus,
+                    },
+                    {
+                      label: "Expenses",
+                      amountKurus: data.total_expenses_kurus,
+                      tone: "bad",
+                    },
+                  ]}
+                />
                 <CashBankSnapshotCard
                   cashKurus={data.cash_in_hand_kurus}
                   bankKurus={data.bank_balance_kurus}
                   cashAccounts={data.cash_accounts}
                 />
-              ) : (
-                <>
-                  <StatCard
-                    href="/reports"
-                    icon={TrendingUp}
-                    label="This period"
-                    caption="Net result"
-                    amountKurus={data.net_result_kurus}
-                    tone={data.net_result_kurus >= 0 ? "good" : "bad"}
-                    lines={[
-                      {
-                        label: "Sales",
-                        amountKurus: data.sales.total_sales_kurus,
-                      },
-                      {
-                        label: "Expenses",
-                        amountKurus: data.total_expenses_kurus,
-                        tone: "bad",
-                      },
-                    ]}
-                  />
-                  <CashBankSnapshotCard
-                    cashKurus={data.cash_in_hand_kurus}
-                    bankKurus={data.bank_balance_kurus}
-                    cashAccounts={data.cash_accounts}
-                  />
-                </>
-              )
+              </>
             ) : (
               <>
                 <StatCard
@@ -243,9 +233,7 @@ function DashboardBody() {
             <OverviewSection
               title="Right now"
               hint={
-                v2Dashboard
-                  ? "Payables, receivables, FX, staff, and partners — open a card for detail. Cash and bank are above."
-                  : "Payables, receivables, FX, staff, and partners — open a card for detail. Cash and bank are above beside This period."
+                "Payables, receivables, FX, staff, and partners — open a card for detail. Cash and bank are above beside This period."
               }
             >
               <BalancesOverview embedded />

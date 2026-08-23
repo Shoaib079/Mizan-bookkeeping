@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DateInput } from "@/components/ui/date-input";
+import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
 import { formatTrDate, parseTrDate } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 type Props = {
   from: string;
@@ -23,7 +25,8 @@ type Props = {
   allowFuture?: boolean;
 };
 
-export function ReportDateRange({
+/** From / To / Apply / This month — the form body (desktop, or inside a sheet). */
+export function ReportDateRangeFields({
   from,
   to,
   onChange,
@@ -56,7 +59,10 @@ export function ReportDateRange({
   };
 
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-3 sm:gap-y-4">
+    <div
+      data-testid="report-date-range-fields"
+      className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-3 sm:gap-y-4"
+    >
       <div className="min-w-0 flex-1 sm:flex-none">
         <Label htmlFor="report-from">From</Label>
         <DateInput
@@ -105,6 +111,68 @@ export function ReportDateRange({
         >
           This month
         </Button>
+      </div>
+    </div>
+  );
+}
+
+/** Chip that opens a sheet with From/To/Apply (mobile period picker). */
+export function ReportPeriodTrigger({
+  from,
+  to,
+  disabled,
+  onChange,
+  className,
+  allowFuture,
+}: Props & { className?: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="report-period-chip"
+        disabled={disabled}
+        className={cn(
+          "min-w-0 w-full rounded-lg border border-border bg-card px-3 py-2.5 text-left text-sm font-medium transition-colors active:bg-muted/60 disabled:opacity-50",
+          className,
+        )}
+        onClick={() => setOpen(true)}
+      >
+        <span className="block truncate tabular-nums">
+          {formatTrDate(from)} – {formatTrDate(to)}
+        </span>
+      </button>
+      <Dialog
+        open={open}
+        title="Report period"
+        mobilePresentation="sheet"
+        onClose={() => setOpen(false)}
+      >
+        <ReportDateRangeFields
+          from={from}
+          to={to}
+          disabled={disabled}
+          allowFuture={allowFuture}
+          onChange={(nextFrom, nextTo) => {
+            onChange(nextFrom, nextTo);
+            setOpen(false);
+          }}
+        />
+      </Dialog>
+    </>
+  );
+}
+
+/** Desktop: full fields. Mobile (&lt;sm): one chip opening the period sheet. */
+export function ReportDateRange(props: Props) {
+  return (
+    <div data-testid="report-date-range">
+      <div className="sm:hidden" data-testid="report-date-range-mobile">
+        <ReportPeriodTrigger {...props} />
+      </div>
+      <div className="hidden sm:block" data-testid="report-date-range-desktop">
+        <ReportDateRangeFields {...props} />
       </div>
     </div>
   );

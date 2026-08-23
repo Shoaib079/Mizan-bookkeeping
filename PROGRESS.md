@@ -18,12 +18,12 @@
 
 ## Current
 
-- **README_START_HERE refresh (`v0.readme-start-here-refresh`):** nine-section entry map after archive cleanup. **Awaiting owner review — do not push.**
+- **Dashboard Apply + Total balance + mobile period chip (`v0.dashboard-apply-total-mobile-range`):** restored period KPI both themes; two-row total; mobile chip. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | README_START_HERE refresh |
-| **Last tag** | `v0.readme-start-here-refresh` |
+| **Last completed slice** | Dashboard Apply + Total balance + mobile period chip |
+| **Last tag** | `v0.dashboard-apply-total-mobile-range` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push; then POST_LAUNCH_PLAN queue |

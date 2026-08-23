@@ -118,23 +118,33 @@ export function CashBankSnapshotCard({
       style={{ ["--accent-bar" as string]: ACCENT_BAR.blue }}
     >
       <MeaningCardAccentBar />
-      <div className="flex items-center justify-between gap-3">
-        <div
-          data-testid="cash-bank-heading"
-          className="flex items-center gap-2 text-sm font-medium text-foreground"
-        >
-          <IconSquare icon={Wallet} tint="sky" stroke="blue" size="sm" />
-          Cash & bank
+      <div
+        data-testid="cash-bank-heading"
+        className="flex items-center gap-2 text-sm font-medium text-foreground"
+      >
+        <IconSquare icon={Wallet} tint="sky" stroke="blue" size="sm" />
+        Cash & bank
+      </div>
+      <div data-testid="cash-bank-total" className="mt-3 w-full min-w-0">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <span
+            data-testid="cash-bank-total-label"
+            className="text-[13px] font-semibold text-[#3D4A63]"
+          >
+            Total balance
+          </span>
+          <span
+            data-testid="cash-bank-as-of-hint"
+            className="text-xs text-muted-foreground"
+          >
+            as of today
+          </span>
         </div>
         <p
-          data-testid="cash-bank-total"
-          className="min-w-0 truncate text-right text-sm"
+          data-testid="cash-bank-total-figure"
+          className="mt-1 w-full text-[20px] font-extrabold tabular-nums text-[#0B1526]"
         >
-          <span className="text-muted-foreground">Total cash & bank</span>
-          <span className="text-muted-foreground"> · </span>
-          <span className="font-bold tabular-nums text-foreground">
-            {formatTry(combined)}
-          </span>
+          {formatTry(combined)}
         </p>
       </div>
 

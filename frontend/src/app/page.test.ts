@@ -18,8 +18,7 @@ describe("dashboard is status-only (recording lives on Add)", () => {
     const src = source();
     expect(src).toContain("This period");
     expect(src).toContain("CashBankSnapshotCard");
-    expect(src).toContain("v2-cash-bank-only");
-    expect(src).toContain("v1-period-and-cash");
+    expect(src).toContain('data-layout="period-and-cash"');
     expect(src).toContain("<BalancesOverview");
     expect(src).toContain("<WeeklyChart");
   });

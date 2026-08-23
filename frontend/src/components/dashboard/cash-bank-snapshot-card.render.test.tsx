@@ -47,7 +47,7 @@ function renderCard(
 }
 
 describe("CashBankSnapshotCard", () => {
-  it("desktop: cash + banks side-by-side with compact total and both subtotals", async () => {
+  it("desktop: cash + banks side-by-side with two-row total and both subtotals", async () => {
     renderCard(
       <CashBankSnapshotCard
         cashKurus={140_000}
@@ -64,9 +64,20 @@ describe("CashBankSnapshotCard", () => {
     expect(columns.className).toContain("grid-cols-1");
 
     const total = screen.getByTestId("cash-bank-total");
-    expect(total.textContent).toContain("Total cash & bank");
-    expect(total.textContent).toContain("·");
-    expect(total.textContent).toContain("1.650,00 ₺");
+    expect(total.className).toContain("w-full");
+    expect(screen.getByTestId("cash-bank-total-label").textContent).toBe(
+      "Total balance",
+    );
+    expect(screen.getByTestId("cash-bank-as-of-hint").textContent).toBe(
+      "as of today",
+    );
+    const figure = screen.getByTestId("cash-bank-total-figure");
+    expect(figure.textContent).toContain("1.650,00 ₺");
+    expect(figure.className).toContain("w-full");
+    expect(figure.className).toContain("text-[20px]");
+    expect(figure.className).toContain("font-extrabold");
+    expect(figure.className).not.toContain("truncate");
+    expect(figure.className).not.toMatch(/\bellipsis\b/);
 
     expect(screen.getAllByTestId("cash-drawer-row")).toHaveLength(2);
     expect(screen.getByText("Cash drawers")).toBeTruthy();
@@ -231,6 +242,24 @@ describe("CashBankSnapshotCard", () => {
       expect(heading.className).not.toContain("text-muted-foreground");
       expect(heading.textContent).toContain("Cash & bank");
     });
+  });
+
+  it("mutation: total back to truncated inline title row → red", () => {
+    const src = sourceDeclaring("CashBankSnapshotCard");
+    expect(src).toContain("cash-bank-total-label");
+    expect(src).toContain("Total balance");
+    expect(src).toContain("cash-bank-total-figure");
+    expect(src).toContain("as of today");
+    expect(src).toContain("text-[20px]");
+    expect(src).toContain("font-extrabold");
+    // Must not put the figure on the heading row with truncate.
+    expect(src).not.toMatch(
+      /cash-bank-heading[\s\S]{0,400}cash-bank-total[\s\S]{0,200}truncate/,
+    );
+    expect(src).not.toMatch(
+      /cash-bank-total-figure[\s\S]{0,120}truncate/,
+    );
+    expect(src).not.toContain("Total cash & bank");
   });
 
   it("mutation: collapse to single column always → red", () => {
