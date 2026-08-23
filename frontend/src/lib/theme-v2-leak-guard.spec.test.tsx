@@ -5,9 +5,6 @@
  * non-accepted v2-only chrome must not appear without data-theme=v2.
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Building2, Wallet } from "lucide-react";
@@ -21,6 +18,7 @@ import {
   THEME_V2_ATTR,
   THEME_V2_ONLY_ATTR,
 } from "@/lib/theme-v2";
+import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 vi.mock("@/lib/api", () => ({
   apiFetch: vi.fn(async () => ({
@@ -134,10 +132,7 @@ describe("with data-theme=v2 wrapper — accepted + gated chrome", () => {
 
 describe("leak mutation + CSS gate", () => {
   it("mutation: leak non-accepted v2-only attr into v1 StatCard → red; restore → green", () => {
-    const src = readFileSync(
-      join(process.cwd(), "src/components/page/stat-card.tsx"),
-      "utf8",
-    );
+    const src = sourceDeclaring("StatCard");
     // Accepted chrome always present
     expect(src).toContain("MeaningCardAccentBar");
     expect(src).toContain("IconSquare");
@@ -154,7 +149,7 @@ describe("leak mutation + CSS gate", () => {
   });
 
   it("non-accepted sticker/button/segment polish stays under [data-theme=v2] in CSS", () => {
-    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    const css = sourceAt("app/globals.css");
     // Accepted bar is unscoped (intentional live baseline)
     expect(css).toMatch(
       /\/\* Accepted-live meaning bars[\s\S]*?\[data-meaning-card\]\s*>\s*\[data-accent-bar\][\s\S]*?width:\s*4px/,
@@ -168,10 +163,7 @@ describe("leak mutation + CSS gate", () => {
   });
 
   it("layout requires THEME_TOGGLE with DEFAULT_THEME before baking data-theme", () => {
-    const src = readFileSync(
-      join(process.cwd(), "src/app/layout.tsx"),
-      "utf8",
-    );
+    const src = sourceDeclaring("RootLayout");
     expect(src).toContain("NEXT_PUBLIC_THEME_TOGGLE");
     expect(src).toContain("NEXT_PUBLIC_DEFAULT_THEME");
     expect(src).toMatch(

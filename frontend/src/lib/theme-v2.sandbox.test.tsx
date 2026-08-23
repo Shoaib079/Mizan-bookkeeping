@@ -17,6 +17,7 @@ import {
   subscribeVisualTheme,
   THEME_V2_ATTR,
 } from "@/lib/theme-v2";
+import { sourceDeclaring } from "@/test-support/source";
 
 const accessState: { role: EntityRole; membershipSettled: boolean } = {
   role: "owner",
@@ -155,13 +156,8 @@ describe("NewLookToggle", () => {
 });
 
 describe("root layout env wiring (source)", () => {
-  it("layout requires THEME_TOGGLE + DEFAULT_THEME before baking data-theme", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { join } = await import("node:path");
-    const src = readFileSync(
-      join(process.cwd(), "src/app/layout.tsx"),
-      "utf8",
-    );
+  it("layout requires THEME_TOGGLE + DEFAULT_THEME before baking data-theme", () => {
+    const src = sourceDeclaring("RootLayout");
     expect(src).toContain("NEXT_PUBLIC_DEFAULT_THEME");
     expect(src).toContain("NEXT_PUBLIC_THEME_TOGGLE");
     expect(src).toContain("data-theme");

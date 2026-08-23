@@ -2,10 +2,6 @@
 
 /** Interactive /preview phone walkthrough — tabs, drill-in, zero API/router. */
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +15,7 @@ import {
   selectPreviewTab,
   type PreviewTab,
 } from "@/lib/preview-nav";
+import { sourceDeclaring } from "@/test-support/source";
 import type { EntityRole } from "@/lib/settings-types";
 import { THEME_V2_ATTR } from "@/lib/theme-v2";
 import { ShoppingBag } from "lucide-react";
@@ -249,15 +246,11 @@ describe("preview never invokes the real router", () => {
   });
 
   it("mutation: wiring a tab to the real router goes red", () => {
-    const here = dirname(fileURLToPath(import.meta.url));
-    const tabBarSrc = readFileSync(join(here, "preview-tab-bar.tsx"), "utf8");
+    const tabBarSrc = sourceDeclaring("PreviewTabBar");
     expect(tabBarSrc).toContain("selectPreviewTab");
     expect(tabBarSrc).not.toMatch(/useRouter|router\.push/);
 
-    const navSrc = readFileSync(
-      join(here, "../../lib/preview-nav.ts"),
-      "utf8",
-    );
+    const navSrc = sourceDeclaring("selectPreviewTab");
     expect(navSrc).toContain("void router");
     const broken = navSrc.replace(
       "void router;\n  setTab(tab);",

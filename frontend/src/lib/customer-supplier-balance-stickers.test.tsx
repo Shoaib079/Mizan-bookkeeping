@@ -47,7 +47,11 @@ describe("supplier directory balance sticker", () => {
     );
     expect(html).toContain("Supplier owes you");
     expect(html).toContain("1.195.278,24");
-    expect(html).not.toMatch(/-\s*1/);
+    // Figure must stay absolute — do not scan whole markup (IconSquare `size-11` false-positives).
+    expect(html).toMatch(
+      /data-sticker-figure[^>]*>\s*1\.195\.278,24/,
+    );
+    expect(html).not.toMatch(/data-sticker-figure[^>]*>\s*-/);
     expect(html).toContain('data-direction="they_owe"');
   });
 

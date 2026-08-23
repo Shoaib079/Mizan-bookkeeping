@@ -42,7 +42,7 @@ describe("FX purchase form", () => {
   it("submits optional blank description as null", async () => {
     const form = sourceDeclaring("FxPurchaseForm");
     expect(form).toContain("fxPurchaseDescriptionForApi");
-    expect(form).toContain("Description (optional)");
+    expect(form).toContain("Note (optional)");
     expect(form).not.toMatch(/fx-buy-desc[\s\S]*required/);
   });
 

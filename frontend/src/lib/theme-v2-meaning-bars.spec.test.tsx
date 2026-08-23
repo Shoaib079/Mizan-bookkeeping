@@ -2,9 +2,6 @@
 
 /** v2 meaning-card left bars on every balance / meaning surface. */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Building2, Coins, Wallet } from "lucide-react";
@@ -16,6 +13,7 @@ import { HubTileCard } from "@/components/page/hub-page";
 import { StatCard } from "@/components/page/stat-card";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { THEME_V2_ATTR } from "@/lib/theme-v2";
+import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 vi.mock("@/lib/api", () => ({
   apiFetch: vi.fn(async () => ({
@@ -137,7 +135,7 @@ describe("v2 meaning bars on every surface", () => {
 
 describe("bar width floor + muted tones", () => {
   it("v2 CSS bar width is >= 4px and tones are the muted set", () => {
-    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8");
+    const css = sourceAt("app/globals.css");
     expect(css).toMatch(
       /\[data-meaning-card\]\s*>\s*\[data-accent-bar\][\s\S]*?width:\s*4px/,
     );
@@ -154,10 +152,7 @@ describe("bar width floor + muted tones", () => {
 
 describe("mutation: banking hub tile bar", () => {
   it("mutation: remove accent bar from HubTileCard → red; restore → green", () => {
-    const src = readFileSync(
-      join(process.cwd(), "src/components/page/hub-page.tsx"),
-      "utf8",
-    );
+    const src = sourceDeclaring("HubTileCard");
     expect(src).toMatch(/<MeaningCardAccentBar\s*\/>/);
     expect(src).toContain('data-testid="hub-tile-card"');
     expect(src).toContain("data-meaning-card");

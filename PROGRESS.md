@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Dashboard v2 header (`v0.dashboard-v2-header`):** greeting + restaurant chip left, ReportDateRange right under New look; v1 unchanged. Includes shared `subscribeVisualTheme` so theme toggle updates consumers. **Awaiting owner review — do not push.** Docs archive (`v0.docs-archive-cleanup`) still unpushed ahead of origin too.
+- **Vitest triage (`v0.vitest-stale-assertion-triage`):** four stale assertions updated; full `npx vitest run` green (1357). **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Dashboard v2 header — greeting + chip + date range |
-| **Last tag** | `v0.dashboard-v2-header` |
+| **Last completed slice** | Vitest triage — restore full green suite |
+| **Last tag** | `v0.vitest-stale-assertion-triage` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push; then README_START_HERE refresh |

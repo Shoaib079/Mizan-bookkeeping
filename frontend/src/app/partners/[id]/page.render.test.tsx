@@ -155,8 +155,11 @@ const LEDGER = {
       movement_type: "salary_fronted",
       journal_entry_id: "je-salary",
       amount_kurus: 3_250_000,
-      description: "Temmuz maaşı",
-      subject_name: "Ahmet Yılmaz",
+      // Enriched DTO shape (v0.ledger-rich-descriptions) — subject is in the
+      // description; subject_name cleared so the UI does not double the name.
+      description:
+        "Salary paid for staff · Canan Takan · Ahmet Yılmaz — Temmuz maaşı",
+      subject_name: null,
       movement_date: "2026-08-05",
     }),
   ],
@@ -195,7 +198,7 @@ afterEach(() => {
 });
 
 function rowNamed(text: string): HTMLElement {
-  return screen.getByText(text).closest("tr") as HTMLElement;
+  return screen.getByText(text, { exact: false }).closest("tr") as HTMLElement;
 }
 
 /** The row, once its verdict has arrived.
@@ -205,7 +208,9 @@ function rowNamed(text: string): HTMLElement {
  * against a page that never draws anything.
  */
 async function settledRow(text: string): Promise<HTMLElement> {
-  await waitFor(() => expect(screen.getByText(text)).toBeTruthy());
+  await waitFor(() =>
+    expect(screen.getByText(text, { exact: false })).toBeTruthy(),
+  );
   await waitFor(() =>
     expect(
       apiFetch.mock.calls.some((call) =>
@@ -333,14 +338,18 @@ describe("when the actions lookup fails", () => {
 
 describe("a salary the partner fronted", () => {
   it("names the employee it was paid for", async () => {
-    // Three salaries in a week all read "Temmuz maaşı" until the reference the
-    // row has always carried was read back.
+    // Rich descriptions fold the employee into the description body
+    // (`Salary paid for staff · {partner} · {employee}`); subject_name is
+    // no longer appended in the UI (v0.ledger-rich-descriptions).
     respond({});
     renderWithQuery(<PartnerDetailPage />);
 
-    await waitFor(() => expect(screen.getByText("Temmuz maaşı")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(/Ahmet Yılmaz/)).toBeTruthy(),
+    );
     const row = rowNamed("Temmuz maaşı");
     expect(row.textContent).toContain("Ahmet Yılmaz");
+    expect(row.textContent).toContain("Temmuz maaşı");
   });
 });
 
