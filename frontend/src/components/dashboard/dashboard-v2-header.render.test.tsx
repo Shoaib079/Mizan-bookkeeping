@@ -11,7 +11,7 @@ import { DashboardV2Header } from "@/components/dashboard/dashboard-v2-header";
 import { OverviewPage } from "@/components/page/overview-page";
 import { ThemeV2Only } from "@/components/ui/theme-v2-gate";
 import { THEME_V2_ATTR } from "@/lib/theme-v2";
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 afterEach(() => {
   cleanup();
@@ -25,45 +25,74 @@ function renderV2Header(ui: React.ReactElement) {
 }
 
 describe("DashboardV2Header", () => {
-  it("v2: greeting + name, restaurant chip with colour dot + today, period right-aligned at sm", () => {
+  it("all breakpoints: greeting + name left; today right same line; restaurant ABSENT", () => {
     renderV2Header(
       <DashboardV2Header
         displayName="Ada Yılmaz"
-        restaurantId="ent-1"
-        restaurantName="Mizan Kitchen"
         now={fixedNow}
-        periodControl={<div data-testid="fake-period">From / To</div>}
+        periodDesktop={<div data-testid="fake-period-desktop">From / To</div>}
+        periodMobile={<div data-testid="fake-period-mobile">chip</div>}
       />,
     );
 
     const greeting = screen.getByTestId("dashboard-v2-greeting");
     expect(greeting.textContent).toBe("Good afternoon, Ada Yılmaz");
 
-    const chip = screen.getByTestId("dashboard-v2-restaurant-chip");
-    expect(chip.textContent).toContain("Mizan Kitchen");
-    expect(chip.textContent).toContain("23.08.2026");
-    expect(screen.getByTestId("dashboard-v2-restaurant-dot")).toBeTruthy();
+    const today = screen.getByTestId("dashboard-v2-today");
+    expect(today.textContent).toBe("23.08.2026");
+    expect(today.className).toContain("text-[13px]");
+    expect(today.className).toContain("text-[#3D4A63]");
 
-    const period = screen.getByTestId("dashboard-v2-period");
-    expect(period.className).toContain("sm:ml-auto");
-    expect(period.className).toContain("w-full");
-    expect(screen.getByTestId("fake-period")).toBeTruthy();
-
-    // Stacked below greeting on narrow; side-by-side >=sm.
     const row = screen.getByTestId("dashboard-v2-header-row");
-    expect(row.className).toContain("flex-col");
-    expect(row.className).toContain("sm:flex-row");
+    expect(row.className).toContain("justify-between");
+    expect(row.contains(greeting)).toBe(true);
+    expect(row.contains(today)).toBe(true);
+
+    expect(screen.queryByTestId("dashboard-v2-restaurant-chip")).toBeNull();
+    expect(screen.queryByTestId("dashboard-v2-restaurant-dot")).toBeNull();
+    expect(screen.queryByText("Mizan Kitchen")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Dashboard" })).toBeNull();
+  });
+
+  it(">=sm: range in right cluster; <sm: compact chip below header row", () => {
+    renderV2Header(
+      <DashboardV2Header
+        displayName="Ada"
+        now={fixedNow}
+        periodDesktop={<div data-testid="fake-period-desktop">fields</div>}
+        periodMobile={<div data-testid="fake-period-mobile">chip</div>}
+      />,
+    );
+
+    const right = screen.getByTestId("dashboard-v2-right");
+    const desktop = screen.getByTestId("dashboard-v2-period-desktop");
+    const mobile = screen.getByTestId("dashboard-v2-period-mobile");
+
+    expect(right.contains(screen.getByTestId("dashboard-v2-today"))).toBe(
+      true,
+    );
+    expect(right.contains(desktop)).toBe(true);
+    expect(desktop.className).toContain("hidden");
+    expect(desktop.className).toContain("sm:block");
+    expect(screen.getByTestId("fake-period-desktop")).toBeTruthy();
+
+    expect(mobile.className).toContain("sm:hidden");
+    expect(screen.getByTestId("dashboard-v2-header").contains(mobile)).toBe(
+      true,
+    );
+    expect(screen.getByTestId("dashboard-v2-header-row").contains(mobile)).toBe(
+      false,
+    );
+    expect(screen.getByTestId("fake-period-mobile")).toBeTruthy();
   });
 
   it("v2: greeting without name omits the comma clause", () => {
     renderV2Header(
       <DashboardV2Header
         displayName=""
-        restaurantId="ent-1"
-        restaurantName="Cafe"
         now={fixedNow}
-        periodControl={null}
+        periodDesktop={null}
+        periodMobile={null}
       />,
     );
     expect(screen.getByTestId("dashboard-v2-greeting").textContent).toBe(
@@ -73,7 +102,7 @@ describe("DashboardV2Header", () => {
 });
 
 describe("dashboard header v1 vs v2 (OverviewPage)", () => {
-  it("without data-theme wrapper: PageHeader Dashboard + period; greeting ABSENT", () => {
+  it("without data-theme wrapper: PageHeader Dashboard + period; greeting ABSENT; no new date row", () => {
     render(
       <OverviewPage
         title="Dashboard"
@@ -85,9 +114,10 @@ describe("dashboard header v1 vs v2 (OverviewPage)", () => {
     expect(screen.getByTestId("v1-period")).toBeTruthy();
     expect(screen.queryByTestId("dashboard-v2-greeting")).toBeNull();
     expect(screen.queryByTestId("dashboard-v2-header")).toBeNull();
+    expect(screen.queryByTestId("dashboard-v2-today")).toBeNull();
   });
 
-  it("under v2 ThemeV2Only: greeting present; no Dashboard H1/divider chrome", () => {
+  it("under v2 ThemeV2Only: greeting + today; no restaurant; no Dashboard H1", () => {
     render(
       <div data-theme={THEME_V2_ATTR}>
         <OverviewPage
@@ -96,10 +126,9 @@ describe("dashboard header v1 vs v2 (OverviewPage)", () => {
             <ThemeV2Only>
               <DashboardV2Header
                 displayName="Ada"
-                restaurantId="e1"
-                restaurantName="Kitchen"
                 now={new Date(2026, 7, 23, 10, 0, 0)}
-                periodControl={<div data-testid="v2-period">range</div>}
+                periodDesktop={<div data-testid="v2-period-desktop">range</div>}
+                periodMobile={<div data-testid="v2-period-mobile">chip</div>}
               />
             </ThemeV2Only>
           }
@@ -110,10 +139,12 @@ describe("dashboard header v1 vs v2 (OverviewPage)", () => {
     expect(screen.getByTestId("dashboard-v2-greeting").textContent).toBe(
       "Good morning, Ada",
     );
-    expect(
-      screen.getByTestId("dashboard-v2-restaurant-chip").textContent,
-    ).toContain("Kitchen");
-    expect(screen.getByTestId("v2-period")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-v2-today").textContent).toBe(
+      "23.08.2026",
+    );
+    expect(screen.queryByTestId("dashboard-v2-restaurant-chip")).toBeNull();
+    expect(screen.getByTestId("v2-period-desktop")).toBeTruthy();
+    expect(screen.getByTestId("v2-period-mobile")).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Dashboard" })).toBeNull();
   });
 });
@@ -129,6 +160,8 @@ describe("dashboard header theme gating (source)", () => {
     expect(page).toContain("replaceHeader=");
     expect(page).toContain("ThemeV2Only");
     expect(page).toContain("DashboardV2Header");
+    expect(page).toContain("ReportDateRangeFields");
+    expect(page).toContain("ReportPeriodTrigger");
     expect(overview).toContain("replaceHeader ??");
     expect(overview).toContain("PageHeader");
   });
@@ -155,5 +188,32 @@ describe("dashboard header theme gating (source)", () => {
     );
     expect(header).not.toContain(">Dashboard<");
     expect(header).not.toContain('title="Dashboard"');
+  });
+
+  it("mutation: restaurant name renders anywhere in the v2 header → red", () => {
+    const header = sourceDeclaring("DashboardV2Header");
+    const page = sourceDeclaring("HomePage");
+    expect(header).not.toContain("restaurantName");
+    expect(header).not.toContain("restaurantId");
+    expect(header).not.toContain("entityAccentColor");
+    expect(header).not.toContain("dashboard-v2-restaurant-chip");
+    expect(header).not.toContain("dashboard-v2-restaurant-dot");
+    expect(page).not.toMatch(
+      /DashboardV2Header[\s\S]*?restaurantName=\{activeRestaurant/,
+    );
+  });
+
+  it("mutation: date not on the greeting line → red", () => {
+    const header = sourceAt(
+      "components/dashboard/dashboard-v2-header.tsx",
+    );
+    expect(header).toContain('data-testid="dashboard-v2-header-row"');
+    expect(header).toContain('data-testid="dashboard-v2-today"');
+    expect(header).toContain('data-testid="dashboard-v2-greeting"');
+    // Today must live inside the same row as the greeting (not only below).
+    expect(header).toMatch(
+      /dashboard-v2-header-row[\s\S]*?dashboard-v2-greeting[\s\S]*?dashboard-v2-today[\s\S]*?<\/div>/,
+    );
+    expect(header).toContain("justify-between");
   });
 });

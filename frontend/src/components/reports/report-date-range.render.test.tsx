@@ -69,6 +69,10 @@ describe("dashboard Apply refetches period figures", () => {
     expect(page).toContain("[entityId, range.from, range.to]");
     expect(page).toContain('label="This period"');
     expect(page).toContain("net_result_kurus");
-    expect(page).toContain("onChange={(from, to) => setRange({ from, to })}");
+    // Shared periodProps drive v1 ReportDateRange + v2 fields/chip.
+    expect(page).toContain("periodProps");
+    expect(page).toContain(
+      "onChange: (from: string, to: string) => setRange({ from, to })",
+    );
   });
 });

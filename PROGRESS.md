@@ -18,12 +18,12 @@
 
 ## Current
 
-- **GS-FX docs reconcile (`v0.gs-fx-docs-reconcile`):** Docs-only status fix — GS-FX is **DONE** (`v0.gs-fx-forex-only-group-sales` + `v0.gs-fx-forex-native-discount`, migration `097`). **Awaiting owner review — do not push.**
+- **Dashboard v2 header final (`v0.dashboard-v2-header-final`):** Greeting left + today's date right (same line); restaurant name/dot removed; desktop range beside date; mobile chip below. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | GS-FX docs reconcile |
-| **Last tag** | `v0.gs-fx-docs-reconcile` |
+| **Last completed slice** | Dashboard v2 header final |
+| **Last tag** | `v0.dashboard-v2-header-final` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |

@@ -15,7 +15,11 @@ import {
   chartStatusForRefresh,
   type WeeklyChartStatus,
 } from "@/components/dashboard/weekly-chart";
-import { ReportDateRange } from "@/components/reports/report-date-range";
+import {
+  ReportDateRange,
+  ReportDateRangeFields,
+  ReportPeriodTrigger,
+} from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { useNewLookTheme } from "@/components/layout/new-look-toggle";
 import { OnboardingChecklist } from "@/components/onboarding-checklist";
@@ -63,15 +67,13 @@ function DashboardBody() {
     useState<WeeklyChartStatus>("loading");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const activeRestaurant = entities.find((e) => e.id === entityId);
-  const periodControl = (
-    <ReportDateRange
-      from={range.from}
-      to={range.to}
-      disabled={!entityId || loading}
-      onChange={(from, to) => setRange({ from, to })}
-    />
-  );
+  const periodProps = {
+    from: range.from,
+    to: range.to,
+    disabled: !entityId || loading,
+    onChange: (from: string, to: string) => setRange({ from, to }),
+  };
+  const periodControl = <ReportDateRange {...periodProps} />;
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -138,9 +140,8 @@ function DashboardBody() {
           <ThemeV2Only>
             <DashboardV2Header
               displayName={userProfile?.display_name}
-              restaurantId={entityId}
-              restaurantName={activeRestaurant?.name}
-              periodControl={periodControl}
+              periodDesktop={<ReportDateRangeFields {...periodProps} />}
+              periodMobile={<ReportPeriodTrigger {...periodProps} />}
             />
           </ThemeV2Only>
         ) : undefined

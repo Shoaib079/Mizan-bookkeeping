@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none — awaiting review; do not push)* |
 | **Next up**              | Per-menu period report for group/agency sales (deferred) |
-| **Last completed slice** | **GS-FX docs reconcile** (`v0.gs-fx-docs-reconcile`) |
-| **Last commit/tag**      | `v0.gs-fx-docs-reconcile` |
+| **Last completed slice** | **Dashboard v2 header final** (`v0.dashboard-v2-header-final`) |
+| **Last commit/tag**      | `v0.dashboard-v2-header-final` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Dashboard v2 header final                       | `v0.dashboard-v2-header-final`                         | Greeting left + today right same line; restaurant chip/dot removed; desktop range beside date; mobile chip below; v1 unchanged; mutation restaurant/date-line → red |
 | 2026-08-23 | GS-FX docs reconcile                            | `v0.gs-fx-docs-reconcile`                              | Docs-only: mark GS-FX DONE across ROADMAP/PROGRESS/POST_LAUNCH/CHANGELOG/README; Do not rebuild + Next up = per-menu period report |
 | 2026-08-23 | Silent membership poll                          | `v0.silent-membership-poll`                            | Fix 15s flicker: silent refreshEntities + grants equal; role/revoke semantics kept |
 | 2026-08-23 | Single page title                               | `v0.single-page-title`                                 | AppShell trail breadcrumb-only; no muted title above H1; accepted-live both themes |
