@@ -1,3 +1,11 @@
+## 2026-08-24 — v2 look is the default (owner rollout)
+
+**Choice:** `data-theme="v2"` is the **default for everyone** (production included) when there is no explicit stored choice. `NEXT_PUBLIC_DEFAULT_THEME=v1` remains an emergency force-v1. The New look toggle stays as a **grace fallback** to v1 (localStorage); toggle UI is on unless `NEXT_PUBLIC_THEME_TOGGLE=false`. Toggle removal is a later cleanup.
+
+**Why (owner 2026-08-24, verbatim):** *"…and then ship v2."*
+
+**Supersedes:** sandbox-only gate requiring BOTH `DEFAULT_THEME=v2` AND `THEME_TOGGLE=true` before baking/applying v2 (DECISIONS 2026-08-22 gating rule for production default).
+
 ## 2026-08-24 — Dashboard is as-of-only; period analysis in Reports
 
 **Choice:** Home dashboard no longer shows a **This period** sticker or any date-range controls (From/To/Apply/This month/mobile period chip). Cash & bank (as-of) and Right now remain. The weekly chart stays for now, pinned to month-to-date internally with a muted **This month** caption (no controls) — removable later. v2 greeting header is greeting + display name only (no today's date). Reports pages keep their own ranges.
@@ -37,7 +45,7 @@
 
 **Choice:** After `v0.v2-meaning-bars-everywhere` reached production, the owner **accepted the live look as-is** (muted left accent bars + tinted Lucide `IconSquare` on meaning cards). That chrome is now the **intentional v1 baseline** — shared with v2, not gated behind `data-theme="v2"`. Remaining v2-only polish (sticker white/heading tokens, KPI type sizes, button/segment/tab restyles, full canvas token remap) stays under `[data-theme="v2"]` only.
 
-**Gating rule (permanent):** `data-theme="v2"` on `<html>` requires **both** `NEXT_PUBLIC_DEFAULT_THEME=v2` **and** `NEXT_PUBLIC_THEME_TOGGLE=true` (sandbox A/B). `DEFAULT_THEME=v2` alone must never flip production. Non-accepted exclusive markers use the shared `ThemeV2Only` / `ThemeV2OnlyMarker` gate (`data-theme-v2-only`). Guard: `theme-v2-leak-guard.spec.test.tsx`.
+**Gating rule (updated 2026-08-24):** Default look is **v2** for everyone — see “v2 look is the default”. Non-accepted exclusive markers still use `ThemeV2Only` / `ThemeV2OnlyMarker` (`data-theme-v2-only`). Historical sandbox pair-gate (DEFAULT_THEME + THEME_TOGGLE) no longer blocks production default.
 
 **Why:** Component chrome had been mounted unconditionally while only some tokens were theme-scoped — IconSquare hex fallbacks painted on live; env layout could bake theme from DEFAULT alone. Accepting what shipped avoids a live visual rollback; the gate stops the next unapproved leak.
 

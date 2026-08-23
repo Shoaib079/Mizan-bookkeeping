@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-/** Sandbox-wide v2 theme — env default + optional owner toggle. */
+/** v2 rollout — default theme + grace toggle. */
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -54,19 +54,19 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe("env default theme helpers", () => {
-  it("envDefaultTheme is v2 only when DEFAULT_THEME=v2 AND THEME_TOGGLE=true", () => {
-    expect(envDefaultTheme("v2", "true")).toBe("v2");
-    expect(envDefaultTheme("v2", undefined)).toBe("v1");
-    expect(envDefaultTheme("v2", "")).toBe("v1");
-    expect(envDefaultTheme(undefined)).toBe("v1");
-    expect(envDefaultTheme("")).toBe("v1");
+describe("env default theme helpers (v2 rollout)", () => {
+  it("envDefaultTheme is v2 unless explicitly v1", () => {
+    expect(envDefaultTheme(undefined)).toBe("v2");
+    expect(envDefaultTheme("")).toBe("v2");
+    expect(envDefaultTheme("v2")).toBe("v2");
+    expect(envDefaultTheme("v1")).toBe("v1");
   });
 
-  it("isThemeToggleEnabled only when exactly true", () => {
+  it("isThemeToggleEnabled unless explicitly false", () => {
+    expect(isThemeToggleEnabled(undefined)).toBe(true);
+    expect(isThemeToggleEnabled("")).toBe(true);
     expect(isThemeToggleEnabled("true")).toBe(true);
-    expect(isThemeToggleEnabled(undefined)).toBe(false);
-    expect(isThemeToggleEnabled("1")).toBe(false);
+    expect(isThemeToggleEnabled("false")).toBe(false);
   });
 
   it("resolveVisualThemeFrom prefers stored value when toggle enabled", () => {
@@ -78,7 +78,9 @@ describe("env default theme helpers", () => {
 
   it("applyVisualTheme sets or clears data-theme on documentElement", () => {
     applyVisualTheme("v2");
-    expect(document.documentElement.getAttribute("data-theme")).toBe(THEME_V2_ATTR);
+    expect(document.documentElement.getAttribute("data-theme")).toBe(
+      THEME_V2_ATTR,
+    );
     applyVisualTheme("v1");
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
@@ -96,41 +98,37 @@ describe("env default theme helpers", () => {
   });
 });
 
-describe("ThemeRoot applies env default", () => {
-  it("sets data-theme=v2 when sandbox env pair is set", () => {
-    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v2");
-    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "true");
+describe("ThemeRoot applies v2 default", () => {
+  it("sets data-theme=v2 when env unset (production default)", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "");
+    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "");
     render(<ThemeRoot />);
     expect(document.documentElement.getAttribute("data-theme")).toBe("v2");
   });
 
-  it("DEFAULT_THEME=v2 alone does not flip live (no toggle)", () => {
-    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v2");
-    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "");
+  it("DEFAULT_THEME=v1 forces v1 (emergency)", () => {
+    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v1");
     render(<ThemeRoot />);
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
-  it("leaves no data-theme attribute when env is unset (v1)", () => {
-    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "");
-    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "");
-    document.documentElement.setAttribute("data-theme", "v2");
+  it("honours stored v1 when toggle enabled", () => {
+    window.localStorage.setItem(VISUAL_THEME_STORAGE_KEY, "v1");
+    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "true");
     render(<ThemeRoot />);
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 });
 
-describe("NewLookToggle", () => {
-  it("is hidden when NEXT_PUBLIC_THEME_TOGGLE is absent", () => {
-    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "");
-    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v2");
+describe("NewLookToggle (grace fallback)", () => {
+  it("is hidden when NEXT_PUBLIC_THEME_TOGGLE=false", () => {
+    vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "false");
     render(<NewLookToggle />);
     expect(screen.queryByRole("switch", { name: "New look" })).toBeNull();
   });
 
-  it("flips the attribute and persists when toggle env is on", () => {
+  it("flips to v1 and persists (grace); flips back to v2", () => {
     vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "true");
-    vi.stubEnv("NEXT_PUBLIC_DEFAULT_THEME", "v2");
     render(<NewLookToggle />);
     const sw = screen.getByRole("switch", { name: "New look" });
     expect(sw.getAttribute("aria-checked")).toBe("true");
@@ -147,7 +145,7 @@ describe("NewLookToggle", () => {
     expect(window.localStorage.getItem(VISUAL_THEME_STORAGE_KEY)).toBe("v2");
   });
 
-  it("stays hidden for cashier even when toggle env is on", () => {
+  it("stays hidden for cashier even when toggle enabled", () => {
     vi.stubEnv("NEXT_PUBLIC_THEME_TOGGLE", "true");
     accessState.role = "cashier";
     render(<NewLookToggle />);
@@ -156,11 +154,23 @@ describe("NewLookToggle", () => {
 });
 
 describe("root layout env wiring (source)", () => {
-  it("layout requires THEME_TOGGLE + DEFAULT_THEME before baking data-theme", () => {
+  it("layout bakes data-theme=v2 unless DEFAULT_THEME=v1", () => {
     const src = sourceDeclaring("RootLayout");
     expect(src).toContain("NEXT_PUBLIC_DEFAULT_THEME");
-    expect(src).toContain("NEXT_PUBLIC_THEME_TOGGLE");
+    expect(src).toContain('=== "v1"');
     expect(src).toContain("data-theme");
     expect(src).toContain("ThemeRoot");
+    // Must not require THEME_TOGGLE to bake v2 (old sandbox gate).
+    expect(src).not.toMatch(
+      /THEME_TOGGLE[\s\S]*=== "true"[\s\S]*DEFAULT_THEME[\s\S]*=== "v2"/,
+    );
+  });
+
+  it("mutation: default theme reverts to v1 → red", () => {
+    const theme = sourceDeclaring("envDefaultTheme");
+    const layout = sourceDeclaring("RootLayout");
+    expect(theme).toContain('if (raw === "v1") return "v1"');
+    expect(theme).toContain('return "v2"');
+    expect(layout).toContain('NEXT_PUBLIC_DEFAULT_THEME === "v1"');
   });
 });

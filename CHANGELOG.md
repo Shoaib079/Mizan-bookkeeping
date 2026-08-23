@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-24
+
+- **v2 rollout (`v0.v2-rollout`).** New look is the default for everyone (production included) when no stored choice; `DEFAULT_THEME=v1` emergency only; New look toggle remains a grace fallback to v1. Dashboard trims (prior commit): no header date, no This period / range UI; chart MTD + “This month” caption. Mutation: date/This period return or default theme → v1 → red. Display-only. **Do not push until review.**
+
 ## 2026-08-23
 
 - **Dashboard Cash & bank v2 parity (`v0.dashboard-cash-bank-v2-parity`).** Two-row Total balance was already shared (`v0.dashboard-apply-total-mobile-range`); leftover v2-only hairline + bold Cash/Banks labels removed so New look cannot diverge when shipped. One `CashBankSnapshotCard` both themes; greeting header remains the only v2 dashboard chrome. Vitest: v1+v2 identical two-row total / as of today / no inline truncate; mutation inline total or resurrecting v2 dividers → red. Display-only. **Do not push until review.**

@@ -24,10 +24,9 @@ export const viewport = {
 };
 
 const htmlThemeAttr =
-  process.env.NEXT_PUBLIC_THEME_TOGGLE === "true" &&
-  process.env.NEXT_PUBLIC_DEFAULT_THEME === "v2"
-    ? ({ "data-theme": THEME_V2_ATTR } as const)
-    : {};
+  process.env.NEXT_PUBLIC_DEFAULT_THEME === "v1"
+    ? {}
+    : ({ "data-theme": THEME_V2_ATTR } as const);
 
 export default function RootLayout({
   children,

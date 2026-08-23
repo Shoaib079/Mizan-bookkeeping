@@ -1,10 +1,9 @@
-/** Mobile visual refresh v2 — token scope (DESIGN_SYSTEM §8).
+/** Visual theme v2 — token scope (DESIGN_SYSTEM §8).
  *
- * Preview gallery wraps content with `themeV2Props()`. Sandbox may set
- * `data-theme="v2"` on `<html>` only when BOTH `NEXT_PUBLIC_DEFAULT_THEME=v2`
- * AND `NEXT_PUBLIC_THEME_TOGGLE=true` (owner A/B). Production leaves both
- * unset. Accepted-live chrome (left accent bar + IconSquare) is intentional
- * v1 baseline — see DECISIONS 2026-08-22.
+ * Default look is **v2** for everyone (owner rollout 2026-08-24). Explicit
+ * localStorage `v1` remains a grace fallback via the New look toggle.
+ * Preview gallery wraps content with `themeV2Props()`. Accepted-live chrome
+ * (left accent bar + IconSquare) stays shared — see DECISIONS.
  */
 
 export const THEME_V2_ATTR = "v2" as const;
@@ -16,11 +15,11 @@ export type ThemeV2Scope = typeof THEME_V2_ATTR;
 
 export type AppVisualTheme = "v1" | "v2";
 
-/** localStorage key for the sandbox A/B switch (not used when toggle env is off). */
+/** localStorage key for the A/B / grace switch. */
 export const VISUAL_THEME_STORAGE_KEY = "mizan:visual-theme";
 
 /**
- * Accepted on live (owner 2026-08-22) — intentional v1+v2 shared baseline.
+ * Accepted on live (owner 2026-08-22) — intentional shared baseline.
  * Do not gate these behind data-theme=v2.
  */
 export const ACCEPTED_LIVE_CHROME = [
@@ -34,21 +33,21 @@ export function themeV2Props(): { "data-theme": ThemeV2Scope } {
 }
 
 /**
- * Env default is v2 only in sandbox: DEFAULT_THEME=v2 alone must NOT flip
- * production. Requires THEME_TOGGLE=true as well.
+ * Production default is v2. `NEXT_PUBLIC_DEFAULT_THEME=v1` forces v1
+ * (emergency). Any other / unset value → v2.
  */
 export function envDefaultTheme(
   raw: string | undefined = process.env.NEXT_PUBLIC_DEFAULT_THEME,
-  toggleRaw: string | undefined = process.env.NEXT_PUBLIC_THEME_TOGGLE,
 ): AppVisualTheme {
-  if (raw === "v2" && isThemeToggleEnabled(toggleRaw)) return "v2";
-  return "v1";
+  if (raw === "v1") return "v1";
+  return "v2";
 }
 
+/** Grace toggle: on unless explicitly `false`. */
 export function isThemeToggleEnabled(
   raw: string | undefined = process.env.NEXT_PUBLIC_THEME_TOGGLE,
 ): boolean {
-  return raw === "true";
+  return raw !== "false";
 }
 
 export function resolveVisualThemeFrom(

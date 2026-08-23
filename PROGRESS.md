@@ -18,12 +18,12 @@
 
 ## Current
 
-- **Dashboard Cash & bank v2 parity (`v0.dashboard-cash-bank-v2-parity`):** Shared card both themes; v2-only divider/bold labels removed. **Awaiting owner review — do not push.**
+- **v2 rollout (`v0.v2-rollout`):** Default theme = v2; dashboard as-of-only (no This period / range / header date). **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Dashboard Cash & bank v2 parity |
-| **Last tag** | `v0.dashboard-cash-bank-v2-parity` |
+| **Last completed slice** | v2 rollout |
+| **Last tag** | `v0.v2-rollout` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |

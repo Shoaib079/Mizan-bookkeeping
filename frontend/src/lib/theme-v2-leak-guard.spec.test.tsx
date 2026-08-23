@@ -168,11 +168,12 @@ describe("leak mutation + CSS gate", () => {
     expect(css).toContain('[data-theme="v2"] [data-stat-figure]');
   });
 
-  it("layout requires THEME_TOGGLE with DEFAULT_THEME before baking data-theme", () => {
+  it("layout bakes data-theme=v2 unless DEFAULT_THEME=v1", () => {
     const src = sourceDeclaring("RootLayout");
-    expect(src).toContain("NEXT_PUBLIC_THEME_TOGGLE");
     expect(src).toContain("NEXT_PUBLIC_DEFAULT_THEME");
-    expect(src).toMatch(
+    expect(src).toContain('=== "v1"');
+    expect(src).toContain("data-theme");
+    expect(src).not.toMatch(
       /THEME_TOGGLE[\s\S]*=== "true"[\s\S]*DEFAULT_THEME[\s\S]*=== "v2"/,
     );
   });

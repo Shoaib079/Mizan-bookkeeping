@@ -18,7 +18,7 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 export function useNewLookTheme() {
-  const [theme, setThemeState] = useState<AppVisualTheme>("v1");
+  const [theme, setThemeState] = useState<AppVisualTheme>(() => envDefaultTheme());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
