@@ -17,12 +17,12 @@
 
 ## Current
 
-- **Transfer rich descriptions:** `Transfer · from → to` at write + GL/list enrich for old rows; Note optional; bare “Account transfer” ignored. Tag `v0.transfer-rich-descriptions`. **Awaiting owner review — do not push.**
+- **Dashboard Cash & bank — itemize drawers:** per-drawer rows + Cash/Banks subtotals + Total cash & bank; API `cash_accounts`. Tag `v0.dashboard-cash-drawers`. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — transfer rich descriptions awaiting review)* |
-| **Last completed slice** | Transfer rich descriptions |
-| **Last tag** | `v0.transfer-rich-descriptions` |
+| **Active slice** | *(none — dashboard cash drawers awaiting review)* |
+| **Last completed slice** | Dashboard Cash & bank — itemize drawers |
+| **Last tag** | `v0.dashboard-cash-drawers` |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Owner review → push when approved |

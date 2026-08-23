@@ -14,13 +14,74 @@ import { apiFetch } from "@/lib/api";
 import type { MoneyAccountTree } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTry } from "@/lib/money";
+import { cn } from "@/lib/utils";
+
+export type CashAccountBalance = {
+  id: string;
+  name: string;
+  balance_kurus: number;
+};
 
 type Props = {
   cashKurus: number;
   bankKurus: number;
+  cashAccounts?: CashAccountBalance[];
 };
 
-export function CashBankSnapshotCard({ cashKurus, bankKurus }: Props) {
+function MoneyRow({
+  label,
+  amountKurus,
+  href,
+  emphasis,
+}: {
+  label: string;
+  amountKurus: number;
+  href?: string;
+  emphasis?: "headline" | "subtotal" | "default";
+}) {
+  const amountClass =
+    emphasis === "headline"
+      ? "text-lg font-bold tabular-nums"
+      : emphasis === "subtotal"
+        ? "text-sm font-semibold tabular-nums"
+        : "text-sm font-semibold tabular-nums";
+  const labelClass =
+    emphasis === "headline"
+      ? "font-semibold text-foreground"
+      : emphasis === "subtotal"
+        ? "text-muted-foreground"
+        : "text-sm font-medium text-primary";
+
+  const amount = (
+    <span className={amountClass}>{formatTry(amountKurus)}</span>
+  );
+  const name = href ? (
+    <Link href={href} className={cn(labelClass, "hover:underline")}>
+      {label}
+    </Link>
+  ) : (
+    <span className={labelClass}>{label}</span>
+  );
+
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      {name}
+      {href ? (
+        <Link href={href} className="hover:underline">
+          {amount}
+        </Link>
+      ) : (
+        amount
+      )}
+    </div>
+  );
+}
+
+export function CashBankSnapshotCard({
+  cashKurus,
+  bankKurus,
+  cashAccounts = [],
+}: Props) {
   const { entityId } = useEntity();
   const [bankAccounts, setBankAccounts] = useState<
     MoneyAccountTree["banks"]["accounts"]
@@ -46,6 +107,8 @@ export function CashBankSnapshotCard({ cashKurus, bankKurus }: Props) {
     };
   }, [entityId]);
 
+  const combined = cashKurus + bankKurus;
+
   return (
     // Same shell as StatCard — meaning card + blue bar + sky icon under v2.
     <div
@@ -60,45 +123,74 @@ export function CashBankSnapshotCard({ cashKurus, bankKurus }: Props) {
         Cash & bank
       </div>
       <div className="mt-3 space-y-3 text-sm">
-        <div className="flex items-baseline justify-between gap-4">
-          <Link
-            href="/banking/cash"
-            className="text-muted-foreground hover:text-foreground"
-          >
+        <MoneyRow
+          label="Total cash & bank"
+          amountKurus={combined}
+          emphasis="headline"
+        />
+
+        <div data-testid="cash-group">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Cash
-          </Link>
-          <Link
-            href="/banking/cash"
-            className="text-lg font-semibold tabular-nums hover:underline"
-          >
-            {formatTry(cashKurus)}
-          </Link>
+          </div>
+          {cashAccounts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No cash drawers yet — add one under Banking → Cash drawer.
+            </p>
+          ) : (
+            <div className="divide-y divide-border border-t border-border/80">
+              {cashAccounts.map((account) => (
+                <div
+                  key={account.id}
+                  data-testid="cash-drawer-row"
+                  data-drawer-name={account.name}
+                  className="flex items-center justify-between gap-3 py-1.5"
+                >
+                  <Link
+                    href={`/banking/accounts/${account.id}`}
+                    className="truncate text-sm font-medium text-primary hover:underline"
+                  >
+                    {account.name}
+                  </Link>
+                  <span className="shrink-0 tabular-nums text-sm font-semibold">
+                    {formatTry(account.balance_kurus)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="mt-1.5 border-t border-border/80 pt-1.5">
+            <MoneyRow
+              label="Cash"
+              amountKurus={cashKurus}
+              href="/banking/cash"
+              emphasis="subtotal"
+            />
+          </div>
         </div>
-        <div>
-          <div className="mb-1 flex items-baseline justify-between gap-4">
-            <Link
-              href="/banking/banks"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Bank accounts
-            </Link>
-            <Link
-              href="/banking/banks"
-              className="text-lg font-semibold tabular-nums hover:underline"
-            >
-              {formatTry(bankKurus)}
-            </Link>
+
+        <div data-testid="bank-group">
+          <div className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Bank accounts
           </div>
           <BankAccountBalanceRows
             accounts={bankAccounts}
             variant="compact"
             className="border-t border-border/80"
           />
+          <div className="mt-1.5 border-t border-border/80 pt-1.5">
+            <MoneyRow
+              label="Banks"
+              amountKurus={bankKurus}
+              href="/banking/banks"
+              emphasis="subtotal"
+            />
+          </div>
         </div>
       </div>
       <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-        Each bank shows its book balance — open an account for statements,
-        activity, and reconciliation.
+        Each drawer and bank shows its book balance — open an account for
+        statements, activity, and reconciliation.
       </p>
     </div>
   );

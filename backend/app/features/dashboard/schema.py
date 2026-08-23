@@ -39,6 +39,14 @@ class FxBalanceRow(BaseModel):
     try_cost_kurus: int
 
 
+class CashAccountBalanceRow(BaseModel):
+    """One active cash drawer for the dashboard Cash & bank card."""
+
+    id: uuid.UUID
+    name: str
+    balance_kurus: int
+
+
 class NeedsReviewBreakdown(BaseModel):
     invoice_drafts: int
     invoice_duplicates: int
@@ -72,6 +80,10 @@ class DashboardRead(BaseModel):
     total_try_position_kurus: int
     cash_in_hand_kurus: int = 0
     bank_balance_kurus: int = 0
+    cash_accounts: list[CashAccountBalanceRow] = Field(
+        default_factory=list,
+        description="Active CASH money accounts (drawers) with book balances",
+    )
     fx_balances: list[FxBalanceRow] = Field(default_factory=list)
     tax_department_payments_kurus: int | None = None
     needs_review: NeedsReviewBreakdown

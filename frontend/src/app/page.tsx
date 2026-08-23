@@ -184,6 +184,7 @@ function DashboardBody() {
                 <CashBankSnapshotCard
                   cashKurus={data.cash_in_hand_kurus}
                   bankKurus={data.bank_balance_kurus}
+                  cashAccounts={data.cash_accounts}
                 />
               </>
             ) : (

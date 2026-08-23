@@ -20,9 +20,12 @@ describe("balances on dashboard", () => {
     expect(page).toContain("lg:grid-cols-2");
     expect(page).toContain("cash_in_hand_kurus");
     expect(page).toContain("bank_balance_kurus");
+    expect(page).toContain("cash_accounts");
     expect(snapshot).toContain("Cash & bank");
+    expect(snapshot).toContain("Total cash & bank");
     expect(snapshot).toContain("Cash");
     expect(snapshot).toContain("Bank accounts");
+    expect(snapshot).toContain("cash-drawer-row");
     expect(snapshot).toContain("BankAccountBalanceRows");
     expect(page).toContain("Right now");
     expect(page).toContain("BalancesOverview");

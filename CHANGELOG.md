@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-23
+
+- **Dashboard Cash & bank — itemize drawers (`v0.dashboard-cash-drawers`).** Cash & bank card lists every active cash drawer (name + book balance) like banks, plus Cash / Banks subtotals and a bold **Total cash & bank** headline (cash + bank). Dashboard API adds `cash_accounts: [{id, name, balance_kurus}]`; existing totals kept. Same card on desktop + mobile home; Balances does not share it. Read/display only — no posting. Vitest + pytest; mutation collapse multi-drawer cash to one aggregate → red. **Do not push until review.**
+
 ## 2026-08-22
 
 - **Transfer rich descriptions (`v0.transfer-rich-descriptions`).** Same pattern as staff/FX/partner: rows identify themselves as `Transfer · {from} → {to}` (picker labels e.g. `Main Drawer (cash)`); optional ` — {note}`; bare `"Account transfer"` ignored as a note. Write-time compose on JE + `account_transfers` via `post_account_transfer` (manual + statement-classify when both accounts known). Read-time enrich old rows on transfers list + GL batch join (Recently recorded / drawer reuse list enrichment). Form: Description → Note (optional), default blank. Amounts / void-and-reenter / cash-flow exclusion / transfer linking policy untouched. Vitest + pytest; mutation bare `"Account transfer"` as sole description → red. **Do not push until review.**

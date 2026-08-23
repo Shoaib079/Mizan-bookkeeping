@@ -15,7 +15,6 @@ from app.core.fx.ledger import native_quantity_balance, try_cost_balance_kurus
 from app.core.ledger.models import JournalEntry, JournalEntryLine, JournalEntrySource, JournalEntryStatus
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.models import MoneyAccount, MoneyAccountKind
-from app.features.banking import service as banking_service
 from app.features.dashboard.schema import (
     DashboardRead,
     DeliveryBalanceLeftRow,
@@ -23,6 +22,10 @@ from app.features.dashboard.schema import (
     NeedsReviewBreakdown,
     PayablePreviewRow,
     PeriodSalesRead,
+)
+from app.features.dashboard.money_positions import (
+    cash_account_rows,
+    try_money_position_kurus,
 )
 from app.features.delivery import service as delivery_service
 from app.features.delivery.models import DeliveryReport, DeliveryReportStatus
@@ -164,35 +167,6 @@ def _payables_preview(
 
     balances.sort(key=lambda row: row.balance_kurus, reverse=True)
     return balances[:limit]
-
-
-def _try_money_position_kurus(
-    session: Session,
-    *,
-    money_account_id: uuid.UUID | None,
-    kinds: tuple[MoneyAccountKind, ...] = (
-        MoneyAccountKind.BANK,
-        MoneyAccountKind.CASH,
-    ),
-) -> int:
-    query = select(MoneyAccount).where(
-        MoneyAccount.is_active.is_(True),
-        MoneyAccount.account_kind.in_(kinds),
-    )
-    if money_account_id is not None:
-        query = query.where(MoneyAccount.id == money_account_id)
-
-    total = 0
-    for money_account in session.scalars(query.order_by(MoneyAccount.name)):
-        gl_account = session.get(Account, money_account.gl_account_id)
-        if gl_account is None:
-            continue
-        total += banking_service.gl_balance_kurus(
-            session,
-            gl_account.id,
-            gl_account.normal_balance,
-        )
-    return total
 
 
 def _fx_balances(session: Session) -> list[FxBalanceRow]:
@@ -337,18 +311,21 @@ def get_dashboard(
         )
         needs_review = _needs_review_counts(session, delivery_enabled=delivery_enabled)
         confirmed_invoice_drafts = _confirmed_invoice_draft_count(session)
-        total_try_position = _try_money_position_kurus(
+        total_try_position = try_money_position_kurus(
             session, money_account_id=money_account_id
         )
-        cash_in_hand = _try_money_position_kurus(
+        cash_in_hand = try_money_position_kurus(
             session,
             money_account_id=money_account_id,
             kinds=(MoneyAccountKind.CASH,),
         )
-        bank_balance = _try_money_position_kurus(
+        bank_balance = try_money_position_kurus(
             session,
             money_account_id=money_account_id,
             kinds=(MoneyAccountKind.BANK,),
+        )
+        cash_accounts = cash_account_rows(
+            session, money_account_id=money_account_id
         )
         fx_balances = _fx_balances(session)
 
@@ -390,6 +367,7 @@ def get_dashboard(
         total_try_position_kurus=total_try_position,
         cash_in_hand_kurus=cash_in_hand,
         bank_balance_kurus=bank_balance,
+        cash_accounts=cash_accounts,
         fx_balances=fx_balances,
         tax_department_payments_kurus=None,
         needs_review=needs_review,

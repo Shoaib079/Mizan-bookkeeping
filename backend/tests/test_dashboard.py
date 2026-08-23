@@ -525,3 +525,83 @@ def test_cross_entity_isolation(
         params={"from": "2026-01-01", "to": "2026-01-31"},
     )
     assert missing.status_code == 404
+
+
+def test_dashboard_itemizes_each_cash_drawer(db_session, restaurant_a) -> None:
+    seed_default_chart(db_session, restaurant_a.id)
+    entity_id = restaurant_a.id
+    bank = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(
+            account_kind=MoneyAccountKind.BANK,
+            name="Garanti",
+            bank_name="Garanti",
+        ),
+    )
+    main = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Main Drawer"),
+    )
+    bar = banking_service.create_money_account(
+        db_session,
+        entity_id,
+        MoneyAccountCreate(account_kind=MoneyAccountKind.CASH, name="Bar Drawer"),
+    )
+    with entity_context(db_session, entity_id):
+        revenue_id = db_session.scalar(
+            select(Account.id).where(Account.code == SALES_REVENUE_CODE)
+        )
+        assert revenue_id is not None
+
+    post_cash_movement(
+        db_session,
+        entity_id,
+        money_account_id=main.id,
+        movement_date=date(2026, 8, 1),
+        direction=CashMovementDirection.IN,
+        amount_kurus=100_000,
+        offset_account_id=revenue_id,
+        description="Main float",
+        actor_id=ACTOR_ID,
+    )
+    post_cash_movement(
+        db_session,
+        entity_id,
+        money_account_id=bar.id,
+        movement_date=date(2026, 8, 1),
+        direction=CashMovementDirection.IN,
+        amount_kurus=40_000,
+        offset_account_id=revenue_id,
+        description="Bar float",
+        actor_id=ACTOR_ID,
+    )
+    # Fund bank via cash out + bank in through transfer posting would work;
+    # use cash movement OUT to revenue offset inverted — simpler: post to bank
+    # via banking transfer from main (keeps integer kuruş).
+    from app.core.banking import posting as banking_posting
+
+    banking_posting.post_account_transfer(
+        db_session,
+        entity_id,
+        from_money_account_id=main.id,
+        to_money_account_id=bank.id,
+        transfer_date=date(2026, 8, 2),
+        amount_kurus=25_000,
+        description="",
+        actor_id=ACTOR_ID,
+    )
+
+    dash = dashboard_service.get_dashboard(
+        db_session, entity_id, date(2026, 8, 1), date(2026, 8, 31)
+    )
+
+    by_name = {row.name: row.balance_kurus for row in dash.cash_accounts}
+    assert set(by_name) == {"Bar Drawer", "Main Drawer"}
+    assert by_name["Main Drawer"] == 75_000  # 100k − 25k transfer out
+    assert by_name["Bar Drawer"] == 40_000
+    assert dash.cash_in_hand_kurus == 115_000
+    assert dash.bank_balance_kurus == 25_000
+    assert dash.cash_in_hand_kurus + dash.bank_balance_kurus == 140_000
+    assert sum(row.balance_kurus for row in dash.cash_accounts) == dash.cash_in_hand_kurus

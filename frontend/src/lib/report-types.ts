@@ -36,6 +36,7 @@ export type DashboardRead = {
   total_try_position_kurus: number;
   cash_in_hand_kurus: number;
   bank_balance_kurus: number;
+  cash_accounts: { id: string; name: string; balance_kurus: number }[];
   fx_balances: {
     money_account_id: string;
     name: string;
