@@ -4,6 +4,7 @@
 
 **Why:** Owner disliked grey payables/receivables figures; direction colour + captions match the sticker convention already used on supplier/customer/partner detail.
 
+## 2026-08-23 — Cash & bank card: column separation + bold subtotals (v2-only)
 
 **Choice:** Under `data-theme="v2"` only, the Cash & bank snapshot adds a hairline between Cash drawers and Bank accounts (`#E6EAF2`; vertical ≥sm with ≥24px gap; horizontal when stacked) and renders the Cash / Banks subtotal labels at 13px / weight 700 / `#3D4A63`. Live v1 card is unchanged.
 
