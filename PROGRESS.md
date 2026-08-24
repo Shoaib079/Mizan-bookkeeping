@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split staff-salary payment dialog (`v0.fe-split-staff-salary`):** File-size cleanup only; no behavior/API change.
+- **Split opening-balances page (`v0.fe-split-opening-balances`):** File-size cleanup only; no behavior/API change.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split staff-salary payment dialog |
-| **Last tag** | `v0.fe-split-staff-salary` |
+| **Last completed slice** | Split opening-balances page |
+| **Last tag** | `v0.fe-split-opening-balances` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (opening balances / statement-classify-bar / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (statement-classify-bar / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

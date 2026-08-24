@@ -57,6 +57,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 - `invoice-draft-review.tsx` **883 → 80** — `v0.fe-split-invoice-draft` (redeemed from baseline). Types + capabilities libs; hook; summary (incl. GlEntryActions); action forms.
 - `manual-expense-form.tsx` **832 → ~150** — `v0.fe-split-manual-expense` (redeemed). Draft/submit libs; hook; fields + salary panel; reuses existing typeahead/category/toggle.
 - `staff-salary-payment-dialog.tsx` **838 → ~269** — `v0.fe-split-staff-salary` (redeemed). Hook + period/settle UI + open/validate/settle libs; reuses funding/FX/submit.
+- `opening-balances/page.tsx` **775 → ~118** — `v0.fe-split-opening-balances` (redeemed). Draft lib + hook + lines panel/row + journal preview.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -66,7 +67,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~883~~ | ~~`components/invoice-draft-review.tsx`~~ → **split** (`v0.fe-split-invoice-draft`) |
 | ~~832~~ | ~~`components/forms/manual-expense-form.tsx`~~ → **split** (`v0.fe-split-manual-expense`) |
 | ~~838~~ | ~~`components/forms/staff-salary-payment-dialog.tsx`~~ → **split** (`v0.fe-split-staff-salary`) |
-| 775 | `app/onboarding/opening-balances/page.tsx` |
+| ~~775~~ | ~~`app/onboarding/opening-balances/page.tsx`~~ → **split** (`v0.fe-split-opening-balances`) |
 | 770 | `components/statement-classify-bar.tsx` |
 | 632 | `components/statement-line-review-row.tsx` |
 | 608 | `lib/nav-sections.ts` |
@@ -197,14 +198,15 @@ Many of these are **accepted-live** from recent dashboard/balances slices. For v
 2. ~~**Split `invoice-draft-review`**~~ — **DONE** `v0.fe-split-invoice-draft`
 3. ~~**Split `manual-expense-form`**~~ — **DONE** `v0.fe-split-manual-expense`
 4. ~~**Split `staff-salary-payment-dialog`**~~ — **DONE** `v0.fe-split-staff-salary`
-5. **Decide preview kit fate** — keep lab vs archive/delete  
-6. **Unify period chips** — one component language for This/Last/Custom + status filters  
-7. **ExpenseRecordKindToggle → SegmentedControl** (or shared chip)  
-8. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
-9. **Split remaining mega-files** — opening balances, statement-classify-bar  
-10. **Cash close UX consolidation**  
-11. **Tokenize remaining accepted hex** (without visual regressions)  
-12. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
+5. ~~**Split `opening-balances/page`**~~ — **DONE** `v0.fe-split-opening-balances`
+6. **Decide preview kit fate** — keep lab vs archive/delete  
+7. **Unify period chips** — one component language for This/Last/Custom + status filters  
+8. **ExpenseRecordKindToggle → SegmentedControl** (or shared chip)  
+9. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
+10. **Split remaining mega-files** — statement-classify-bar  
+11. **Cash close UX consolidation**  
+12. **Tokenize remaining accepted hex** (without visual regressions)  
+13. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
 
 ---
 

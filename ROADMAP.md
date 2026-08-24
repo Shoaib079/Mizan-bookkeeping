@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Continue FE file-size splits (opening balances / statement-classify-bar / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
-| **Last completed slice** | **Split staff-salary payment dialog** (`v0.fe-split-staff-salary`) |
-| **Last commit/tag**      | `v0.fe-split-staff-salary` |
+| **Next up**              | Continue FE file-size splits (statement-classify-bar / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
+| **Last completed slice** | **Split opening-balances page** (`v0.fe-split-opening-balances`) |
+| **Last commit/tag**      | `v0.fe-split-opening-balances` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Split opening-balances page (file size)         | `v0.fe-split-opening-balances`                         | Page 775→~118; draft lib + hook + lines panel/row + journal preview; FormPage archetype kept; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split staff-salary payment dialog (file size)   | `v0.fe-split-staff-salary`                             | Dialog 838→~269; hook + period/settle UI + open/validate/settle libs; reuse funding/FX/submit; guards retargeted; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split manual-expense form (file size)           | `v0.fe-split-manual-expense`                           | Form 832→~150; draft/submit libs + hook + fields/salary panel; reuse typeahead/toggle; guards retargeted; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split invoice-draft review (file size)          | `v0.fe-split-invoice-draft`                            | Panel 883→80; types/capabilities + hook + summary/actions; GlEntryActions guard retargeted; canOneClickPost shared; redeemed from baseline; no behavior/guard change |
