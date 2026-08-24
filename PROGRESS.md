@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split statement-classify bar (`v0.fe-split-statement-classify`):** File-size cleanup only; no behavior/API change.
+- **Split statement-line review row (`v0.fe-split-statement-line-review`):** File-size cleanup only; no behavior/API change.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split statement-classify bar |
-| **Last tag** | `v0.fe-split-statement-classify` |
+| **Last completed slice** | Split statement-line review row |
+| **Last tag** | `v0.fe-split-statement-line-review` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (statement-line-review-row / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (nav-sections / cash-close / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
