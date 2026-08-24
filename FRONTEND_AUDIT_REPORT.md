@@ -76,7 +76,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~608~~ | ~~`lib/nav-sections.ts`~~ → **split** (`v0.fe-split-nav-sections`) |
 | ~~589~~ | ~~`components/forms/cash-drawer-close-day-form.tsx`~~ → **split** (`v0.fe-split-cash-close-day`) |
 | ~~580~~ | ~~`components/forms/group-sale-form.tsx`~~ → **split** (`v0.fe-split-group-sale`) |
-| 538 | `components/review/general-ledger-panel.tsx` |
+| ~~538~~ | ~~`components/review/general-ledger-panel.tsx`~~ → **split** (`v0.fe-split-general-ledger`) |
 | 517 | `components/ui/date-input.tsx` |
 | 512 | `app/banking/cash/page.tsx` |
 | 498 | `app/split/page.tsx` |
@@ -92,7 +92,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `general-ledger-panel.tsx` (~538) / `date-input.tsx` (~517).
+**Recommendation:** Continue the existing split pattern. Next: `date-input.tsx` (~517) / banking cash page (~512).
 
 ---
 

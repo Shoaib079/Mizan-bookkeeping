@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split group-sale form (`v0.fe-split-group-sale`):** File-size cleanup only; public import path unchanged.
+- **Split general-ledger panel (`v0.fe-split-general-ledger`):** File-size cleanup only; public import path unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split group-sale form |
-| **Last tag** | `v0.fe-split-group-sale` |
+| **Last completed slice** | Split general-ledger panel |
+| **Last tag** | `v0.fe-split-general-ledger` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (GL panel / date-input / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (date-input / cash page / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

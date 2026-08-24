@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Continue FE file-size splits (GL panel / date-input / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
-| **Last completed slice** | **Split group-sale form** (`v0.fe-split-group-sale`) |
-| **Last commit/tag**      | `v0.fe-split-group-sale` |
+| **Next up**              | Continue FE file-size splits (date-input / cash page / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
+| **Last completed slice** | **Split general-ledger panel** (`v0.fe-split-general-ledger`) |
+| **Last commit/tag**      | `v0.fe-split-general-ledger` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Split general-ledger panel (file size)          | `v0.fe-split-general-ledger`                           | Panel 538→~91; hook + filters + table; reuse export/detail/GlEntryActions; focus/`effective_only` preserved; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split group-sale form (file size)               | `v0.fe-split-group-sale`                               | Form 580→~93; hook + line helpers + header/lines/footer; reuse menu picker + form-copy; idempotency surface → hook; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split cash-drawer close-day form (file size)    | `v0.fe-split-cash-close-day`                           | Form 589→~129; hook + phase types + form body + done panel; reuse denom/MainTill/split; guards → sourceDeclaringAll; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split nav-sections (file size)                  | `v0.fe-split-nav-sections`                             | Module 608→~40 barrel; types + sections data + route registry + path helpers; public `@/lib/nav-sections` API unchanged; redeemed from baseline; no behavior change |
