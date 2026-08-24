@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 
 describe("SEC-4: M1 — Role gating defaults to least privilege", () => {
@@ -55,7 +55,7 @@ describe("SEC-4: M2 — FX parser uses parseTryParts (no 100× bug)", () => {
 
 describe("SEC-4: M3 — Drawer reopen POST sends Idempotency-Key", () => {
   it("cash page imports newIdempotencyKey and attaches it to reopen call", async () => {
-    const src = sourceDeclaring("CashDrawerPage");
+    const src = sourceDeclaringAll("CashDrawerPage", "useCashDrawerPage");
     expect(src).toContain("newIdempotencyKey");
     expect(src).toMatch(/idempotencyKey:\s*newIdempotencyKey\(\)/);
   });

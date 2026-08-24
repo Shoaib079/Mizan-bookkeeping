@@ -14,10 +14,15 @@ import {
   shouldShowWriteChrome,
 } from "@/lib/entity-access";
 import { grantsForRole } from "@/lib/member-grants";
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 /** Surfaces gated via useWriteChrome → shouldShowWriteChrome / canUseRecordAction */
-const OPS_WRITE_SURFACES: { symbol: string; markers: string[] }[] = [
+const OPS_WRITE_SURFACES: {
+  symbol: string;
+  markers: string[];
+  /** Extra declaring files when the surface was split under the file-size ratchet. */
+  with?: string[];
+}[] = [
   {
     symbol: "PartnerDetailPage",
     markers: ["useWriteChrome", "showWrite", "Record", "Pay profit"],
@@ -68,6 +73,7 @@ const OPS_WRITE_SURFACES: { symbol: string; markers: string[] }[] = [
   },
   {
     symbol: "CashDrawerPage",
+    with: ["useCashDrawerPage"],
     markers: ["useWriteChrome", "showOpsWrite", "cashPageWriteHeader"],
   },
   {
@@ -121,8 +127,10 @@ describe("S3 write chrome helpers (role grants)", () => {
 describe("S3 write chrome surfaces are gated (source)", () => {
   it.each(OPS_WRITE_SURFACES)(
     "$symbol uses the write-chrome helper near its controls",
-    ({ symbol, markers }) => {
-      const source = sourceDeclaring(symbol);
+    ({ symbol, markers, with: also }) => {
+      const source = also?.length
+        ? sourceDeclaringAll(symbol, ...also)
+        : sourceDeclaring(symbol);
       for (const marker of markers) {
         expect(source, `${symbol} missing ${marker}`).toContain(marker);
       }

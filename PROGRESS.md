@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split DateInput (`v0.fe-split-date-input`):** File-size cleanup only; public import path unchanged.
+- **Split banking cash page (`v0.fe-split-banking-cash`):** File-size cleanup only; `/banking/cash` behavior unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split DateInput |
-| **Last tag** | `v0.fe-split-date-input` |
+| **Last completed slice** | Split banking cash page |
+| **Last tag** | `v0.fe-split-banking-cash` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (cash page / split page / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`split/page.tsx` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

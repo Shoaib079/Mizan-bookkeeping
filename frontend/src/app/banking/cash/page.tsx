@@ -4,423 +4,69 @@
 
 import Link from "next/link";
 import { Wallet } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { CashCountForm } from "@/components/forms/cash-count-form";
-import { CashDrawerCloseDayForm } from "@/components/forms/cash-drawer-close-day-form";
-import { CashDrawerCloseForm } from "@/components/forms/cash-drawer-close-form";
-import { CashMovementForm } from "@/components/forms/cash-movement-form";
-import { MoneyAccountForm } from "@/components/forms/money-account-form";
-import { Button } from "@/components/ui/button";
-import { Dialog } from "@/components/ui/dialog";
+import { cashPageWriteHeader } from "@/components/banking/cash-page-write-actions";
+import { CashDrawerPageDialogs } from "@/components/banking/cash-drawer-page-dialogs";
+import { CashDrawerSessionsPanel } from "@/components/banking/cash-drawer-sessions-panel";
+import { CashDrawersList } from "@/components/banking/cash-drawers-list";
+import { useCashDrawerPage } from "@/components/banking/use-cash-drawer-page";
 import { PageHeader } from "@/components/page/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input, Label } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { apiFetch } from "@/lib/api";
-import { cashPageWriteHeader } from "@/components/banking/cash-page-write-actions";
-import { useWriteChrome } from "@/lib/use-write-chrome";
-import { useEntity } from "@/lib/entity-context";
-import { newIdempotencyKey } from "@/lib/use-submit-idempotency";
-import { useToast } from "@/lib/toast";
-import type {
-  CashDrawerSessionDetail,
-  CashDrawerSessionRead,
-  MoneyAccountLeaf,
-  MoneyAccountTree,
-} from "@/lib/banking-types";
-import { formatTrDate, formatTry } from "@/lib/money";
 
 export default function CashDrawerPage() {
-  const { entityId, actorId } = useEntity();
-  const { showWrite: showOpsWrite, showCountCash, showCloseDay } =
-    useWriteChrome();
-  const { toast } = useToast();
-  const [sessions, setSessions] = useState<CashDrawerSessionRead[]>([]);
-  /** Closed counts only — an open session has nothing counted yet. */
-  const countHistory = useMemo(
-    () => sessions.filter((s) => s.status === "closed"),
-    [sessions],
-  );
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<CashDrawerSessionDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [movementOpen, setMovementOpen] = useState(false);
-  const [closeOpen, setCloseOpen] = useState(false);
-  const [countCashOpen, setCountCashOpen] = useState(false);
-  const [closeDayOpen, setCloseDayOpen] = useState(false);
-  const [reopenOpen, setReopenOpen] = useState(false);
-  const [reopenReason, setReopenReason] = useState("");
-  const [reopenError, setReopenError] = useState<string | null>(null);
-  const [reopening, setReopening] = useState(false);
-  const [cashAccounts, setCashAccounts] = useState<MoneyAccountLeaf[]>([]);
-  const [addDrawerOpen, setAddDrawerOpen] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [renameText, setRenameText] = useState("");
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const [renaming, setRenaming] = useState(false);
-
-  const reloadCashAccounts = useCallback(async () => {
-    if (!entityId) {
-      setCashAccounts([]);
-      return;
-    }
-    try {
-      const tree = await apiFetch<MoneyAccountTree>(
-        `/entities/${entityId}/banking/accounts/tree`,
-      );
-      setCashAccounts(tree.cash.accounts.filter((a) => a.is_active));
-    } catch {
-      setCashAccounts([]);
-    }
-  }, [entityId]);
-
-  const reloadSessions = useCallback(async () => {
-    if (!entityId) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch<{ items: CashDrawerSessionRead[] }>(
-        `/entities/${entityId}/cash/drawer-sessions?limit=50`,
-      );
-      setSessions(res.items);
-      setSelectedId((prev) => prev ?? res.items[0]?.id ?? null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed");
-    } finally {
-      setLoading(false);
-    }
-  }, [entityId]);
-
-  const reloadDetail = useCallback(async () => {
-    if (!entityId || !selectedId) {
-      setDetail(null);
-      return;
-    }
-    try {
-      const data = await apiFetch<CashDrawerSessionDetail>(
-        `/entities/${entityId}/cash/drawer-sessions/${selectedId}`,
-      );
-      setDetail(data);
-    } catch {
-      setDetail(null);
-    }
-  }, [entityId, selectedId]);
-
-  useEffect(() => {
-    void reloadCashAccounts();
-  }, [reloadCashAccounts]);
-
-  useEffect(() => {
-    void reloadSessions();
-  }, [reloadSessions]);
-
-  useEffect(() => {
-    void reloadDetail();
-  }, [reloadDetail]);
-
-  function onSaved() {
-    void reloadSessions();
-    void reloadDetail();
-    void reloadCashAccounts();
-  }
-
-  function startRename(account: MoneyAccountLeaf) {
-    setRenamingId(account.id);
-    setRenameText(account.name);
-    setRenameError(null);
-  }
-
-  async function saveRename(accountId: string) {
-    if (!entityId) return;
-    const name = renameText.trim();
-    if (!name) {
-      setRenameError("Name is required.");
-      return;
-    }
-    setRenaming(true);
-    setRenameError(null);
-    try {
-      await apiFetch(`/entities/${entityId}/banking/accounts/${accountId}`, {
-        method: "PATCH",
-        idempotencyKey: newIdempotencyKey(),
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      });
-      setRenamingId(null);
-      toast("Drawer renamed");
-      void reloadCashAccounts();
-    } catch (err) {
-      setRenameError(err instanceof Error ? err.message : "Rename failed");
-    } finally {
-      setRenaming(false);
-    }
-  }
-
-  async function onReopenSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!entityId || !detail) return;
-    const reason = reopenReason.trim();
-    if (!reason) return;
-    setReopening(true);
-    setReopenError(null);
-    try {
-      await apiFetch(
-        `/entities/${entityId}/cash/drawer-sessions/${detail.id}/reopen`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          idempotencyKey: newIdempotencyKey(),
-          body: JSON.stringify({
-            reason,
-            actor_id: actorId,
-          }),
-        },
-      );
-      setReopenOpen(false);
-      setReopenReason("");
-      onSaved();
-    } catch (err) {
-      setReopenError(err instanceof Error ? err.message : "Reopen failed");
-    } finally {
-      setReopening(false);
-    }
-  }
+  const s = useCashDrawerPage();
 
   return (
     <>
       <PageHeader
         title="Cash"
         {...cashPageWriteHeader({
-          entityId,
-          showOpsWrite,
-          showCountCash,
-          showCloseDay,
-          onMovement: () => setMovementOpen(true),
-          onCountCash: () => setCountCashOpen(true),
-          onCloseDay: () => setCloseDayOpen(true),
-          onAddDrawer: () => setAddDrawerOpen(true),
+          entityId: s.entityId,
+          showOpsWrite: s.showOpsWrite,
+          showCountCash: s.showCountCash,
+          showCloseDay: s.showCloseDay,
+          onMovement: () => s.setMovementOpen(true),
+          onCountCash: () => s.setCountCashOpen(true),
+          onCloseDay: () => s.setCloseDayOpen(true),
+          onAddDrawer: () => s.setAddDrawerOpen(true),
         })}
       />
 
-      {!entityId && (
+      {!s.entityId && (
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar.
         </p>
       )}
-      {error && <p className="mb-4 text-sm text-destructive">{error}</p>}
+      {s.error && <p className="mb-4 text-sm text-destructive">{s.error}</p>}
 
-      {entityId && cashAccounts.length > 0 && (
-        <section className="mb-6 rounded-lg border border-border bg-card">
-          <div className="border-b border-border px-4 py-3">
-            <h2 className="text-sm font-semibold">Cash drawers</h2>
-            <p className="text-xs text-muted-foreground">
-              {cashAccounts.length === 1
-                ? "One TRY drawer — created automatically with the restaurant."
-                : `${cashAccounts.length} drawers — choose which one when recording cash.`}
-            </p>
-          </div>
-          <ul className="divide-y divide-border px-4">
-            {cashAccounts.map((account) => (
-              <li
-                key={account.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm"
-              >
-                {renamingId === account.id ? (
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-                    <Input
-                      value={renameText}
-                      onChange={(e) => setRenameText(e.target.value)}
-                      className="max-w-xs"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void saveRename(account.id);
-                        }
-                        if (e.key === "Escape") setRenamingId(null);
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      disabled={renaming}
-                      onClick={() => void saveRename(account.id)}
-                    >
-                      {renaming ? "Saving…" : "Save"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => setRenamingId(null)}
-                    >
-                      Cancel
-                    </Button>
-                    {renameError && (
-                      <p className="w-full text-xs text-destructive">
-                        {renameError}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className="font-medium">{account.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => startRename(account)}
-                    >
-                      Rename
-                    </Button>
-                  </div>
-                )}
-                <span className="tabular-nums">
-                  {formatTry(account.balance_kurus)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {s.entityId && (
+        <CashDrawersList
+          cashAccounts={s.cashAccounts}
+          renamingId={s.renamingId}
+          renameText={s.renameText}
+          renameError={s.renameError}
+          renaming={s.renaming}
+          onRenameTextChange={s.setRenameText}
+          onStartRename={s.startRename}
+          onCancelRename={s.cancelRename}
+          onSaveRename={s.saveRename}
+        />
       )}
 
-      {loading && <TableSkeleton columns={2} rows={4} />}
+      {s.loading && <TableSkeleton columns={2} rows={4} />}
 
-      {sessions.length > 0 && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section>
-            <h2 className="mb-3 text-sm font-semibold">Drawer sessions</h2>
-            <div className="space-y-2">
-              {sessions.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`flex w-full items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-muted/50 ${
-                    selectedId === s.id ? "bg-muted/50" : ""
-                  }`}
-                  onClick={() => setSelectedId(s.id)}
-                >
-                  <div>
-                    <p className="text-sm font-medium">
-                      {formatTrDate(s.session_date)}
-                    </p>
-                    {s.over_short_kurus !== null && (
-                      <p className="text-xs text-muted-foreground">
-                        Over/short: {formatTry(s.over_short_kurus)}
-                      </p>
-                    )}
-                  </div>
-                  <StatusBadge status={s.status} />
-                </button>
-              ))}
-            </div>
-          </section>
+      <CashDrawerSessionsPanel
+        sessions={s.sessions}
+        selectedId={s.selectedId}
+        onSelect={s.setSelectedId}
+        detail={s.detail}
+        showOpsWrite={s.showOpsWrite}
+        onOpenReopen={s.openReopenDialog}
+        onCloseDrawer={() => s.setCloseOpen(true)}
+      />
 
-          {detail && (
-            <section>
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="text-sm font-semibold">
-                  {formatTrDate(detail.session_date)} detail
-                </h2>
-                <div className="flex gap-2">
-                  {detail.status === "closed" && (
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setReopenReason("");
-                        setReopenError(null);
-                        setReopenOpen(true);
-                      }}
-                    >
-                      Reopen (owner)
-                    </Button>
-                  )}
-                  {detail.status === "open" && showOpsWrite && (
-                    <Button type="button" onClick={() => setCloseOpen(true)}>
-                      Close drawer
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="mb-4 rounded-lg border border-border bg-card p-4 text-sm">
-                {detail.expected_balance_kurus !== null && (
-                  <p>
-                    Expected:{" "}
-                    <span className="tabular-nums font-medium">
-                      {formatTry(detail.expected_balance_kurus)}
-                    </span>
-                  </p>
-                )}
-                {detail.counted_balance_kurus !== null && (
-                  <p>
-                    Counted:{" "}
-                    <span className="tabular-nums font-medium">
-                      {formatTry(detail.counted_balance_kurus)}
-                    </span>
-                  </p>
-                )}
-                {detail.over_short_kurus !== null && (
-                  <p>
-                    Over/short:{" "}
-                    <span className="tabular-nums font-medium">
-                      {formatTry(detail.over_short_kurus)}
-                    </span>
-                  </p>
-                )}
-                {detail.reopen_reason && (
-                  <p className="mt-2 text-muted-foreground">
-                    Reopened: {detail.reopen_reason}
-                  </p>
-                )}
-              </div>
-
-              {detail.movements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No movements linked to this session.
-                </p>
-              ) : (
-                <DataTable>
-                  <DataTableHead>
-                    <tr>
-                      <DataTableHeaderCell>Date</DataTableHeaderCell>
-                      <DataTableHeaderCell>Dir</DataTableHeaderCell>
-                      <DataTableHeaderCell>Description</DataTableHeaderCell>
-                      <DataTableHeaderCell align="right">
-                        Amount
-                      </DataTableHeaderCell>
-                    </tr>
-                  </DataTableHead>
-                  <DataTableBody>
-                    {detail.movements.map((m) => (
-                      <DataTableRow key={m.id}>
-                        <DataTableCell>
-                          {formatTrDate(m.movement_date)}
-                        </DataTableCell>
-                        <DataTableCell>{m.direction}</DataTableCell>
-                        <DataTableCell>{m.description}</DataTableCell>
-                        <DataTableCell align="right">
-                          {formatTry(m.amount_kurus)}
-                        </DataTableCell>
-                      </DataTableRow>
-                    ))}
-                  </DataTableBody>
-                </DataTable>
-              )}
-            </section>
-          )}
-        </div>
-      )}
-
-      {countHistory.length > 0 && (
+      {s.countHistory.length > 0 && (
         <p className="mt-6 text-sm text-muted-foreground">
           Looking for the over/short pattern across days?{" "}
           <Link href="/reports/cash-book" className="text-primary hover:underline">
@@ -430,7 +76,7 @@ export default function CashDrawerPage() {
         </p>
       )}
 
-      {!loading && entityId && sessions.length === 0 && (
+      {!s.loading && s.entityId && s.sessions.length === 0 && (
         <EmptyState
           icon={Wallet}
           title="No drawer sessions yet"
@@ -438,74 +84,31 @@ export default function CashDrawerPage() {
         />
       )}
 
-      <CashMovementForm
-        open={movementOpen}
-        onClose={() => setMovementOpen(false)}
-        defaultCashAccountId={detail?.money_account_id}
-        onSaved={onSaved}
-      />
-      <CashCountForm
-        open={countCashOpen}
-        onClose={() => setCountCashOpen(false)}
-        defaultCashAccountId={detail?.money_account_id}
-        defaultSessionDate={detail?.session_date}
+      <CashDrawerPageDialogs
+        detail={s.detail}
+        movementOpen={s.movementOpen}
+        onMovementClose={() => s.setMovementOpen(false)}
+        countCashOpen={s.countCashOpen}
+        onCountCashClose={() => s.setCountCashOpen(false)}
         onContinueToCloseDay={() => {
-          setCountCashOpen(false);
-          setCloseDayOpen(true);
+          s.setCountCashOpen(false);
+          s.setCloseDayOpen(true);
         }}
-      />
-      <CashDrawerCloseDayForm
-        open={closeDayOpen}
-        onClose={() => setCloseDayOpen(false)}
-        defaultCashAccountId={detail?.money_account_id}
-        defaultSessionDate={detail?.session_date}
-        onClosed={onSaved}
-      />
-      {detail && detail.status === "open" && (
-        <CashDrawerCloseForm
-          open={closeOpen}
-          onClose={() => setCloseOpen(false)}
-          session={detail}
-          onClosed={onSaved}
-        />
-      )}
-
-      <Dialog
-        open={reopenOpen}
-        title="Reopen closed drawer day"
-        onClose={() => setReopenOpen(false)}
-      >
-        <form onSubmit={onReopenSubmit} className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Owner only. Reopening is audited — provide a reason, same as period
-            unlock.
-          </p>
-          <div>
-            <Label htmlFor="drawer-reopen-reason">Reason</Label>
-            <Input
-              id="drawer-reopen-reason"
-              value={reopenReason}
-              onChange={(e) => setReopenReason(e.target.value)}
-              placeholder="Why reopen this drawer day?"
-              required
-              autoFocus
-            />
-          </div>
-          {reopenError && (
-            <p className="text-sm text-destructive">{reopenError}</p>
-          )}
-          <Button type="submit" disabled={reopening || !reopenReason.trim()}>
-            {reopening ? "Reopening…" : "Reopen drawer day"}
-          </Button>
-        </form>
-      </Dialog>
-
-      <MoneyAccountForm
-        open={addDrawerOpen}
-        onClose={() => setAddDrawerOpen(false)}
-        defaultKind="cash"
-        fixedKind="cash"
-        onSaved={() => void reloadCashAccounts()}
+        closeDayOpen={s.closeDayOpen}
+        onCloseDayClose={() => s.setCloseDayOpen(false)}
+        closeOpen={s.closeOpen}
+        onCloseDrawerClose={() => s.setCloseOpen(false)}
+        reopenOpen={s.reopenOpen}
+        onReopenClose={() => s.setReopenOpen(false)}
+        reopenReason={s.reopenReason}
+        onReopenReasonChange={s.setReopenReason}
+        reopenError={s.reopenError}
+        reopening={s.reopening}
+        onReopenSubmit={s.onReopenSubmit}
+        addDrawerOpen={s.addDrawerOpen}
+        onAddDrawerClose={() => s.setAddDrawerOpen(false)}
+        onSaved={s.onSaved}
+        onCashAccountsReload={() => void s.reloadCashAccounts()}
       />
     </>
   );
