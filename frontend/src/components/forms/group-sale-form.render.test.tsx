@@ -6,7 +6,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fxRateHelperText } from "@/lib/group-sale-form-copy";
-import { sourceAt, sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring } from "@/test-support/source";
 
 const apiFetch = vi.fn();
 
@@ -220,11 +220,12 @@ describe("GroupSaleForm note field", () => {
   });
 
   it("mutation: pre-filling Group sale in the form source fails the guard", () => {
-    const src = sourceAt("components/forms/group-sale-form.tsx");
-    expect(src).not.toMatch(/useState\("Group sale"\)/);
-    expect(src).not.toMatch(/setDescription\("Group sale"\)/);
-    expect(src).toContain("Note (optional)");
-    const broken = src.replace('useState("")', 'useState("Group sale")');
+    const form = sourceDeclaring("GroupSaleFormFooter");
+    const hook = sourceDeclaring("useGroupSaleForm");
+    expect(form).toContain("Note (optional)");
+    expect(hook).not.toMatch(/useState\("Group sale"\)/);
+    expect(hook).not.toMatch(/setDescription\("Group sale"\)/);
+    const broken = hook.replace('useState("")', 'useState("Group sale")');
     expect(broken).toMatch(/useState\("Group sale"\)/);
   });
 });

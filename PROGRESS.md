@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split cash-drawer close-day form (`v0.fe-split-cash-close-day`):** File-size cleanup only; public import path unchanged.
+- **Split group-sale form (`v0.fe-split-group-sale`):** File-size cleanup only; public import path unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split cash-drawer close-day form |
-| **Last tag** | `v0.fe-split-cash-close-day` |
+| **Last completed slice** | Split group-sale form |
+| **Last tag** | `v0.fe-split-group-sale` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (group-sale / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (GL panel / date-input / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
