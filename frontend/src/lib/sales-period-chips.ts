@@ -8,6 +8,24 @@ import { currentMonthRange, lastFullMonthRange } from "@/lib/date-range";
 
 export type SalesPeriodChip = "this-month" | "last-month" | "custom";
 
+/** One column from GET …/reports/sales-summary (posted 4000 only). */
+export type SalesSummaryColumnRead = {
+  from_date: string;
+  to_date: string;
+  full_month: boolean;
+  cash_kurus: number;
+  card_kurus: number;
+  delivery_kurus: number;
+  total_kurus: number;
+};
+
+export type SalesSummaryRead = {
+  entity_id: string;
+  delivery_enabled: boolean;
+  current: SalesSummaryColumnRead;
+  prior: SalesSummaryColumnRead;
+};
+
 export const SALES_PERIOD_CHIPS: { id: SalesPeriodChip; label: string }[] = [
   { id: "this-month", label: "This month" },
   { id: "last-month", label: "Last month" },

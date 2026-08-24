@@ -173,3 +173,9 @@ export function DataTableHeaderCell({
     </th>
   );
 }
+
+export function DataTableFoot({ children }: { children: React.ReactNode }) {
+  return (
+    <tfoot className="border-t-2 border-border bg-muted/50">{children}</tfoot>
+  );
+}

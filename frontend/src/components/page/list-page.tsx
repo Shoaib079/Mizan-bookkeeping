@@ -116,12 +116,12 @@ export function ListPage({
         </div>
       )}
 
-      {filters && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">{filters}</div>
-      )}
-
       {summary && !forbidden && (
         <div className="mb-5 flex flex-wrap gap-3">{summary}</div>
+      )}
+
+      {filters && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">{filters}</div>
       )}
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

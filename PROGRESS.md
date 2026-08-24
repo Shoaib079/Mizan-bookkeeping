@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Sales period chips (`v0.sales-period-chips`):** This month / Last month / Custom on Posted sales; queues still ignore dates. Guards verified clean on prior commit.
+- **Sales page visuals (`v0.sales-page-visuals`):** Posted KPIs + colored amounts + filled FilterChips. No backend/guard changes.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Sales period chips |
-| **Last tag** | `v0.sales-period-chips` |
+| **Last completed slice** | Sales page visuals |
+| **Last tag** | `v0.sales-page-visuals` |
 | **Unpushed** | no (after push) |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |
 | **Exact next action** | Await next owner slice |

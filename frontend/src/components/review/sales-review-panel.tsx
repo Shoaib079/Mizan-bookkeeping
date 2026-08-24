@@ -2,28 +2,24 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { ShoppingBag } from "lucide-react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { PosDailySalesPostedActions } from "@/components/sales/pos-daily-sales-posted-actions";
-import { SalesPeriodChips } from "@/components/sales/sales-period-chips";
-import { Button } from "@/components/ui/button";
-import { DownloadIcon } from "@/components/ui/download-icon";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { FilterChips } from "@/components/page/filter-chips";
 import { ListPage } from "@/components/page/list-page";
+import {
+  SalesPeriodChips,
+  SalesPostedKpiCards,
+} from "@/components/sales/sales-period-chips";
+import {
+  SalesReviewMobileList,
+  SalesReviewTable,
+} from "@/components/sales/sales-review-table";
+import { Button } from "@/components/ui/button";
+import { DownloadIcon } from "@/components/ui/download-icon";
 import { EmptyState } from "@/components/ui/empty-state";
-import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { ShoppingBag } from "lucide-react";
 import {
   apiDownload,
   ApiError,
@@ -32,10 +28,9 @@ import {
 } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { canExportFiles } from "@/lib/entity-access";
-import { formatTrDate, formatTry } from "@/lib/money";
-import { useEntityAccess } from "@/lib/use-entity-access";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
-import { isPendingReviewStatus } from "@/lib/review-status";
+import type { SalesSummaryRead } from "@/lib/sales-period-chips";
+import { useEntityAccess } from "@/lib/use-entity-access";
 import {
   SALES_REVIEW_FILTERS,
   salesFilterUsesRange,
@@ -46,11 +41,8 @@ import {
 type PaginatedResponse<T> = { items: T[]; total: number };
 
 type Props = {
-  /** M1: /sales defaults to "all", /review/sales to "pending". */
   defaultFilter?: SalesReviewFilter;
-  /** M3: /sales owns creation — "New daily sales" button + ?new=1 deep link. */
   showCreate?: boolean;
-  /** The page's own name — /sales and /review/sales share this panel. */
   title?: string;
 };
 
@@ -73,11 +65,22 @@ export function SalesReviewPanel({
     offset,
     setOffset,
     pageSize,
-  } =
-    useSalesReviewUrl(defaultFilter);
+  } = useSalesReviewUrl(defaultFilter);
+  const postedRange = salesFilterUsesRange(review);
   const [createOpen, setCreateOpen] = useState(false);
+  const [items, setItems] = useState<PosDailySummary[]>([]);
+  const [total, setTotal] = useState(0);
+  const [periodTotals, setPeriodTotals] = useState<SalesSummaryRead | null>(
+    null,
+  );
+  const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [voidSummary, setVoidSummary] = useState<PosDailySummary | null>(null);
+  const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
+    null,
+  );
 
-  // ?new=1 (Record hub deep link) opens the form once, then cleans the URL.
   useEffect(() => {
     if (!showCreate) return;
     const params = new URLSearchParams(window.location.search);
@@ -92,31 +95,30 @@ export function SalesReviewPanel({
       );
     }
   }, [showCreate]);
-  const [items, setItems] = useState<PosDailySummary[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [voidSummary, setVoidSummary] = useState<PosDailySummary | null>(null);
-  const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
-    null,
-  );
 
   const reload = useCallback(async () => {
     if (!entityId) {
       setItems([]);
       setTotal(0);
+      setPeriodTotals(null);
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await apiFetch<PaginatedResponse<PosDailySummary>>(
+      const listPromise = apiFetch<PaginatedResponse<PosDailySummary>>(
         `/entities/${entityId}/pos/daily-summaries?${listQuery}`,
       );
+      const summaryPromise = postedRange
+        ? apiFetch<SalesSummaryRead>(
+            `/entities/${entityId}/reports/sales-summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+          )
+        : Promise.resolve(null);
+      const [res, summary] = await Promise.all([listPromise, summaryPromise]);
       setItems(res.items);
       setTotal(res.total);
+      setPeriodTotals(summary);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         setError("You do not have access to sales for this restaurant.");
@@ -125,10 +127,11 @@ export function SalesReviewPanel({
       }
       setItems([]);
       setTotal(0);
+      setPeriodTotals(null);
     } finally {
       setLoading(false);
     }
-  }, [entityId, listQuery]);
+  }, [entityId, from, listQuery, postedRange, to]);
 
   useEffect(() => {
     void reload();
@@ -158,6 +161,10 @@ export function SalesReviewPanel({
     );
   }
 
+  const cashTotal = periodTotals?.current.cash_kurus ?? 0;
+  const cardTotal = periodTotals?.current.card_kurus ?? 0;
+  const salesTotal = periodTotals?.current.total_kurus ?? 0;
+
   return (
     <ListPage
       title={title}
@@ -179,19 +186,28 @@ export function SalesReviewPanel({
               </Button>
             </Link>
           )}
-        {showExport && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={loading || exporting || total === 0}
-            className="gap-1.5"
-            onClick={() => void onExport()}
-          >
-            <DownloadIcon className="size-4" />
-            {exporting ? "Downloading…" : "Download Excel"}
-          </Button>
-        )}
+          {showExport && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={loading || exporting || total === 0}
+              className="gap-1.5"
+              onClick={() => void onExport()}
+            >
+              <DownloadIcon className="size-4" />
+              {exporting ? "Downloading…" : "Download Excel"}
+            </Button>
+          )}
         </>
+      }
+      summary={
+        postedRange && periodTotals ? (
+          <SalesPostedKpiCards
+            cashKurus={cashTotal}
+            cardKurus={cardTotal}
+            totalKurus={salesTotal}
+          />
+        ) : undefined
       }
       filters={
         <div className="flex w-full flex-col gap-2">
@@ -201,9 +217,7 @@ export function SalesReviewPanel({
             onChange={setReview}
             ariaLabel="Filter daily sales"
           />
-          {/* Period chips only on Posted — All / Needs review ignore dates so
-              outstanding work is never hidden by a month default. */}
-          {salesFilterUsesRange(review) && (
+          {postedRange && (
             <SalesPeriodChips
               from={from}
               to={to}
@@ -214,134 +228,43 @@ export function SalesReviewPanel({
         </div>
       }
       countLabel={
-        // "in this period" was true when every view was date-scoped. The
-        // queues no longer are, and a count that names a period it does not
-        // have is the same wrong label as "Period total" on the expenses page.
         loading
           ? "Loading…"
           : `${total} daily sale${total === 1 ? "" : "s"}` +
-            (salesFilterUsesRange(review) ? " in this period" : "")
+            (postedRange ? " in this period" : "")
       }
       skeletonColumns={6}
       isEmpty={items.length === 0}
       empty={
         <EmptyState
           icon={ShoppingBag}
-          title={
-            salesFilterUsesRange(review) ? "No sales in this period" : "No sales"
-          }
+          title={postedRange ? "No sales in this period" : "No sales"}
           hint={
-            // Telling someone to change dates they cannot see sends them
-            // looking for a control that is not on the screen — which is the
-            // same wrong turn the date picker itself used to cause.
-            salesFilterUsesRange(review)
+            postedRange
               ? "Change the dates or filter, or upload sales via Record."
               : "Change the filter, or upload sales via Record."
           }
         />
       }
       table={
-        <DataTable wide>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Date</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Cash</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Card</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Total</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => (
-              <DataTableRow key={row.id}>
-                <DataTableCell>
-                  {isPendingReviewStatus(row.status) ? (
-                    <Link
-                      href={`/sales/${row.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      {row.summary_date ? formatTrDate(row.summary_date) : "—"}
-                    </Link>
-                  ) : (
-                    (row.summary_date ? formatTrDate(row.summary_date) : "—")
-                  )}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {formatTry(row.cash_kurus)}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {formatTry(row.card_kurus)}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {formatTry(row.total_kurus)}
-                </DataTableCell>
-                <DataTableCell>
-                  <StatusBadge status={row.status} />
-                  {row.review_reason && isPendingReviewStatus(row.status) && (
-                    <p className="mt-1 max-w-xs truncate text-xs text-warning">
-                      {row.review_reason}
-                    </p>
-                  )}
-                </DataTableCell>
-                <DataTableCell align="right">
-                  {row.status === "posted" ? (
-                    <PosDailySalesPostedActions
-                      row={row}
-                      grants={grants}
-                      onCorrect={() => setCorrectSummary(row)}
-                      onVoid={() => setVoidSummary(row)}
-                    />
-                  ) : isPendingReviewStatus(row.status) ? (
-                    <Link
-                      href={`/sales/${row.id}`}
-                      className="text-xs text-primary hover:underline"
-                    >
-                      Review
-                    </Link>
-                  ) : null}
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
+        <SalesReviewTable
+          items={items}
+          grants={grants}
+          showPeriodTotals={Boolean(postedRange && periodTotals)}
+          cashTotal={cashTotal}
+          cardTotal={cardTotal}
+          salesTotal={salesTotal}
+          onCorrect={setCorrectSummary}
+          onVoid={setVoidSummary}
+        />
       }
       mobile={
-        <MobileCardList>
-          {items.map((row) => (
-            <MobileCardRow
-              key={row.id}
-              href={
-                isPendingReviewStatus(row.status)
-                  ? `/sales/${row.id}`
-                  : `/sales/${row.id}`
-              }
-              title={row.summary_date ? formatTrDate(row.summary_date) : "—"}
-              meta={<StatusBadge status={row.status} />}
-              amount={formatTry(row.total_kurus)}
-              trailing={
-                row.status === "posted" ? (
-                  <div
-                    onClick={(event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                    }}
-                  >
-                    <PosDailySalesPostedActions
-                      row={row}
-                      grants={grants}
-                      compact
-                      onCorrect={() => setCorrectSummary(row)}
-                      onVoid={() => setVoidSummary(row)}
-                    />
-                  </div>
-                ) : isPendingReviewStatus(row.status) ? (
-                  <span className="text-xs text-primary">Review</span>
-                ) : null
-              }
-            />
-          ))}
-        </MobileCardList>
+        <SalesReviewMobileList
+          items={items}
+          grants={grants}
+          onCorrect={setCorrectSummary}
+          onVoid={setVoidSummary}
+        />
       }
       pager={{ offset, pageSize, total, onOffsetChange: setOffset }}
     >
@@ -352,14 +275,12 @@ export function SalesReviewPanel({
           onSaved={() => void reload()}
         />
       )}
-
       <CorrectDailySalesForm
         open={correctSummary !== null}
         summary={correctSummary}
         onClose={() => setCorrectSummary(null)}
         onSaved={() => void reload()}
       />
-
       <VoidSubledgerDialog
         open={voidSummary !== null}
         title="Void daily sales"

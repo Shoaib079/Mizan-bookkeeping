@@ -89,7 +89,7 @@ vi.mock("@/lib/use-sales-review-url", () => ({
     pageSize: 50,
   }),
   SALES_REVIEW_FILTERS: [{ id: "all", label: "All" }],
-  salesFilterUsesRange: () => true,
+  salesFilterUsesRange: () => false,
 }));
 
 const { SalesReviewPanel } = await import("@/components/review/sales-review-panel");
@@ -193,7 +193,7 @@ describe("mobile daily sales posted row actions", () => {
   });
 
   it("mutation: mobile card without PosDailySalesPostedActions goes red", () => {
-    const source = sourceDeclaring("SalesReviewPanel");
+    const source = sourceDeclaring("SalesReviewMobileList");
     expect(source).toContain("PosDailySalesPostedActions");
     expect(source).toContain("compact");
     const broken = source.replaceAll("PosDailySalesPostedActions", "span");

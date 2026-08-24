@@ -51,7 +51,7 @@ export function FilterChips<T extends string>({
               // the picked one apart is the whole job — filling all of them
               // would say nothing.
               active
-                ? "bg-[var(--segment-active-bg)] font-medium text-[var(--segment-active-fg)]"
+                ? "bg-primary font-medium text-primary-foreground"
                 : "border border-primary/40 text-primary hover:bg-primary/15",
             )}
             onClick={() => onChange(chip.id)}
@@ -61,7 +61,7 @@ export function FilterChips<T extends string>({
               <span
                 className={cn(
                   "rounded-full px-1.5 text-[10px] tabular-nums",
-                  active ? "bg-primary/20" : "bg-muted",
+                  active ? "bg-primary-foreground/20" : "bg-muted",
                 )}
               >
                 {chip.count}

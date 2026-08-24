@@ -467,7 +467,7 @@ describe("filters read as choices", () => {
     // The chosen chip is solidly filled — a tint was repeatedly read as no
     // colour at all. The unchosen ones stay outlined, because telling the
     // picked one apart is the whole point of a filter row.
-    expect(source).toContain("bg-[var(--segment-active-bg)] font-medium text-[var(--segment-active-fg)]");
+    expect(source).toContain("bg-primary font-medium text-primary-foreground");
   });
 
   it("ListPage gives filters their own row", () => {

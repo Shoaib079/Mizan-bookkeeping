@@ -16,7 +16,12 @@ import type { LucideIcon } from "lucide-react";
 
 import { formatTry } from "@/lib/money";
 import type { AmountFormatter } from "@/components/page/summary-panel";
-import { IconSquare, toneToIconLook } from "@/components/ui/icon-square";
+import {
+  IconSquare,
+  toneToIconLook,
+  type IconStroke,
+  type IconTint,
+} from "@/components/ui/icon-square";
 import { MeaningCardAccentBar } from "@/components/ui/meaning-card";
 import { TrendPill } from "@/components/ui/trend-pill";
 import { cn } from "@/lib/utils";
@@ -31,6 +36,13 @@ function toneClass(tone: StatLine["tone"]): string | undefined {
   if (tone === "good") return "text-success";
   if (tone === "bad") return "text-destructive";
   return undefined;
+}
+
+function accentForTint(tint: IconTint, fallback: string): string {
+  if (tint === "mint") return "var(--accent-bar-green, #4E9E77)";
+  if (tint === "blush") return "var(--accent-bar-red, #C05B62)";
+  if (tint === "gray") return "var(--accent-bar-gray, #A7B0BD)";
+  return fallback;
 }
 
 type Props = {
@@ -49,6 +61,11 @@ type Props = {
   /** Optional trend pill — e.g. "+12%". */
   trend?: { value: string; direction?: "up" | "down" | "flat" };
   className?: string;
+  /** Override the figure colour (e.g. text-primary on Card sales). */
+  figureClassName?: string;
+  /** Override IconSquare tint/stroke when tone alone is not enough. */
+  iconTint?: IconTint;
+  iconStroke?: IconStroke;
 };
 
 export function StatCard({
@@ -63,9 +80,15 @@ export function StatCard({
   href,
   trend,
   className,
+  figureClassName,
+  iconTint,
+  iconStroke,
 }: Props) {
   const shown = value ?? (amountKurus !== undefined ? format(amountKurus) : "—");
   const look = toneToIconLook(tone);
+  const tint = iconTint ?? look.tint;
+  const stroke = iconStroke ?? look.stroke;
+  const accent = accentForTint(tint, look.accent);
 
   const body = (
     <>
@@ -73,7 +96,7 @@ export function StatCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           {Icon && (
-            <IconSquare icon={Icon} tint={look.tint} stroke={look.stroke} size="lg" />
+            <IconSquare icon={Icon} tint={tint} stroke={stroke} size="lg" />
           )}
           <span data-stat-label className="text-sm text-muted-foreground">
             {label}
@@ -88,6 +111,7 @@ export function StatCard({
         className={cn(
           "mt-2 text-2xl font-semibold tabular-nums",
           toneClass(tone),
+          figureClassName,
         )}
       >
         {shown}
@@ -123,7 +147,7 @@ export function StatCard({
         data-meaning-card
         data-tone={tone}
         className={shell}
-        style={{ ["--accent-bar" as string]: look.accent }}
+        style={{ ["--accent-bar" as string]: accent }}
       >
         {body}
       </Link>
@@ -134,7 +158,7 @@ export function StatCard({
       data-meaning-card
       data-tone={tone}
       className={shell}
-      style={{ ["--accent-bar" as string]: look.accent }}
+      style={{ ["--accent-bar" as string]: accent }}
     >
       {body}
     </div>
