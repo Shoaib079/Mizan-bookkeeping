@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { codeOnly, sourceDeclaring } from "@/test-support/source";
+import { codeOnly, sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 describe("the page has one scroll area", () => {
   /* Reported: scrolling the line table slid its header up over the
@@ -99,7 +99,10 @@ describe("StatementDetailPage", () => {
 
   it("patches one line after post instead of full reload with loading flash", () => {
     const source = sourceDeclaring("StatementDetailPage");
-    const barSource = sourceDeclaring("StatementClassifyBar");
+    const barSource = sourceDeclaringAll(
+      "StatementClassifyBar",
+      "useStatementClassifyBar",
+    );
     expect(source).toContain("replaceStatementLine");
     expect(source).toContain("handlePosted");
     expect(source).not.toMatch(/handlePosted[\s\S]*void reload\(\)/);
@@ -108,7 +111,10 @@ describe("StatementDetailPage", () => {
   });
 
   it("opens salary period dialog when correcting staff_payment lines", () => {
-    const barSource = sourceDeclaring("StatementClassifyBar");
+    const barSource = sourceDeclaringAll(
+      "StatementClassifyBar",
+      "useStatementClassifyBar",
+    );
     expect(barSource).toContain('setSalaryDialogPurpose("correct")');
     expect(barSource).toContain("executeCorrect(periodFields)");
     expect(barSource).toContain("openCorrectDialog");

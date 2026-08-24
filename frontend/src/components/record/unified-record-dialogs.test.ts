@@ -88,7 +88,10 @@ describe("unified record dialogs", () => {
     expect(salaryDialog).not.toContain("defaultPeriod.year");
     expect(salaryDialog).not.toContain("defaultPeriod.month");
 
-    const classifyBar = sourceDeclaring("StatementClassifyBar");
+    const classifyBar = sourceDeclaringAll(
+      "StatementClassifyBar",
+      "useStatementClassifyBar",
+    );
     expect(classifyBar).toContain("selectedEmployee");
     expect(classifyBar).not.toContain('?? "Employee"');
     expect(salaryDialog).toContain("!isStatement &&");
