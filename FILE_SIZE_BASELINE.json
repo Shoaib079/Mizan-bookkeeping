@@ -63,7 +63,6 @@
   "frontend/src/components/layout/account-menu.tsx": 455,
   "frontend/src/components/record/people-record-dialog.tsx": 414,
   "frontend/src/components/statement-bulk-action-bar.tsx": 430,
-  "frontend/src/components/ui/date-input.tsx": 517,
   "frontend/src/lib/record-actions.ts": 417,
   "frontend/src/lib/statement-classification-options.ts": 466
 }

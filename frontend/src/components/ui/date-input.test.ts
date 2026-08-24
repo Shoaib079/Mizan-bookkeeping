@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
-const SOURCE = sourceDeclaring("DateInput");
+const SOURCE = sourceDeclaringAll(
+  "DateInput",
+  "DateInputCalendar",
+  "computeMobileCalendarStyle",
+  "viewFromValue",
+);
 
 describe("DateInput future dates", () => {
   it("disables future days by default for posting forms", () => {
@@ -29,5 +34,14 @@ describe("DateInput future dates", () => {
     expect(inputWrapIdx).toBeGreaterThan(-1);
     expect(hintIdx).toBeGreaterThan(inputWrapIdx);
     expect(SOURCE).toContain("!isMobile && calendarPanel");
+  });
+});
+
+describe("DateInput split", () => {
+  it("composes calendar + layout helpers (not a monolith)", () => {
+    const field = sourceDeclaring("DateInput");
+    expect(field).toContain("DateInputCalendar");
+    expect(field).toContain("computeMobileCalendarStyle");
+    expect(field).toContain("useDismissOnOutsideClick");
   });
 });

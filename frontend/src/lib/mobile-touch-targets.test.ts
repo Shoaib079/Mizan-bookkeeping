@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 import { MOBILE_SHELL_MAX_WIDTH_PX, MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 
@@ -41,7 +41,7 @@ describe("mobile touch targets", () => {
   it("the calendar's month arrows are not smaller on mobile than on desktop", () => {
     // They were h-7 (28px) on mobile against h-8 on desktop — smaller on the
     // one device driven by thumbs.
-    const dateInput = sourceDeclaring("DateInput");
+    const dateInput = sourceDeclaringAll("DateInput", "DateInputCalendar");
     expect(dateInput).not.toContain('isMobile ? "h-7 w-7" : "h-8 w-8"');
     expect(dateInput).toContain('isMobile ? "h-11 w-11" : "h-8 w-8"');
   });

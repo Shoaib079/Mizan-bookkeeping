@@ -15,6 +15,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { cn } from "@/lib/utils";
 
 export type ComboboxOption = {
@@ -94,6 +95,11 @@ export function Combobox({
     setActiveIndex(0);
   }, []);
 
+  useDismissOnOutsideClick(rootRef, open, close, {
+    escape: false,
+    portalRef: listRef,
+  });
+
   const select = useCallback(
     (nextValue: string) => {
       onValueChange(nextValue);
@@ -161,18 +167,6 @@ export function Combobox({
       window.removeEventListener("scroll", onReposition, true);
     };
   }, [open, updateMenuPosition, filtered.length]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocumentMouseDown(event: MouseEvent) {
-      const target = event.target as Node;
-      if (rootRef.current?.contains(target)) return;
-      if (listRef.current?.contains(target)) return;
-      close();
-    }
-    document.addEventListener("mousedown", onDocumentMouseDown);
-    return () => document.removeEventListener("mousedown", onDocumentMouseDown);
-  }, [open, close]);
 
   useEffect(() => {
     setActiveIndex(0);

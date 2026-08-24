@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split general-ledger panel (`v0.fe-split-general-ledger`):** File-size cleanup only; public import path unchanged.
+- **Split DateInput (`v0.fe-split-date-input`):** File-size cleanup only; public import path unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split general-ledger panel |
-| **Last tag** | `v0.fe-split-general-ledger` |
+| **Last completed slice** | Split DateInput |
+| **Last tag** | `v0.fe-split-date-input` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (date-input / cash page / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (cash page / split page / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

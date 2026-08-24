@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -12,233 +12,27 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { DateInputCalendar } from "@/components/ui/date-input-calendar";
+import {
+  computeMobileCalendarStyle,
+  viewFromValue,
+} from "@/components/ui/date-input-layout";
+import type { DateInputProps } from "@/components/ui/date-input-types";
 import {
   addDays,
   displayFromDate,
-  formatMonthYear,
   getCalendarDays,
   isFutureDay,
-  isSameDay,
   lateNightDateHint,
   parseDisplayToDate,
   startOfDay,
-  weekdayLabels,
 } from "@/lib/dates";
 import { shouldOpenCalendarOnClick } from "@/lib/date-input-open";
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
-export type DateInputProps = {
-  id?: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  required?: boolean;
-  className?: string;
-  placeholder?: string;
-  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
-  /** Off for report filters where today's date is normal (avoids clutter/overlap). */
-  showLateNightHint?: boolean;
-  /** Block calendar days after today — default for all posting/entry dates. */
-  disableFuture?: boolean;
-};
-
-const CALENDAR_WIDTH_PX = 280;
-const CALENDAR_HEIGHT_EST_PX = 340;
-const VIEWPORT_PAD_PX = 8;
-
-function viewFromValue(
-  value: string,
-  today: Date | null,
-  disableFuture: boolean,
-): { year: number; month: number } | null {
-  const parsed = parseDisplayToDate(value);
-  if (parsed) {
-    if (disableFuture && today && isFutureDay(parsed, today)) {
-      return { year: today.getFullYear(), month: today.getMonth() };
-    }
-    return { year: parsed.getFullYear(), month: parsed.getMonth() };
-  }
-  if (today) {
-    return { year: today.getFullYear(), month: today.getMonth() };
-  }
-  return null;
-}
-
-function computeMobileCalendarStyle(anchor: DOMRect): CSSProperties {
-  const width = Math.min(
-    CALENDAR_WIDTH_PX,
-    window.innerWidth - VIEWPORT_PAD_PX * 2,
-  );
-  let left = anchor.left;
-  left = Math.max(
-    VIEWPORT_PAD_PX,
-    Math.min(left, window.innerWidth - width - VIEWPORT_PAD_PX),
-  );
-
-  let top = anchor.bottom + 4;
-  if (top + CALENDAR_HEIGHT_EST_PX > window.innerHeight - VIEWPORT_PAD_PX) {
-    const above = anchor.top - CALENDAR_HEIGHT_EST_PX - 4;
-    if (above >= VIEWPORT_PAD_PX) {
-      top = above;
-    } else {
-      top = Math.max(
-        VIEWPORT_PAD_PX,
-        window.innerHeight - CALENDAR_HEIGHT_EST_PX - VIEWPORT_PAD_PX,
-      );
-    }
-  }
-
-  return { position: "fixed", left, top, width, zIndex: 60 };
-}
-
-type CalendarPanelProps = {
-  viewYear: number;
-  viewMonth: number;
-  canGoNextMonth: boolean;
-  cells: (Date | null)[];
-  selected: Date | null;
-  today: Date;
-  isDateDisabled: (date: Date) => boolean;
-  onShiftMonth: (delta: number) => void;
-  onPickDate: (date: Date) => void;
-  className?: string;
-  style?: CSSProperties;
-  panelRef?: React.RefObject<HTMLDivElement | null>;
-  isMobile?: boolean;
-};
-
-function CalendarPanel({
-  viewYear,
-  viewMonth,
-  canGoNextMonth,
-  cells,
-  selected,
-  today,
-  isDateDisabled,
-  onShiftMonth,
-  onPickDate,
-  className,
-  style,
-  panelRef,
-  isMobile = false,
-}: CalendarPanelProps) {
-  return (
-    <div
-      ref={panelRef}
-      role="dialog"
-      aria-label="Choose date"
-      style={style}
-      className={cn(
-        "rounded-lg border border-border bg-card shadow-md",
-        isMobile ? "p-3" : "w-[17.5rem] p-4",
-        className,
-      )}
-    >
-      <div className="mb-2 flex items-center justify-between gap-1">
-        <button
-          type="button"
-          aria-label="Previous month"
-          onClick={() => onShiftMonth(-1)}
-          className={cn(
-            "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
-            // Was h-7 (28px) on mobile and h-8 on desktop — smaller on the
-            // one device driven by thumbs. 44px on a phone, unchanged above.
-            isMobile ? "h-11 w-11" : "h-8 w-8",
-          )}
-        >
-          <ChevronLeft className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
-        </button>
-        <span
-          className={cn(
-            "font-medium capitalize",
-            isMobile ? "text-sm" : "text-base",
-          )}
-        >
-          {formatMonthYear(viewYear, viewMonth)}
-        </span>
-        <button
-          type="button"
-          aria-label="Next month"
-          disabled={!canGoNextMonth}
-          onClick={() => onShiftMonth(1)}
-          className={cn(
-            "flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground",
-            // Was h-7 (28px) on mobile and h-8 on desktop — smaller on the
-            // one device driven by thumbs. 44px on a phone, unchanged above.
-            isMobile ? "h-11 w-11" : "h-8 w-8",
-            !canGoNextMonth && "cursor-not-allowed opacity-40 hover:bg-transparent",
-          )}
-        >
-          <ChevronRight className={isMobile ? "h-4 w-4" : "h-5 w-5"} />
-        </button>
-      </div>
-
-      <div className={cn("mb-1 grid grid-cols-7", isMobile ? "gap-0.5" : "gap-1")}>
-        {weekdayLabels().map((label) => (
-          <div
-            key={label}
-            className={cn(
-              "py-1 text-center font-medium text-muted-foreground",
-              isMobile ? "text-[0.65rem]" : "text-xs",
-            )}
-          >
-            {label}
-          </div>
-        ))}
-      </div>
-
-      <div className={cn("grid grid-cols-7", isMobile ? "gap-0.5" : "gap-1")}>
-        {cells.map((cell, index) => {
-          if (!cell) {
-            return <span key={`pad-${index}`} aria-hidden />;
-          }
-          const future = isDateDisabled(cell);
-          const isSelected = selected != null && isSameDay(cell, selected);
-          const isToday = isSameDay(cell, today);
-          return (
-            <button
-              key={cell.toISOString()}
-              type="button"
-              disabled={future}
-              aria-disabled={future}
-              onClick={() => onPickDate(cell)}
-              className={cn(
-                "rounded-md tabular-nums",
-                isMobile ? "h-8 text-sm" : "h-9 text-base",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-                future &&
-                  "cursor-not-allowed text-muted-foreground/40 hover:bg-transparent",
-                !future && "hover:bg-sidebar-accent hover:text-primary",
-                !future &&
-                  isSelected &&
-                  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
-                !future &&
-                  !isSelected &&
-                  isToday &&
-                  "font-semibold text-primary",
-                !future && !isSelected && !isToday && "text-foreground",
-              )}
-            >
-              {cell.getDate()}
-            </button>
-          );
-        })}
-      </div>
-
-      <button
-        type="button"
-        className={cn(
-          "mt-2 w-full rounded-md text-primary hover:bg-sidebar-accent",
-          isMobile ? "py-1.5 text-xs" : "py-2 text-sm",
-        )}
-        onClick={() => onPickDate(today)}
-      >
-        Today
-      </button>
-    </div>
-  );
-}
+export type { DateInputProps } from "@/components/ui/date-input-types";
 
 export function DateInput({
   id,
@@ -266,6 +60,13 @@ export function DateInput({
   const selected = parseDisplayToDate(value);
   const [viewYear, setViewYear] = useState(0);
   const [viewMonth, setViewMonth] = useState(0);
+
+  const closeCalendar = useCallback(() => setOpen(false), []);
+
+  useDismissOnOutsideClick(rootRef, open, closeCalendar, {
+    escape: false,
+    portalRef: calendarRef,
+  });
 
   useEffect(() => {
     setToday(startOfDay(new Date()));
@@ -323,18 +124,6 @@ export function DateInput({
       window.removeEventListener("scroll", onViewportChange, true);
     };
   }, [open, isMobile, updateMobileCalendarPosition]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onDocumentMouseDown(event: MouseEvent) {
-      const target = event.target as Node;
-      if (rootRef.current?.contains(target)) return;
-      if (calendarRef.current?.contains(target)) return;
-      setOpen(false);
-    }
-    document.addEventListener("mousedown", onDocumentMouseDown);
-    return () => document.removeEventListener("mousedown", onDocumentMouseDown);
-  }, [open]);
 
   const isDateDisabled = useCallback(
     (date: Date) =>
@@ -435,7 +224,7 @@ export function DateInput({
 
   const calendarPanel =
     open && today ? (
-      <CalendarPanel
+      <DateInputCalendar
         panelRef={calendarRef}
         viewYear={viewYear}
         viewMonth={viewMonth}
@@ -449,9 +238,7 @@ export function DateInput({
         isMobile={isMobile}
         style={isMobile ? mobileCalendarStyle : undefined}
         className={
-          isMobile
-            ? undefined
-            : "absolute left-0 top-full z-50 mt-1"
+          isMobile ? undefined : "absolute left-0 top-full z-50 mt-1"
         }
       />
     ) : null;
