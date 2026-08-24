@@ -17,15 +17,20 @@ import { describe, expect, it } from "vitest";
 
 import { sourceDeclaring } from "@/test-support/source";
 
+const SUMMARY = sourceDeclaring("InvoiceDraftSummary");
 const REVIEW = sourceDeclaring("InvoiceDraftReview");
 
 describe("posted invoice actions in review", () => {
+  it("composes the summary card that owns ledger actions", () => {
+    expect(REVIEW).toContain("InvoiceDraftSummary");
+  });
+
   it("renders the ledger's own actions component", () => {
     // Not a second Edit button written here. One implementation means the
     // delivery-commission and supplier-invoice routes, the void paths and
     // the permission gates are shared rather than reimplemented.
-    expect(REVIEW).toContain("<GlEntryActions");
-    expect(REVIEW).toContain(
+    expect(SUMMARY).toContain("<GlEntryActions");
+    expect(SUMMARY).toContain(
       'from "@/components/ledger/gl-entry-actions"',
     );
   });
@@ -33,7 +38,7 @@ describe("posted invoice actions in review", () => {
   it("passes the source the entry was actually posted with", () => {
     // A commission and a supplier invoice resolve to different correction
     // routes; sending "invoice" for both would open the wrong form.
-    expect(REVIEW).toContain(
+    expect(SUMMARY).toContain(
       'source: isCommission ? "delivery_commission" : "invoice"',
     );
   });
@@ -41,12 +46,12 @@ describe("posted invoice actions in review", () => {
   it("only offers them once the invoice is in the ledger", () => {
     // No journal entry means nothing to edit or void yet — the draft is
     // still going through review, where the existing buttons apply.
-    expect(REVIEW).toContain("viewOnly && draft.journal_entry_id");
+    expect(SUMMARY).toContain("viewOnly && draft.journal_entry_id");
   });
 
   it("refreshes the screen after a correction", () => {
     // Otherwise the figures on screen are the ones that were just replaced.
-    const block = REVIEW.slice(REVIEW.indexOf("<GlEntryActions"));
+    const block = SUMMARY.slice(SUMMARY.indexOf("<GlEntryActions"));
     expect(block.slice(0, 600)).toContain("onUpdated");
   });
 });

@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split statement-import panel (`v0.fe-split-statement-import`):** File-size cleanup only; no behavior/guard change.
+- **Split invoice-draft review (`v0.fe-split-invoice-draft`):** File-size cleanup only; no behavior/guard change.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split statement-import panel |
-| **Last tag** | `v0.fe-split-statement-import` |
+| **Last completed slice** | Split invoice-draft review |
+| **Last tag** | `v0.fe-split-invoice-draft` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (invoice-draft / manual-expense / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (manual-expense / salary payment / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

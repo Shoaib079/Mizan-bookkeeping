@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Continue FE file-size splits (invoice-draft / manual-expense / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
-| **Last completed slice** | **Split statement-import panel** (`v0.fe-split-statement-import`) |
-| **Last commit/tag**      | `v0.fe-split-statement-import` |
+| **Next up**              | Continue FE file-size splits (manual-expense / salary payment / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
+| **Last completed slice** | **Split invoice-draft review** (`v0.fe-split-invoice-draft`) |
+| **Last commit/tag**      | `v0.fe-split-invoice-draft` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Split invoice-draft review (file size)          | `v0.fe-split-invoice-draft`                            | Panel 883→80; types/capabilities + hook + summary/actions; GlEntryActions guard retargeted; canOneClickPost shared; redeemed from baseline; no behavior/guard change |
 | 2026-08-24 | Split statement-import panel (file size)        | `v0.fe-split-statement-import`                         | Panel 889→115; hook + submit helper + pick/preview/sidebar; redeemed from FILE_SIZE_BASELINE; no behavior/guard change |
 | 2026-08-24 | Full frontend audit (discovery)                 | `v0.frontend-audit`                                    | Docs-only: `FRONTEND_AUDIT_REPORT.md` — apiFetch inventory, 25 oversized files, preview/orphan suspects, duplicate chip/download/cash-close patterns; green light; no app/guard changes |
 | 2026-08-24 | Sales page visuals (KPI + colors + chip)        | `v0.sales-page-visuals`                                | Posted StatCard KPIs via sales-summary; tfoot + cell colors; FilterChips filled primary; summary above filters |
