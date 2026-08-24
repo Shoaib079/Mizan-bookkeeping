@@ -65,8 +65,10 @@ describe("unified record dialogs", () => {
     expect(people).toContain("employeeId={person.id}");
     expect(people).toContain("employeeName={person.name}");
     expect(people).toContain("/staff/employees");
-    expect(salaryDialog).toContain("isValidStaffSalaryEmployee");
+    const salaryHook = sourceDeclaring("useStaffSalaryPayment");
+    expect(salaryHook).toContain("isValidStaffSalaryEmployee");
     expect(salaryDialog).not.toContain('employeeName = "Employee"');
+    expect(salaryHook).not.toContain('employeeName = "Employee"');
     expect(cashForm).not.toContain("StaffSalaryPaymentDialog");
     expect(cashForm).not.toContain('employeeName = "Employee"');
     expect(staffPage).toContain("StaffSalaryPaymentDialog");

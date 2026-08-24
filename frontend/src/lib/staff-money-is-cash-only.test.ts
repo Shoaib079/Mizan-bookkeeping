@@ -22,7 +22,7 @@ import { sourceAt } from "@/test-support/source";
 
 /** Manual money entry. Each has a backend guard refusing a bank account. */
 const MANUAL_STAFF_FORMS = [
-  "components/forms/staff-salary-payment-dialog.tsx",
+  "components/forms/use-staff-salary-payment.ts",
   "components/forms/staff-cash-movement-form.tsx",
   "components/forms/staff-extra-days-form.tsx",
   "components/forms/staff-advance-return-form.tsx",

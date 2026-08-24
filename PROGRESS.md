@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split manual-expense form (`v0.fe-split-manual-expense`):** File-size cleanup only; no behavior/guard change.
+- **Split staff-salary payment dialog (`v0.fe-split-staff-salary`):** File-size cleanup only; no behavior/API change.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split manual-expense form |
-| **Last tag** | `v0.fe-split-manual-expense` |
+| **Last completed slice** | Split staff-salary payment dialog |
+| **Last tag** | `v0.fe-split-staff-salary` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (salary payment / opening balances / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (opening balances / statement-classify-bar / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

@@ -63,7 +63,6 @@
   "frontend/src/components/forms/group-sale-form.tsx": 606,
   "frontend/src/components/forms/partner-profit-allocation-form.tsx": 410,
   "frontend/src/components/forms/partner-record-form.tsx": 418,
-  "frontend/src/components/forms/staff-salary-payment-dialog.tsx": 838,
   "frontend/src/components/layout/account-menu.tsx": 455,
   "frontend/src/components/record/people-record-dialog.tsx": 414,
   "frontend/src/components/review/general-ledger-panel.tsx": 539,

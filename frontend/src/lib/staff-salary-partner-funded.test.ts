@@ -17,8 +17,9 @@ describe("StaffSalaryFundingFields", () => {
 describe("StaffSalaryPaymentDialog — partner-funded path", () => {
   it("wires funding fields and posts partner-funded endpoint", () => {
     const dialog = sourceDeclaring("StaffSalaryPaymentDialog");
+    const hook = sourceDeclaring("useStaffSalaryPayment");
     expect(dialog).toContain("StaffSalaryFundingFields");
-    expect(dialog).toContain("postStaffSalaryPayment");
+    expect(hook).toContain("postStaffSalaryPayment");
     // Record desk passes hidePaymentDate — Paid from must still render.
     expect(dialog).toMatch(
       /\{\s*!isStatement &&\s*\(isTry \? \(\s*<StaffSalaryFundingFields/,
