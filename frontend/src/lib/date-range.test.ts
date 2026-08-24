@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   currentMonthRange,
   isoToday,
-  lastFullMonthRange,
   resolveReportRange,
 } from "@/lib/date-range";
 
@@ -18,13 +17,6 @@ describe("date-range", () => {
     expect(currentMonthRange(aug3)).toEqual({
       from: "2026-08-01",
       to: "2026-08-03",
-    });
-  });
-
-  it("lastFullMonthRange is the whole prior calendar month", () => {
-    expect(lastFullMonthRange(new Date(2026, 7, 24))).toEqual({
-      from: "2026-07-01",
-      to: "2026-07-31",
     });
   });
 

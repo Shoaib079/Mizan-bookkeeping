@@ -20,13 +20,6 @@ export function currentMonthRange(reference = new Date()): { from: string; to: s
   return { from: toIso(from), to: toIso(reference) };
 }
 
-/** Full previous calendar month (1st … last day), relative to `reference`. */
-export function lastFullMonthRange(reference = new Date()): { from: string; to: string } {
-  const lastDay = new Date(reference.getFullYear(), reference.getMonth(), 0);
-  const firstDay = new Date(lastDay.getFullYear(), lastDay.getMonth(), 1);
-  return { from: toIso(firstDay), to: toIso(lastDay) };
-}
-
 /** Clamp report range end to today; reset invalid ranges to month-to-date.
  *
  * `allowFuture` exists for the general ledger, and only for it.

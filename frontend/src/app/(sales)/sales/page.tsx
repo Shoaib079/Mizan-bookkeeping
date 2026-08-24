@@ -7,7 +7,6 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
-import { SalesSummaryBlock } from "@/components/sales/sales-summary-block";
 import { TableSkeleton } from "@/components/ui/skeleton";
 
 /** Named for what it is — a lazy wrapper — not for what it loads.
@@ -24,10 +23,7 @@ const LazySalesReviewPanel = dynamic(
 export default function SalesPage() {
   return (
     <Suspense fallback={<TableSkeleton columns={6} />}>
-      <div className="flex flex-col gap-6">
-        <SalesSummaryBlock />
-        <LazySalesReviewPanel showCreate />
-      </div>
+      <LazySalesReviewPanel showCreate />
     </Suspense>
   );
 }

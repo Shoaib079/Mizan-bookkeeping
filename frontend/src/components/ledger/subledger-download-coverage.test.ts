@@ -86,13 +86,19 @@ describe("the download dropdown is not forked per feature", () => {
    */
   function dropdownImplementations(): string[] {
     return sourceFiles()
-      .filter(
-        (file) =>
-          file.path.endsWith(".tsx") &&
-          /import \{[^}]*\bDownload\b[^}]*\} from "lucide-react"/.test(file.text) &&
+      .filter((file) => {
+        if (!file.path.endsWith(".tsx")) return false;
+        const usesDownloadIcon =
+          /from "@\/components\/ui\/download-icon"/.test(file.text) ||
+          /import \{[^}]*\bDownload\b[^}]*\} from "lucide-react"/.test(
+            file.text,
+          );
+        return (
+          usesDownloadIcon &&
           file.text.includes("absolute") &&
-          file.text.includes("setOpen"),
-      )
+          file.text.includes("setOpen")
+        );
+      })
       .map((file) => file.path);
   }
 

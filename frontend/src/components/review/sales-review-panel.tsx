@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Download } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-form";
@@ -10,6 +9,7 @@ import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { PosDailySalesPostedActions } from "@/components/sales/pos-daily-sales-posted-actions";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
+import { DownloadIcon } from "@/components/ui/download-icon";
 import {
   DataTable,
   DataTableBody,
@@ -187,7 +187,7 @@ export function SalesReviewPanel({
             className="gap-1.5"
             onClick={() => void onExport()}
           >
-            <Download className="size-4" />
+            <DownloadIcon className="size-4" />
             {exporting ? "Downloading…" : "Download Excel"}
           </Button>
         )}

@@ -24,10 +24,11 @@
  * this component existing.
  */
 
-import { ChevronDown, Download } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DownloadIcon } from "@/components/ui/download-icon";
 import { canExportFiles } from "@/lib/entity-access";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { useEntityAccess } from "@/lib/use-entity-access";
@@ -109,7 +110,7 @@ function DownloadMenuInner({
           onClick={() => setOpen((value) => !value)}
           className="gap-1.5"
         >
-          <Download className="size-4" />
+          <DownloadIcon className="size-4" />
           {busy ? "Downloading…" : "Download"}
           <ChevronDown className="size-4 opacity-70" />
         </Button>

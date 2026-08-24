@@ -18,14 +18,13 @@
 
 ## Current
 
-- **Sales summary (`v0.sales-summary`):** In-app cash/card/delivery totals on `/sales` — selected period vs **full** prior calendar month. Read-only; period comparison unchanged. **Awaiting owner review — do not push.**
+- **Remove Sales summary UI + Download icon (`v0.sales-summary-ui-off`):** Done — `/sales` has no summary block; shared `DownloadIcon` (`ArrowDownToLine`). Backend sales-summary API kept.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | Sales summary — awaiting review |
-| **Last completed slice** | Sales summary (commit/tag pending owner review) |
-| **Last tag** | `v0.sales-summary` (after commit) |
-| **Unpushed** | yes — do not push until owner review + sign-off |
+| **Active slice** | *(none)* |
+| **Last completed slice** | Remove sales-summary UI + Download icon |
+| **Last tag** | `v0.sales-summary-ui-off` |
+| **Unpushed** | no (after push) |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |
-| **Gate step** | Commit + tag done locally; awaiting review; do not push |
-| **Exact next action** | Owner reviews `/sales` Sales summary (This month / Last month mid-month prior = full month); then push if signed off |
+| **Exact next action** | Await next owner slice |

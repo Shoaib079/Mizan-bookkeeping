@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Sales summary (`v0.sales-summary`) — awaiting review; do not push |
+| **Active slice**         | *(none)* |
 | **Next up**              | Per-menu period report for group/agency sales (deferred) |
-| **Last completed slice** | **Sales summary** (`v0.sales-summary`) |
-| **Last commit/tag**      | `v0.sales-summary` |
+| **Last completed slice** | **Remove Sales summary UI + Download icon** (`v0.sales-summary-ui-off`) |
+| **Last commit/tag**      | `v0.sales-summary-ui-off` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Remove Sales summary UI + Download icon         | `v0.sales-summary-ui-off`                              | Drop SalesSummaryBlock from /sales; shared DownloadIcon=ArrowDownToLine; backend API kept; mutations block-back / tray-icon → red |
 | 2026-08-24 | Sales summary (cash/card in-app)                | `v0.sales-summary`                                     | `/sales` two-column posted 4000 totals; prior = full calendar month; chips + optional Excel; period comparison unchanged; mutation block missing → red |
 | 2026-08-24 | Button colours restore (accepted-live)          | `v0.button-colour-restore`                             | Drop v2 white-secondary CSS; filled blue secondary + positive green; mutation colourless → red |
 | 2026-08-24 | Cash & bank align + hairline                    | `v0.dashboard-cash-bank-align-divider`                 | Shared columns aligned (flex + mt-auto subtotals + equal row rhythm); restore #E6EAF2 vertical/stack dividers; mutation divider/padding → red |

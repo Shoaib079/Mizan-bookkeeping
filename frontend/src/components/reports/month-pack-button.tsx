@@ -2,10 +2,11 @@
 
 /** Download every book for the period — one colorful button, then Excel or PDF. */
 
-import { ChevronDown, Download, FileSpreadsheet, FileText } from "lucide-react";
+import { ChevronDown, FileSpreadsheet, FileText } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DownloadIcon } from "@/components/ui/download-icon";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
 import { canExportFiles } from "@/lib/entity-access";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
@@ -71,7 +72,7 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
         onClick={() => setOpen((value) => !value)}
         className={cn("gap-1.5", compact && "h-10 px-3")}
       >
-        <Download className="size-4 shrink-0" />
+        <DownloadIcon className="size-4 shrink-0" />
         {busy ? "Preparing…" : compact ? "Download" : "Download all"}
         {!compact && (
           <ChevronDown
