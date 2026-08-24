@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Sales page visuals (`v0.sales-page-visuals`):** Posted KPIs + colored amounts + filled FilterChips. No backend/guard changes.
+- **Full frontend audit (`v0.frontend-audit`):** Discovery report in `FRONTEND_AUDIT_REPORT.md`. No app/guard code changes.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Sales page visuals |
-| **Last tag** | `v0.sales-page-visuals` |
+| **Last completed slice** | Full frontend audit |
+| **Last tag** | `v0.frontend-audit` |
 | **Unpushed** | no (after push) |
-| **Next up** | Per-menu period report for group/agency sales (deferred) |
+| **Next up** | Per-menu period report for group/agency sales (deferred); optional FE cleanup from audit report |
 | **Exact next action** | Await next owner slice |

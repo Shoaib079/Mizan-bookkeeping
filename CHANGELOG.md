@@ -8,6 +8,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-24
 
+- **Full frontend audit (`v0.frontend-audit`).** Docs-only discovery before any v3 FE build: `FRONTEND_AUDIT_REPORT.md` covers ~100 `apiFetch` sites, 25 files over 400 lines, preview-only / test-only orphans, duplicate period-chip / download / cash-close patterns, and hex-token leftovers. Vitest + eslint + next build green. No app or guard changes.
 - **Sales page visuals (`v0.sales-page-visuals`).** Posted: StatCard KPIs (Cash/Card/Total) from existing sales-summary API; table + tfoot color-coded (success / primary / bold ink); FilterChips active = filled primary (fixes Posted looking like plain text under v2 white segment tokens). ListPage renders summary above filters. Split table to `sales-review-table.tsx` for file size. No backend/guard changes.
 - **Sales period chips on Posted (`v0.sales-period-chips`).** This month / Last month / Custom below status chips on `/sales` (Posted only — All/Needs review still ignore dates). Last month = full prior calendar month; Custom opens existing ReportDateRange. No 7/30-day chips. Guards untouched. Mutations: rolling-window labels → red.
 - **Remove Sales summary UI from /sales + cleaner Download icon (`v0.sales-summary-ui-off`).** Owner: drop the Sales summary block from the sales page (backend report API left in place — no guard/API changes). Shared `DownloadIcon` = Lucide `ArrowDownToLine` on DownloadMenu, MonthPack, Sales Excel. Mutations: block returns on /sales → red; tray `Download` back on DownloadMenu → red.
