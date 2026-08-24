@@ -60,6 +60,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 - `opening-balances/page.tsx` **775 → ~118** — `v0.fe-split-opening-balances` (redeemed). Draft lib + hook + lines panel/row + journal preview.
 - `statement-classify-bar.tsx` **770 → ~279** — `v0.fe-split-statement-classify` (redeemed). Hook + target control + correct dialog; reuses classify payload helpers.
 - `statement-line-review-row.tsx` **632 → ~126** — `v0.fe-split-statement-line-review` (redeemed). Hook + header/actions/correct dialog.
+- `nav-sections.ts` **608 → ~40** — `v0.fe-split-nav-sections` (redeemed). Types + sections data + route registry + path helpers; barrel re-exports.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -72,7 +73,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~775~~ | ~~`app/onboarding/opening-balances/page.tsx`~~ → **split** (`v0.fe-split-opening-balances`) |
 | ~~770~~ | ~~`components/statement-classify-bar.tsx`~~ → **split** (`v0.fe-split-statement-classify`) |
 | ~~632~~ | ~~`components/statement-line-review-row.tsx`~~ → **split** (`v0.fe-split-statement-line-review`) |
-| 608 | `lib/nav-sections.ts` |
+| ~~608~~ | ~~`lib/nav-sections.ts`~~ → **split** (`v0.fe-split-nav-sections`) |
 | 589 | `components/forms/cash-drawer-close-day-form.tsx` |
 | 580 | `components/forms/group-sale-form.tsx` |
 | 538 | `components/review/general-ledger-panel.tsx` |
@@ -203,14 +204,15 @@ Many of these are **accepted-live** from recent dashboard/balances slices. For v
 5. ~~**Split `opening-balances/page`**~~ — **DONE** `v0.fe-split-opening-balances`
 6. ~~**Split `statement-classify-bar`**~~ — **DONE** `v0.fe-split-statement-classify`
 7. ~~**Split `statement-line-review-row`**~~ — **DONE** `v0.fe-split-statement-line-review`
-8. **Decide preview kit fate** — keep lab vs archive/delete  
-9. **Unify period chips** — one component language for This/Last/Custom + status filters  
-10. **ExpenseRecordKindToggle → SegmentedControl** (or shared chip)  
-11. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
-12. **Split remaining mega-files** — nav-sections, cash-close, group-sale, …  
-13. **Cash close UX consolidation**  
-14. **Tokenize remaining accepted hex** (without visual regressions)  
-15. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
+8. ~~**Split `nav-sections`**~~ — **DONE** `v0.fe-split-nav-sections`
+9. **Decide preview kit fate** — keep lab vs archive/delete  
+10. **Unify period chips** — one component language for This/Last/Custom + status filters  
+11. **ExpenseRecordKindToggle → SegmentedControl** (or shared chip)  
+12. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
+13. **Split remaining mega-files** — cash-close, group-sale, GL panel, …  
+14. **Cash close UX consolidation**  
+15. **Tokenize remaining accepted hex** (without visual regressions)  
+16. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
 
 ---
 

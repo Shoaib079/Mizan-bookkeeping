@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split statement-line review row (`v0.fe-split-statement-line-review`):** File-size cleanup only; no behavior/API change.
+- **Split nav-sections (`v0.fe-split-nav-sections`):** File-size cleanup only; public import path unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split statement-line review row |
-| **Last tag** | `v0.fe-split-statement-line-review` |
+| **Last completed slice** | Split nav-sections |
+| **Last tag** | `v0.fe-split-nav-sections` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (nav-sections / cash-close / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (cash-close / group-sale / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
