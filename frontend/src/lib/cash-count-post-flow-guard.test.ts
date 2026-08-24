@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
-
-
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 describe("cash count post-close flow", () => {
   it("goes to send-part-home after close, with float-friendly done copy", () => {
-    const form = sourceDeclaring("CashDrawerCloseDayForm");
+    const form = sourceDeclaringAll(
+      "CashDrawerCloseDayForm",
+      "useCashDrawerCloseDay",
+      "CashCloseDayFormBody",
+      "CashCloseDayDone",
+      "CashCloseDayPhase",
+    );
     expect(form).toContain('kind: "split"');
     expect(form).toContain('kind: "done"');
     expect(form).toContain("counter float");

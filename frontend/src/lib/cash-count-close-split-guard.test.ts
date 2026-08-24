@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
-
+/** Close-day feature spread across form shell + hook + body (file-size split). */
+function closeDaySource() {
+  return sourceDeclaringAll(
+    "CashDrawerCloseDayForm",
+    "useCashDrawerCloseDay",
+    "CashCloseDayFormBody",
+    "CashCloseDayDone",
+    "CashCloseDayPhase",
+  );
+}
 
 describe("Count cash vs Close day split", () => {
   it("Count cash form never calls close-day API", () => {
@@ -15,7 +24,7 @@ describe("Count cash vs Close day split", () => {
 
   it("Count cash and Close day lock to Main till; home is reference only", () => {
     const count = sourceDeclaring("CashCountForm");
-    const close = sourceDeclaring("CashDrawerCloseDayForm");
+    const close = closeDaySource();
     const ref = sourceDeclaring("MainTillReference");
     expect(count).toContain("MainTillReference");
     expect(count).toContain("mainTillAccount");
@@ -28,7 +37,7 @@ describe("Count cash vs Close day split", () => {
   });
 
   it("Close day posts then opens send-part-home (float stays in Main)", () => {
-    const close = sourceDeclaring("CashDrawerCloseDayForm");
+    const close = closeDaySource();
     expect(close).toContain("data-testid=\"close-day-form\"");
     expect(close).toContain("drawer-sessions/close-day");
     expect(close).toContain('kind: "split"');
@@ -39,7 +48,7 @@ describe("Count cash vs Close day split", () => {
 
   it("Count/Close never create cash drawers — Banking → Cash only", () => {
     const count = sourceDeclaring("CashCountForm");
-    const close = sourceDeclaring("CashDrawerCloseDayForm");
+    const close = closeDaySource();
     const split = sourceDeclaring("CashDrawerSplitPanel");
     const banking = sourceDeclaring("CashDrawerPage");
     for (const src of [count, close, split]) {

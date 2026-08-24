@@ -74,7 +74,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~770~~ | ~~`components/statement-classify-bar.tsx`~~ → **split** (`v0.fe-split-statement-classify`) |
 | ~~632~~ | ~~`components/statement-line-review-row.tsx`~~ → **split** (`v0.fe-split-statement-line-review`) |
 | ~~608~~ | ~~`lib/nav-sections.ts`~~ → **split** (`v0.fe-split-nav-sections`) |
-| 589 | `components/forms/cash-drawer-close-day-form.tsx` |
+| ~~589~~ | ~~`components/forms/cash-drawer-close-day-form.tsx`~~ → **split** (`v0.fe-split-cash-close-day`) |
 | 580 | `components/forms/group-sale-form.tsx` |
 | 538 | `components/review/general-ledger-panel.tsx` |
 | 517 | `components/ui/date-input.tsx` |
@@ -92,7 +92,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: salary payment dialog / opening balances / statement-classify-bar.
+**Recommendation:** Continue the existing split pattern. Next: `group-sale-form.tsx` (~580).
 
 ---
 
@@ -159,9 +159,9 @@ Shared core: `components/ui/download-menu.tsx` + thin wrappers:
 Two forms coexist:
 
 - `cash-drawer-close-form.tsx`
-- `cash-drawer-close-day-form.tsx` (~589 lines)
+- `cash-drawer-close-day-form.tsx` → **split** (`v0.fe-split-cash-close-day`; shell ~129 + hook/body/done)
 
-Wired from record desk / cash page / action modals. Candidate to consolidate UX and shared denomination / variance UI.
+Wired from record desk / cash page / action modals. Older `cash-drawer-close-form.tsx` (session-based) still coexists — consolidate UX later if desired.
 
 ### 4. Money formatting
 
