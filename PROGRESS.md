@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Full frontend audit (`v0.frontend-audit`):** Discovery report in `FRONTEND_AUDIT_REPORT.md`. No app/guard code changes.
+- **Split statement-import panel (`v0.fe-split-statement-import`):** File-size cleanup only; no behavior/guard change.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Full frontend audit |
-| **Last tag** | `v0.frontend-audit` |
+| **Last completed slice** | Split statement-import panel |
+| **Last tag** | `v0.fe-split-statement-import` |
 | **Unpushed** | no (after push) |
-| **Next up** | Per-menu period report for group/agency sales (deferred); optional FE cleanup from audit report |
+| **Next up** | Continue FE file-size splits (invoice-draft / manual-expense / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

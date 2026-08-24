@@ -8,6 +8,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-24
 
+- **Split statement-import panel (`v0.fe-split-statement-import`).** Cleanup-only: `statement-import-panel.tsx` 889→115 lines. Extracted `useStatementImport`, `submitStatementImport` (+ toast helper), pick step, map preview, map sidebar. Redeemed from `FILE_SIZE_BASELINE.json`. Vitest + eslint + tsc + next build + file-size ratchet green. No visual/behavior/guard/API changes.
 - **Full frontend audit (`v0.frontend-audit`).** Docs-only discovery before any v3 FE build: `FRONTEND_AUDIT_REPORT.md` covers ~100 `apiFetch` sites, 25 files over 400 lines, preview-only / test-only orphans, duplicate period-chip / download / cash-close patterns, and hex-token leftovers. Vitest + eslint + next build green. No app or guard changes.
 - **Sales page visuals (`v0.sales-page-visuals`).** Posted: StatCard KPIs (Cash/Card/Total) from existing sales-summary API; table + tfoot color-coded (success / primary / bold ink); FilterChips active = filled primary (fixes Posted looking like plain text under v2 white segment tokens). ListPage renders summary above filters. Split table to `sales-review-table.tsx` for file size. No backend/guard changes.
 - **Sales period chips on Posted (`v0.sales-period-chips`).** This month / Last month / Custom below status chips on `/sales` (Posted only — All/Needs review still ignore dates). Last month = full prior calendar month; Custom opens existing ReportDateRange. No 7/30-day chips. Guards untouched. Mutations: rolling-window labels → red.
