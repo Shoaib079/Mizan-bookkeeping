@@ -7,7 +7,7 @@ import { CorrectDailySalesForm } from "@/components/forms/correct-daily-sales-fo
 import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { PosDailySalesPostedActions } from "@/components/sales/pos-daily-sales-posted-actions";
-import { ReportDateRange } from "@/components/reports/report-date-range";
+import { SalesPeriodChips } from "@/components/sales/sales-period-chips";
 import { Button } from "@/components/ui/button";
 import { DownloadIcon } from "@/components/ui/download-icon";
 import {
@@ -193,26 +193,25 @@ export function SalesReviewPanel({
         )}
         </>
       }
-      toolbar={
-        // Shown only where it applies. The queues ignore the range now, and a
-        // date picker that changes nothing is worse than none — it looks like
-        // the answer when a row seems missing, and it is never the reason.
-        salesFilterUsesRange(review) ? (
-          <ReportDateRange
-            from={from}
-            to={to}
-            disabled={loading || exporting}
-            onChange={setRange}
-          />
-        ) : undefined
-      }
       filters={
-        <FilterChips
-          chips={SALES_REVIEW_FILTERS}
-          value={review}
-          onChange={setReview}
-          ariaLabel="Filter daily sales"
-        />
+        <div className="flex w-full flex-col gap-2">
+          <FilterChips
+            chips={SALES_REVIEW_FILTERS}
+            value={review}
+            onChange={setReview}
+            ariaLabel="Filter daily sales"
+          />
+          {/* Period chips only on Posted — All / Needs review ignore dates so
+              outstanding work is never hidden by a month default. */}
+          {salesFilterUsesRange(review) && (
+            <SalesPeriodChips
+              from={from}
+              to={to}
+              disabled={loading || exporting}
+              onChange={setRange}
+            />
+          )}
+        </div>
       }
       countLabel={
         // "in this period" was true when every view was date-scoped. The
