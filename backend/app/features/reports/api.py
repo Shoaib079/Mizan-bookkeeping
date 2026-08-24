@@ -9,7 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.core.auth.deps import financial_reports_guard, reports_read_guard, export_scope_guard
+from app.core.auth.deps import (
+    financial_reports_guard,
+    reports_read_guard,
+    export_scope_guard,
+)
 from app.db.session import get_session
 from app.features.delivery.settings import DeliveryNotEnabledError
 from app.features.reports import service as reports_service
@@ -24,6 +28,7 @@ from app.features.reports import financial_statements
 from app.features.reports import kdv_input
 from app.features.reports import pdf_export
 from app.features.reports import period_comparison
+from app.features.reports import sales_summary_http
 from app.features.entities import service as entity_service
 from app.features.reports.schema import (
     BalanceSheetRead,
@@ -40,6 +45,7 @@ from app.features.reports.service import InvalidDateRangeError
 from app.features.reports.time_series import TimeSeriesRead, get_time_series
 
 router = APIRouter(prefix="/entities/{entity_id}/reports", tags=["reports"])
+router.include_router(sales_summary_http.router)
 
 
 def _entity_name_for_export(session: Session, entity_id: uuid.UUID) -> str:

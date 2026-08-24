@@ -48,6 +48,24 @@ def _require_entity(session: Session, entity_id: uuid.UUID) -> None:
         raise LookupError("Entity not found")
 
 
+def sales_revenue_account_ids(session: Session) -> tuple[uuid.UUID, uuid.UUID]:
+    """Public: sales 4000 + group 4300 account ids (entity context required)."""
+    return _sales_revenue_account_ids(session)
+
+
+def period_revenue_credits(
+    session: Session,
+    *,
+    account_id: uuid.UUID,
+    from_date: date,
+    to_date: date,
+) -> dict[JournalEntrySource, int]:
+    """Public: posted credit totals by JE source for one revenue account."""
+    return _period_revenue_credits(
+        session, account_id=account_id, from_date=from_date, to_date=to_date
+    )
+
+
 def _sales_revenue_account_ids(session: Session) -> tuple[uuid.UUID, uuid.UUID]:
     rows = session.execute(
         select(Account.id, Account.code).where(

@@ -18,12 +18,14 @@
 
 ## Current
 
-- **Button colours restore (`v0.button-colour-restore`):** Filled blue secondary + positive green; v2 white override gone. **Awaiting owner review — do not push.**
+- **Sales summary (`v0.sales-summary`):** In-app cash/card/delivery totals on `/sales` — selected period vs **full** prior calendar month. Read-only; period comparison unchanged. **Awaiting owner review — do not push.**
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none — awaiting review)* |
-| **Last completed slice** | Button colours restore |
-| **Last tag** | `v0.button-colour-restore` |
+| **Active slice** | Sales summary — awaiting review |
+| **Last completed slice** | Sales summary (commit/tag pending owner review) |
+| **Last tag** | `v0.sales-summary` (after commit) |
 | **Unpushed** | yes — do not push until owner review + sign-off |
 | **Next up** | Per-menu period report for group/agency sales (deferred) |
+| **Gate step** | Commit + tag done locally; awaiting review; do not push |
+| **Exact next action** | Owner reviews `/sales` Sales summary (This month / Last month mid-month prior = full month); then push if signed off |

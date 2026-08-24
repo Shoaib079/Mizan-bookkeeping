@@ -307,3 +307,28 @@ class BankReconciliationRead(BaseModel):
 
     as_of: date | None = None
     accounts: list[BankReconciliationAccount] = Field(default_factory=list)
+
+
+class SalesSummaryColumnRead(BaseModel):
+    """One period column — cash / card / delivery on posted 4000 only."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    from_date: date
+    to_date: date
+    full_month: bool
+    cash_kurus: int
+    card_kurus: int
+    delivery_kurus: int
+    total_kurus: int
+
+
+class SalesSummaryRead(BaseModel):
+    """Selected period + full prior calendar month (side-by-side)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    entity_id: uuid.UUID
+    delivery_enabled: bool
+    current: SalesSummaryColumnRead
+    prior: SalesSummaryColumnRead
