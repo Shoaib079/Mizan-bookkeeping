@@ -2,76 +2,18 @@
 
 /** Manual expense dialog — autosave draft + discard confirm (DESIGN_SYSTEM §10, Slice 10.7). */
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import { Button } from "@/components/ui/button";
-import { DateInput } from "@/components/ui/date-input";
-import { Dialog } from "@/components/ui/dialog";
-import { Combobox } from "@/components/ui/combobox";
-import { Label, Select, Textarea } from "@/components/ui/input";
-import { MoneyInput } from "@/components/ui/money-input";
-import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
+import { ManualExpenseFields } from "@/components/forms/manual-expense-fields";
+import { ManualExpenseSalaryPanel } from "@/components/forms/manual-expense-salary-panel";
+import { useManualExpenseForm } from "@/components/forms/use-manual-expense-form";
 import { RecordingForBanner } from "@/components/forms/recording-for-banner";
-import { AddExpenseCategoryButton } from "@/components/forms/add-expense-category-button";
-import { CashDrawerPicker } from "@/components/forms/cash-drawer-picker";
-import { ExpenseItemTypeahead } from "@/components/forms/expense-item-typeahead";
-import { type EmployeeRow } from "@/components/forms/employee-form";
-import { type PartnerRow } from "@/components/forms/partner-form";
-import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
-import { apiFetch } from "@/lib/api";
-import { withAcknowledgeDuplicate } from "@/lib/duplicate-record";
-import { useDuplicateRecordSubmit } from "@/lib/use-duplicate-record-submit";
-import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
-import { useEntity } from "@/lib/entity-context";
-import {
-  filterExpenseAccounts,
-  formatExpenseAccountLabel,
-  mergeExpenseAccounts,
-  type ChartAccount,
-} from "@/lib/expense-accounts";
-import { statesDiffer, useFormDraft } from "@/lib/form-draft";
-import { defaultMainDrawerId, shouldShowCashDrawerPicker } from "@/lib/load-money-accounts";
-import { parseTrDate, parseTryToKurus } from "@/lib/money";
-import { todayTrDate } from "@/lib/dates";
-import { useToast } from "@/lib/toast";
-import { useRegisterUnsaved } from "@/lib/unsaved-work";
-import { useFormTouched } from "@/lib/use-form-dirty";
-import {
-  clearConfirmItemOnTextEdit,
-  type ExpenseItemSearchResult,
-} from "@/lib/expense-item-search";
-import {
-  isSuggestedAccountActive,
-  shouldApplyExpenseAccountSuggestion,
-  type ExpenseAccountSuggestion,
-} from "@/lib/expense-account-suggest";
 import {
   ExpenseRecordKindToggle,
   type ExpenseRecordKind,
 } from "@/components/expenses/expense-record-kind-toggle";
-
-type MoneyAccount = { id: string; name: string };
-
-type PaymentMode = "cash" | "partner";
-
-type ExpenseFormDraft = {
-  expenseAccountId: string;
-  moneyAccountId: string;
-  partnerId: string;
-  paymentMode: PaymentMode;
-  itemName: string;
-  amountText: string;
-  dateText: string;
-  notes: string;
-};
-
-function isExpenseDraftEmpty(draft: ExpenseFormDraft): boolean {
-  return (
-    !draft.itemName.trim() &&
-    !draft.amountText.trim() &&
-    !draft.dateText.trim()
-  );
-}
+import { DateInput } from "@/components/ui/date-input";
+import { Dialog } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/input";
+import { ResumeDraftBanner } from "@/components/ui/resume-draft-banner";
 
 type Props = {
   open: boolean;
@@ -94,418 +36,27 @@ export function ManualExpenseForm({
   embedded = false,
   onSaved,
 }: Props) {
-  const { entityId, actorId } = useEntity();
-  const { toast } = useToast();
-  const submitIdempotency = useSubmitIdempotency();
-  const { submitWithDuplicateGuard, DuplicateRecordDialog } =
-    useDuplicateRecordSubmit();
-
-  useEffect(() => {
-    if (open) submitIdempotency.resetSubmit();
-  }, [open, submitIdempotency]);
-  const [cashAccounts, setCashAccounts] = useState<MoneyAccount[]>([]);
-  const [partners, setPartners] = useState<PartnerRow[]>([]);
-  const [employees, setEmployees] = useState<EmployeeRow[]>([]);
-  const [recordKind, setRecordKind] = useState<ExpenseRecordKind>(defaultRecordKind);
-  const [employeeId, setEmployeeId] = useState("");
-  const [expenseAccounts, setExpenseAccounts] = useState<ChartAccount[]>([]);
-  const [expenseAccountId, setExpenseAccountId] = useState("");
-  const [moneyAccountId, setMoneyAccountId] = useState("");
-  const [partnerId, setPartnerId] = useState("");
-  const [paymentMode, setPaymentMode] = useState<PaymentMode>("cash");
-  const [itemName, setItemName] = useState("");
-  const [confirmExpenseItemId, setConfirmExpenseItemId] = useState<string | null>(
-    null,
-  );
-  const pickedItemCanonicalRef = useRef<string | null>(null);
-  const [amountText, setAmountText] = useState("");
-  const [notes, setNotes] = useState("");
-  const [dateText, setDateText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [optionsLoaded, setOptionsLoaded] = useState(false);
-  const [baseline, setBaseline] = useState<ExpenseFormDraft | null>(null);
-  const [suggestedAccountId, setSuggestedAccountId] = useState<string | null>(null);
-  const [suggestedSource, setSuggestedSource] = useState<string | null>(null);
-  const userPickedAccountRef = useRef(false);
-
-  const draftFormKey = `manual-expense:${recordKind}`;
-
-  const formDraft = useMemo<ExpenseFormDraft>(
-    () => ({
-      expenseAccountId,
-      moneyAccountId,
-      partnerId,
-      paymentMode,
-      itemName,
-      amountText,
-      dateText,
-      notes,
-    }),
-    [
-      expenseAccountId,
-      moneyAccountId,
-      partnerId,
-      paymentMode,
-      itemName,
-      amountText,
-      dateText,
-      notes,
-    ],
-  );
-
-  const {
-    resumeDraft,
-    acceptResume,
-    declineResume,
-    clearDraft,
-  } = useFormDraft({
-    entityId,
-    formKey: draftFormKey,
-    value: formDraft,
-    enabled: open && recordKind === "expense",
-    isEmpty: isExpenseDraftEmpty,
-  });
-
-  const { touched, markTouched } = useFormTouched(open && recordKind === "expense");
-
-  const dirty =
-    recordKind === "expense" &&
-    touched &&
-    baseline !== null &&
-    statesDiffer(baseline, formDraft);
-
-  useRegisterUnsaved("manual-expense", dirty, open && recordKind === "expense");
-
-  const loadOptions = useCallback(async () => {
-    if (!entityId) return;
-    const [accountsRes, chartRes, partnersRes, employeesRes] = await Promise.all([
-      apiFetch<{ items: MoneyAccount[] }>(
-        `/entities/${entityId}/banking/accounts?account_kind=cash&limit=50`,
-      ),
-      apiFetch<{ items: ChartAccount[] }>(
-        `/entities/${entityId}/chart-of-accounts?limit=200`,
-      ),
-      apiFetch<{ items: PartnerRow[] }>(
-        `/entities/${entityId}/partners?limit=50`,
-      ),
-      apiFetch<{ items: EmployeeRow[] }>(
-        `/entities/${entityId}/staff/employees?include_inactive=false&limit=100`,
-      ),
-    ]);
-    setCashAccounts(accountsRes.items);
-    setPartners(partnersRes.items.filter((p) => p.is_active));
-    const activeEmployees = employeesRes.items.filter((e) => e.is_active);
-    setEmployees(activeEmployees);
-    if (activeEmployees[0]) setEmployeeId(activeEmployees[0].id);
-    const pickable = filterExpenseAccounts(chartRes.items);
-    setExpenseAccounts(pickable);
-    const drawerId = defaultMainDrawerId(
-      accountsRes.items.map((a) => ({
-        id: a.id,
-        gl_account_id: "",
-        name: a.name,
-        account_kind: "cash",
-      })),
-    );
-    if (drawerId) setMoneyAccountId(drawerId);
-    else if (accountsRes.items[0]) setMoneyAccountId(accountsRes.items[0].id);
-    const activePartners = partnersRes.items.filter((p) => p.is_active);
-    if (activePartners[0]) setPartnerId(activePartners[0].id);
-    setOptionsLoaded(true);
-  }, [entityId]);
-
-  useEffect(() => {
-    if (!open) {
-      setOptionsLoaded(false);
-      setBaseline(null);
-      return;
-    }
-    setDateText(todayTrDate());
-    setItemName("");
-    setConfirmExpenseItemId(null);
-    pickedItemCanonicalRef.current = null;
-    setExpenseAccountId("");
-    setAmountText("");
-    setNotes("");
-    setPaymentMode("cash");
-    setPartnerId("");
-    setRecordKind(defaultRecordKind);
-    setEmployeeId("");
-    setError(null);
-    userPickedAccountRef.current = false;
-    setSuggestedAccountId(null);
-    setSuggestedSource(null);
-    void loadOptions().catch(() => undefined);
-  }, [open, loadOptions, defaultRecordKind]);
-
+  const s = useManualExpenseForm({ open, defaultRecordKind, onSaved });
   const allowSalaryMode = showRecordKindToggle;
-
-  useEffect(() => {
-    if (!open || !entityId || itemName.trim().length < 2) {
-      setSuggestedAccountId(null);
-      setSuggestedSource(null);
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const suggestion = await apiFetch<ExpenseAccountSuggestion>(
-            `/entities/${entityId}/expenses/suggest-account?description=${encodeURIComponent(itemName.trim())}`,
-          );
-          const nextId = shouldApplyExpenseAccountSuggestion(
-            suggestion.account_id
-              ? {
-                  account_id: suggestion.account_id,
-                  source: (suggestion.source ?? "learned") as "learned" | "ai",
-                  confidence: suggestion.confidence ?? "medium",
-                }
-              : null,
-            expenseAccountId,
-            userPickedAccountRef.current,
-          );
-          if (nextId) {
-            setExpenseAccountId(nextId);
-            setSuggestedAccountId(nextId);
-            setSuggestedSource(suggestion.source ?? null);
-          } else if (suggestion.account_id) {
-            setSuggestedAccountId(suggestion.account_id);
-            setSuggestedSource(suggestion.source ?? null);
-          } else {
-            setSuggestedAccountId(null);
-            setSuggestedSource(null);
-          }
-        } catch {
-          setSuggestedAccountId(null);
-          setSuggestedSource(null);
-        }
-      })();
-    }, 400);
-
-    return () => window.clearTimeout(timer);
-  }, [open, entityId, itemName, expenseAccountId]);
-
-  useEffect(() => {
-    if (!open || !optionsLoaded || baseline !== null || resumeDraft !== null) {
-      return;
-    }
-    setBaseline(formDraft);
-  }, [open, optionsLoaded, baseline, resumeDraft, formDraft]);
-
-  function handleItemNameChange(next: string) {
-    if (
-      clearConfirmItemOnTextEdit(
-        confirmExpenseItemId,
-        pickedItemCanonicalRef.current,
-        next,
-      )
-    ) {
-      setConfirmExpenseItemId(null);
-      pickedItemCanonicalRef.current = null;
-    }
-    setItemName(next);
-  }
-
-  function handlePickExpenseItem(item: ExpenseItemSearchResult) {
-    setItemName(item.canonical_name);
-    setConfirmExpenseItemId(item.id);
-    pickedItemCanonicalRef.current = item.canonical_name;
-    if (item.default_expense_account_id) {
-      setExpenseAccountId(item.default_expense_account_id);
-      setSuggestedAccountId(null);
-      setSuggestedSource(null);
-    }
-  }
-
-  function applyDraft(draft: ExpenseFormDraft) {
-    setExpenseAccountId(draft.expenseAccountId);
-    setMoneyAccountId(draft.moneyAccountId);
-    setPartnerId(draft.partnerId);
-    setPaymentMode(draft.paymentMode);
-    setItemName(draft.itemName);
-    setAmountText(draft.amountText);
-    setDateText(draft.dateText);
-    setNotes(draft.notes);
-  }
-
-  function handleResume() {
-    const draft = acceptResume();
-    if (!draft) return;
-    applyDraft(draft);
-    setBaseline(draft);
-  }
-
-  function handleDeclineResume() {
-    declineResume();
-    setBaseline(formDraft);
-  }
-
-  function handleDiscard() {
-    clearDraft();
-    setItemName("");
-    setConfirmExpenseItemId(null);
-    pickedItemCanonicalRef.current = null;
-    setAmountText("");
-    setNotes("");
-    setDateText(todayTrDate());
-    setPaymentMode("cash");
-    setPartnerId("");
-    setBaseline(null);
-  }
-
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!entityId) {
-      setError("Select a restaurant in the sidebar first.");
-      return;
-    }
-    const amountKurus = parseTryToKurus(amountText);
-    const expenseDate = parseTrDate(dateText);
-    if (amountKurus === null || amountKurus <= 0) {
-      setError("Enter a valid amount.");
-      return;
-    }
-    if (!expenseDate) {
-      setError("Date must be DD.MM.YYYY.");
-      return;
-    }
-    if (!expenseAccountId) {
-      setError("Choose an expense account.");
-      return;
-    }
-    if (paymentMode === "cash" && !moneyAccountId) {
-      setError("Choose a cash drawer.");
-      return;
-    }
-    if (paymentMode === "partner" && !partnerId) {
-      setError("Choose a partner.");
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const idempotencyKey = submitIdempotency.beginSubmit();
-      const description = itemName || "Manual expense";
-      await submitWithDuplicateGuard(async (acknowledgedDuplicate) => {
-        if (paymentMode === "partner") {
-          await apiFetch(
-            `/entities/${entityId}/partners/${partnerId}/expenses-fronted`,
-            {
-              method: "POST",
-              idempotencyKey,
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(
-                withAcknowledgeDuplicate(
-                  {
-                    expense_date: expenseDate,
-                    amount_kurus: amountKurus,
-                    description,
-                    actor_id: actorId,
-                    expense_account_id: expenseAccountId,
-                  },
-                  acknowledgedDuplicate,
-                ),
-              ),
-            },
-          );
-        } else {
-          await apiFetch(`/entities/${entityId}/expenses`, {
-            method: "POST",
-            idempotencyKey,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(
-              withAcknowledgeDuplicate(
-                {
-                  expense_date: expenseDate,
-                  amount_kurus: amountKurus,
-                  expense_account_id: expenseAccountId,
-                  money_account_id: moneyAccountId,
-                  written_item_description: itemName || null,
-                  has_source_document: false,
-                  description,
-                  notes: notes.trim() || null,
-                  actor_id: actorId,
-                  confirm_expense_item_id: confirmExpenseItemId,
-                },
-                acknowledgedDuplicate,
-              ),
-            ),
-          });
-        }
-      });
-      submitIdempotency.completeSubmit();
-      clearDraft();
-      onSaved?.();
-      toast(
-        paymentMode === "partner"
-          ? "Partner expense recorded"
-          : "Expense recorded",
-      );
-      // Keep the dialog open so the owner can add another expense; reset for a
-      // fresh entry and clear the category so it must be chosen again. The
-      // owner closes the dialog themselves.
-      setItemName("");
-      setConfirmExpenseItemId(null);
-      pickedItemCanonicalRef.current = null;
-      setAmountText("");
-      setNotes("");
-      setExpenseAccountId("");
-      setSuggestedAccountId(null);
-      setSuggestedSource(null);
-      userPickedAccountRef.current = false;
-      setBaseline({
-        expenseAccountId: "",
-        moneyAccountId,
-        partnerId,
-        paymentMode,
-        itemName: "",
-        amountText: "",
-        dateText,
-        notes: "",
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  const selectedEmployee = employees.find((e) => e.id === employeeId);
   const dialogTitle =
-    recordKind === "salary" ? "Record salary payment" : title;
-  const showCashDrawerPicker =
-    paymentMode === "cash" && shouldShowCashDrawerPicker(cashAccounts);
-
-  const notesField = (
-    <div>
-      <Label htmlFor="exp-notes">Notes (optional)</Label>
-      <Textarea
-        id="exp-notes"
-        value={notes}
-        onChange={(e) => setNotes(e.target.value)}
-        placeholder="Receipt #, supplier, who paid…"
-        maxLength={512}
-        disabled={submitting}
-      />
-    </div>
-  );
+    s.recordKind === "salary" ? "Record salary payment" : title;
+  const DuplicateRecordDialog = s.DuplicateRecordDialog;
 
   if (!open) return null;
 
   const formBody = (
     <>
       {!embedded && <RecordingForBanner />}
-      {recordKind === "expense" && !embedded && (
+      {s.recordKind === "expense" && !embedded && (
         <p className="mb-4 text-xs text-muted-foreground">
           Cash and partner paid only — bank and card charges are classified
           when the bank statement arrives (never record them here).
         </p>
       )}
-      {recordKind === "expense" && resumeDraft && (
+      {s.recordKind === "expense" && s.resumeDraft && (
         <ResumeDraftBanner
-          onResume={handleResume}
-          onDismiss={handleDeclineResume}
+          onResume={s.handleResume}
+          onDismiss={s.handleDeclineResume}
         />
       )}
       {!embedded && (
@@ -513,300 +64,68 @@ export function ManualExpenseForm({
           <Label htmlFor="exp-date">Date (DD.MM.YYYY)</Label>
           <DateInput
             id="exp-date"
-            value={dateText}
-            onChange={setDateText}
+            value={s.dateText}
+            onChange={s.setDateText}
             required
           />
         </div>
       )}
       {allowSalaryMode && (
         <ExpenseRecordKindToggle
-          value={recordKind}
-          onChange={setRecordKind}
+          value={s.recordKind}
+          onChange={s.setRecordKind}
           className={embedded ? "mb-2" : "mb-4"}
         />
       )}
 
-      {recordKind === "salary" ? (
-        <>
-          {!embedded && (
-            <p className="mb-3 text-xs text-muted-foreground">
-              Posts through staff salary payable (same as Staff → Pay salary). Pick
-              the salary month separately from the payment date.
-            </p>
-          )}
-          {embedded && (
-            <div className="mb-3">
-              <Label htmlFor="exp-date">Date</Label>
-              <DateInput
-                id="exp-date"
-                value={dateText}
-                onChange={setDateText}
-                required
-                showLateNightHint
-              />
-            </div>
-          )}
-          <div className={embedded ? "mb-3" : "mb-3"}>
-            <Label htmlFor="exp-salary-employee">Employee</Label>
-            <Combobox
-              id="exp-salary-employee"
-              value={employeeId}
-              onValueChange={setEmployeeId}
-              options={employees.map((e) => ({
-                value: e.id,
-                label: e.name,
-              }))}
-              placeholder="Choose employee…"
-            />
-          </div>
-          {entityId && selectedEmployee && (
-            <StaffSalaryPaymentDialog
-              embedded
-              open
-              entityId={entityId}
-              employeeId={selectedEmployee.id}
-              employeeName={selectedEmployee.name}
-              payCurrency={selectedEmployee.pay_currency}
-              source="staff"
-              hidePaymentDate
-              paymentDate={parseTrDate(dateText) ?? undefined}
-              closeOnSuccess={false}
-              onClose={onClose}
-              onSaved={onSaved}
-            />
-          )}
-        </>
-      ) : (
-      <form
-        onSubmit={onSubmit}
-        onChange={markTouched}
-        className={embedded ? "space-y-3" : "space-y-3"}
-      >
-        {embedded ? (
-          <>
-            <div>
-              <Label htmlFor="exp-date">Date</Label>
-              <DateInput
-                id="exp-date"
-                value={dateText}
-                onChange={setDateText}
-                required
-                showLateNightHint
-              />
-            </div>
-            <ExpenseItemTypeahead
-              entityId={entityId}
-              value={itemName}
-              confirmedItemId={confirmExpenseItemId}
-              onValueChange={handleItemNameChange}
-              onPickItem={handlePickExpenseItem}
-              disabled={submitting}
-            />
-            <div>
-              <Label htmlFor="exp-amount">Amount (TRY)</Label>
-              <MoneyInput
-                id="exp-amount"
-                placeholder="e.g. 150,00"
-                value={amountText}
-                onChange={setAmountText}
-                required
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="exp-account">Expense account</Label>
-                {entityId && (
-                  <AddExpenseCategoryButton
-                    entityId={entityId}
-                    onCreated={async (account) => {
-                      setExpenseAccounts((prev) =>
-                        mergeExpenseAccounts(prev, account),
-                      );
-                      setExpenseAccountId(account.id);
-                      userPickedAccountRef.current = true;
-                      setSuggestedAccountId(null);
-                      setSuggestedSource(null);
-                    }}
-                  />
-                )}
-              </div>
-              <Select
-                id="exp-account"
-                value={expenseAccountId}
-                onChange={(e) => {
-                  userPickedAccountRef.current = true;
-                  setExpenseAccountId(e.target.value);
-                  setSuggestedAccountId(null);
-                  setSuggestedSource(null);
-                }}
-              >
-                <option value="">Select category…</option>
-                {expenseAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {formatExpenseAccountLabel(a)}
-                  </option>
-                ))}
-              </Select>
-              {isSuggestedAccountActive(expenseAccountId, suggestedAccountId) && (
-                <p className="text-xs text-muted-foreground">
-                  Suggested account
-                  {suggestedSource === "ai"
-                    ? " (AI)"
-                    : suggestedSource === "learned"
-                      ? " (learned)"
-                      : ""}
-                </p>
-              )}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="exp-payment">Payment</Label>
-                <Select
-                  id="exp-payment"
-                  value={paymentMode}
-                  onChange={(e) =>
-                    setPaymentMode(e.target.value as PaymentMode)
-                  }
-                >
-                  <option value="cash">Cash drawer</option>
-                  <option value="partner">Partner paid (owe partner)</option>
-                </Select>
-              </div>
-              {showCashDrawerPicker ? (
-                <CashDrawerPicker
-                  id="exp-cash"
-                  accounts={cashAccounts}
-                  value={moneyAccountId}
-                  onValueChange={setMoneyAccountId}
-                />
-              ) : paymentMode === "partner" ? (
-                <div>
-                  <Label htmlFor="exp-partner">Partner</Label>
-                  <Combobox
-                    id="exp-partner"
-                    value={partnerId}
-                    onValueChange={setPartnerId}
-                    options={partners.map((p) => ({
-                      value: p.id,
-                      label: p.name,
-                    }))}
-                    placeholder="Partner…"
-                  />
-                </div>
-              ) : (
-                <div className="hidden sm:block" aria-hidden />
-              )}
-            </div>
-            {notesField}
-          </>
-        ) : (
-          <>
-        <ExpenseItemTypeahead
-          entityId={entityId}
-          value={itemName}
-          confirmedItemId={confirmExpenseItemId}
-          onValueChange={handleItemNameChange}
-          onPickItem={handlePickExpenseItem}
-          disabled={submitting}
+      {s.recordKind === "salary" ? (
+        <ManualExpenseSalaryPanel
+          embedded={embedded}
+          entityId={s.entityId}
+          employees={s.employees}
+          employeeId={s.employeeId}
+          setEmployeeId={s.setEmployeeId}
+          selectedEmployee={s.selectedEmployee}
+          dateText={s.dateText}
+          setDateText={s.setDateText}
+          onClose={onClose}
+          onSaved={onSaved}
         />
-        <div>
-          <Label htmlFor="exp-amount">Amount (TRY)</Label>
-          <MoneyInput
-            id="exp-amount"
-            placeholder="e.g. 150,00"
-            value={amountText}
-            onChange={setAmountText}
-            required
-          />
-        </div>
-        <div>
-          <div className="flex items-center justify-between gap-2">
-            <Label htmlFor="exp-account">Expense account</Label>
-            {entityId && (
-              <AddExpenseCategoryButton
-                entityId={entityId}
-                onCreated={async (account) => {
-                  setExpenseAccounts((prev) => mergeExpenseAccounts(prev, account));
-                  setExpenseAccountId(account.id);
-                  userPickedAccountRef.current = true;
-                  setSuggestedAccountId(null);
-                  setSuggestedSource(null);
-                }}
-              />
-            )}
-          </div>
-          <Select
-            id="exp-account"
-            value={expenseAccountId}
-            onChange={(e) => {
-              userPickedAccountRef.current = true;
-              setExpenseAccountId(e.target.value);
-              setSuggestedAccountId(null);
-              setSuggestedSource(null);
-            }}
-          >
-            <option value="">Select category…</option>
-            {expenseAccounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {formatExpenseAccountLabel(a)}
-              </option>
-            ))}
-          </Select>
-          {isSuggestedAccountActive(expenseAccountId, suggestedAccountId) && (
-            <p className="text-xs text-muted-foreground">
-              Suggested account
-              {suggestedSource === "ai" ? " (AI)" : suggestedSource === "learned" ? " (learned)" : ""}
-              {" — you can change it before saving."}
-            </p>
-          )}
-        </div>
-        <div>
-          <Label htmlFor="exp-payment">Payment</Label>
-          <Select
-            id="exp-payment"
-            value={paymentMode}
-            onChange={(e) =>
-              setPaymentMode(e.target.value as PaymentMode)
-            }
-          >
-            <option value="cash">Cash drawer</option>
-            <option value="partner">Partner paid (owe partner)</option>
-          </Select>
-        </div>
-        {paymentMode === "cash" ? (
-          <CashDrawerPicker
-            id="exp-cash"
-            accounts={cashAccounts}
-            value={moneyAccountId}
-            onValueChange={setMoneyAccountId}
-          />
-        ) : (
-          <div>
-            <Label htmlFor="exp-partner">Partner</Label>
-            <Combobox
-              id="exp-partner"
-              value={partnerId}
-              onValueChange={setPartnerId}
-              options={partners.map((p) => ({
-                value: p.id,
-                label: p.name,
-              }))}
-              placeholder="Partner…"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Repay the partner later under Record → Partner reimb.
-            </p>
-          </div>
-        )}
-        {notesField}
-          </>
-        )}
-        {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Recording…" : "Record expense"}
-        </Button>
-      </form>
+      ) : (
+        <ManualExpenseFields
+          layout={embedded ? "embedded" : "dialog"}
+          entityId={s.entityId ?? ""}
+          submitting={s.submitting}
+          error={s.error}
+          itemName={s.itemName}
+          confirmExpenseItemId={s.confirmExpenseItemId}
+          onItemNameChange={s.handleItemNameChange}
+          onPickItem={s.handlePickExpenseItem}
+          amountText={s.amountText}
+          setAmountText={s.setAmountText}
+          dateText={s.dateText}
+          setDateText={s.setDateText}
+          expenseAccounts={s.expenseAccounts}
+          setExpenseAccounts={s.setExpenseAccounts}
+          expenseAccountId={s.expenseAccountId}
+          setExpenseAccountId={s.setExpenseAccountId}
+          suggestedAccountId={s.suggestedAccountId}
+          suggestedSource={s.suggestedSource}
+          markAccountPickedByUser={s.markAccountPickedByUser}
+          paymentMode={s.paymentMode}
+          setPaymentMode={s.setPaymentMode}
+          showCashDrawerPicker={s.showCashDrawerPicker}
+          cashAccounts={s.cashAccounts}
+          moneyAccountId={s.moneyAccountId}
+          setMoneyAccountId={s.setMoneyAccountId}
+          partners={s.partners}
+          partnerId={s.partnerId}
+          setPartnerId={s.setPartnerId}
+          notes={s.notes}
+          setNotes={s.setNotes}
+          markTouched={s.markTouched}
+          onSubmit={s.onSubmit}
+        />
       )}
     </>
   );
@@ -820,8 +139,8 @@ export function ManualExpenseForm({
           open={open}
           title={dialogTitle}
           onClose={onClose}
-          dirty={recordKind === "expense" ? dirty : false}
-          onDiscard={recordKind === "expense" ? handleDiscard : undefined}
+          dirty={s.recordKind === "expense" ? s.dirty : false}
+          onDiscard={s.recordKind === "expense" ? s.handleDiscard : undefined}
         >
           {formBody}
         </Dialog>

@@ -103,9 +103,11 @@ describe("unified record dialogs", () => {
 
   it("manual expense can record salary payments from one daily intake dialog", () => {
     const form = sourceDeclaring("ManualExpenseForm");
+    const salary = sourceDeclaring("ManualExpenseSalaryPanel");
     const reviewPanel = sourceDeclaring("ExpensesReviewPanel");
     expect(form).toContain("ExpenseRecordKindToggle");
-    expect(form).toContain("StaffSalaryPaymentDialog");
+    expect(form).toContain("ManualExpenseSalaryPanel");
+    expect(salary).toContain("StaffSalaryPaymentDialog");
     expect(form).toMatch(/bank statement/i);
     expect(reviewPanel).toContain("ManualExpenseForm");
     expect(reviewPanel).toContain("Record expense");

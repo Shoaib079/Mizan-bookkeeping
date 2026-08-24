@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split invoice-draft review (`v0.fe-split-invoice-draft`):** File-size cleanup only; no behavior/guard change.
+- **Split manual-expense form (`v0.fe-split-manual-expense`):** File-size cleanup only; no behavior/guard change.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split invoice-draft review |
-| **Last tag** | `v0.fe-split-invoice-draft` |
+| **Last completed slice** | Split manual-expense form |
+| **Last tag** | `v0.fe-split-manual-expense` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (manual-expense / salary payment / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (salary payment / opening balances / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

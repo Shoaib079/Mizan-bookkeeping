@@ -17,8 +17,11 @@ describe("partner paid labels (not fronted)", () => {
     expect(labels).toContain("salary_fronted:");
 
     const expenseForm = sourceDeclaring("ManualExpenseForm");
-    expect(expenseForm).toContain("expenses-fronted");
-    expect(expenseForm).toContain("Partner paid (owe partner)");
+    const fields = sourceDeclaring("ManualExpenseFields");
+    const submit = sourceDeclaring("submitManualExpense");
+    expect(submit).toContain("expenses-fronted");
+    expect(fields).toContain("Partner paid (owe partner)");
+    expect(expenseForm).toContain("ManualExpenseFields");
   });
 
   it("Record / review / classify copy say partner paid, not fronted", () => {

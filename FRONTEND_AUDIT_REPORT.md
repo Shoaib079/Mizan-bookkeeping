@@ -11,7 +11,7 @@
 
 ## Executive verdict
 
-The frontend is shippable and currently green. The main pre-v3 risks are **file-size debt** (statement-import + invoice-draft panels **redeemed**), a **preview kit** that is not wired into the live product, a handful of **lib helpers used only by tests**, and **parallel UI patterns** for periods / downloads / cash close. No systemic `apiFetch` misuse or hard-coded API base URLs showed up.
+The frontend is shippable and currently green. The main pre-v3 risks are **file-size debt** (statement-import + invoice-draft + manual-expense panels **redeemed**), a **preview kit** that is not wired into the live product, a handful of **lib helpers used only by tests**, and **parallel UI patterns** for periods / downloads / cash close. No systemic `apiFetch` misuse or hard-coded API base URLs showed up.
 
 ---
 
@@ -55,6 +55,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 **Progress (2026-08-24):**
 - `statement-import-panel.tsx` **889 → 115** — `v0.fe-split-statement-import` (redeemed from baseline)
 - `invoice-draft-review.tsx` **883 → 80** — `v0.fe-split-invoice-draft` (redeemed from baseline). Types + capabilities libs; hook; summary (incl. GlEntryActions); action forms.
+- `manual-expense-form.tsx` **832 → ~150** — `v0.fe-split-manual-expense` (redeemed). Draft/submit libs; hook; fields + salary panel; reuses existing typeahead/category/toggle.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -62,7 +63,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 |------:|------|
 | ~~889~~ | ~~`components/banking/statement-import-panel.tsx`~~ → **split** (`v0.fe-split-statement-import`) |
 | ~~883~~ | ~~`components/invoice-draft-review.tsx`~~ → **split** (`v0.fe-split-invoice-draft`) |
-| 832 | `components/forms/manual-expense-form.tsx` |
+| ~~832~~ | ~~`components/forms/manual-expense-form.tsx`~~ → **split** (`v0.fe-split-manual-expense`) |
 | 794 | `components/forms/staff-salary-payment-dialog.tsx` |
 | 775 | `app/onboarding/opening-balances/page.tsx` |
 | 770 | `components/statement-classify-bar.tsx` |
@@ -86,7 +87,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: manual expense / salary payment / opening balances.
+**Recommendation:** Continue the existing split pattern. Next: salary payment dialog / opening balances / statement-classify-bar.
 
 ---
 
@@ -193,14 +194,15 @@ Many of these are **accepted-live** from recent dashboard/balances slices. For v
 
 1. ~~**Split `statement-import-panel`**~~ — **DONE** `v0.fe-split-statement-import`
 2. ~~**Split `invoice-draft-review`**~~ — **DONE** `v0.fe-split-invoice-draft`
-3. **Decide preview kit fate** — keep lab vs archive/delete  
-4. **Unify period chips** — one component language for This/Last/Custom + status filters  
-5. **ExpenseRecordKindToggle → SegmentedControl** (or shared chip)  
-6. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
-7. **Split remaining mega-files** — manual-expense, salary payment, opening balances  
-8. **Cash close UX consolidation**  
-9. **Tokenize remaining accepted hex** (without visual regressions)  
-10. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
+3. ~~**Split `manual-expense-form`**~~ — **DONE** `v0.fe-split-manual-expense`
+4. **Decide preview kit fate** — keep lab vs archive/delete  
+5. **Unify period chips** — one component language for This/Last/Custom + status filters  
+6. **ExpenseRecordKindToggle → SegmentedControl** (or shared chip)  
+7. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
+8. **Split remaining mega-files** — salary payment, opening balances, statement-classify-bar  
+9. **Cash close UX consolidation**  
+10. **Tokenize remaining accepted hex** (without visual regressions)  
+11. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
 
 ---
 

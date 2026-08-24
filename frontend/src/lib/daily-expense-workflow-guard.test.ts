@@ -45,11 +45,13 @@ describe("daily expense workflow (cash/partner/salary only)", () => {
 
   it("manual expense form has no bank/card payment path", () => {
     const form = sourceDeclaring("ManualExpenseForm");
+    const fields = sourceDeclaring("ManualExpenseFields");
     const modals = sourceDeclaring("RecordActionModals");
-    expect(form).not.toContain("bank_card");
-    expect(form).not.toContain("paymentSource");
-    expect(form).toMatch(/bank statement/i);
-    expect(form).toContain("Record expense");
+    const surface = form + fields;
+    expect(surface).not.toContain("bank_card");
+    expect(surface).not.toContain("paymentSource");
+    expect(surface).toMatch(/bank statement/i);
+    expect(surface).toContain("Record expense");
     expect(modals).not.toContain("storePurchase");
   });
 
