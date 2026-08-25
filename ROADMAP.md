@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Continue FE file-size splits (split page / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
-| **Last completed slice** | **Split banking cash page** (`v0.fe-split-banking-cash`) |
-| **Last commit/tag**      | `v0.fe-split-banking-cash` |
+| **Next up**              | Continue FE file-size splits (statement-classification-options / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
+| **Last completed slice** | **Split split hub page** (`v0.fe-split-split-page`) |
+| **Last commit/tag**      | `v0.fe-split-split-page` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-25 | Split split hub page (file size)                | `v0.fe-split-split-page`                               | Page 498→~85; hook + toolbar + expense/payment lists + dialog; reuse FormDialogShell/DataTable/MoneyInput; PageHeader archetype kept; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split banking cash page (file size)             | `v0.fe-split-banking-cash`                             | Page 512→~115; hook + drawers list + sessions panel + dialogs; reuse write chrome / forms; guards → page+hook; redeemed from baseline; no behavior change |
 | 2026-08-24 | Split DateInput (file size)                     | `v0.fe-split-date-input`                               | Component 517→~304; calendar + layout + types; reuse dates/open helpers; dismiss hook gains portalRef (date-input + combobox); redeemed from baseline; no behavior change |
 | 2026-08-24 | Split general-ledger panel (file size)          | `v0.fe-split-general-ledger`                           | Panel 538→~91; hook + filters + table; reuse export/detail/GlEntryActions; focus/`effective_only` preserved; redeemed from baseline; no behavior change |

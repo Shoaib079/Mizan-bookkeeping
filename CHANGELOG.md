@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-25
+
+- **Split split hub page (`v0.fe-split-split-page`).** Cleanup-only: `app/split/page.tsx` 498→~85. Extracted `useSplitHubPage`, toolbar, expense/payment lists, dialog. Reused FormDialogShell / DataTable / Combobox / MoneyInput / expense-account helpers. PageHeader archetype kept on `SplitHubPage`. Redeemed from `FILE_SIZE_BASELINE.json`. Vitest + eslint + tsc + next build + ratchet + pytest green. No visual/behavior/API/permission changes.
+
 ## 2026-08-24
 
 - **Split banking cash page (`v0.fe-split-banking-cash`).** Cleanup-only: `banking/cash/page.tsx` 512→~115. Extracted `useCashDrawerPage`, drawers list, sessions panel, page dialogs. Reused write chrome / count / close-day / close / movement / `MoneyAccountForm`. Guards retargeted via `sourceDeclaringAll` (page+hook). Redeemed from `FILE_SIZE_BASELINE.json`. Vitest + eslint + tsc + next build + ratchet + pytest green. No visual/behavior/API/permission changes.

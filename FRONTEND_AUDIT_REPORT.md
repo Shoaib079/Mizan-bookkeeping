@@ -79,7 +79,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~538~~ | ~~`components/review/general-ledger-panel.tsx`~~ → **split** (`v0.fe-split-general-ledger`) |
 | ~~517~~ | ~~`components/ui/date-input.tsx`~~ → **split** (`v0.fe-split-date-input`) |
 | ~~512~~ | ~~`app/banking/cash/page.tsx`~~ → **split** (`v0.fe-split-banking-cash`) |
-| 498 | `app/split/page.tsx` |
+| ~~498~~ | ~~`app/split/page.tsx`~~ → **split** (`v0.fe-split-split-page`) |
 | 466 | `lib/statement-classification-options.ts` |
 | 455 | `components/layout/account-menu.tsx` |
 | 446 | `components/forms/customer-payment-form.tsx` |
@@ -92,7 +92,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `split/page.tsx` (~498).
+**Recommendation:** Continue the existing split pattern. Next: `lib/statement-classification-options.ts` (~466).
 
 ---
 

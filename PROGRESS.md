@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split banking cash page (`v0.fe-split-banking-cash`):** File-size cleanup only; `/banking/cash` behavior unchanged.
+- **Split split hub page (`v0.fe-split-split-page`):** File-size cleanup only; `/split` behavior unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split banking cash page |
-| **Last tag** | `v0.fe-split-banking-cash` |
+| **Last completed slice** | Split split hub page |
+| **Last tag** | `v0.fe-split-split-page` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`split/page.tsx` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`statement-classification-options` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
