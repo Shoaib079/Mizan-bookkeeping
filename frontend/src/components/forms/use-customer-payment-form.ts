@@ -9,7 +9,6 @@ import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
 import {
   formatForexBalanceSummary,
-  formatFxNative,
   parseFxNative,
 } from "@/lib/fx-money";
 import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
@@ -17,7 +16,7 @@ import {
   loadPaymentReceiveAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
-import { formatKurus, formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
+import { formatKurus, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 

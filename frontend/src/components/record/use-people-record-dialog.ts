@@ -16,7 +16,6 @@ import {
 import { apiFetch } from "@/lib/api";
 import { todayTrDate } from "@/lib/dates";
 import { useEntity } from "@/lib/entity-context";
-import { extractPartnerBalanceKurus } from "@/lib/partner-balance";
 import { parseTrDate } from "@/lib/money";
 import type { PersonPickerKind, RecordActionKey } from "@/lib/record-actions";
 
@@ -35,15 +34,6 @@ export function usePeopleRecordDialog(opts: {
   const [balanceKurus, setBalanceKurus] = useState<number | undefined>(
     undefined,
   );
-  const [netBalanceKurus, setNetBalanceKurus] = useState<number | undefined>(
-    undefined,
-  );
-  const [capitalBalanceKurus, setCapitalBalanceKurus] = useState<
-    number | undefined
-  >(undefined);
-  const [unpaidProfitKurus, setUnpaidProfitKurus] = useState<number | undefined>(
-    undefined,
-  );
   const [balanceLoading, setBalanceLoading] = useState(false);
   const [balanceError, setBalanceError] = useState<string | null>(null);
   const [dateText, setDateText] = useState("");
@@ -57,9 +47,6 @@ export function usePeopleRecordDialog(opts: {
     setLoadError(null);
     setLoading(false);
     setBalanceKurus(undefined);
-    setNetBalanceKurus(undefined);
-    setCapitalBalanceKurus(undefined);
-    setUnpaidProfitKurus(undefined);
     setBalanceLoading(false);
     setBalanceError(null);
     setDateText("");
@@ -103,18 +90,12 @@ export function usePeopleRecordDialog(opts: {
   useEffect(() => {
     if (!open || !entityId || !selectedId) {
       setBalanceKurus(undefined);
-      setNetBalanceKurus(undefined);
-      setCapitalBalanceKurus(undefined);
-      setUnpaidProfitKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
     }
     if (!NEEDS_REIMBURSEMENT_BALANCE.has(action)) {
       setBalanceKurus(undefined);
-      setNetBalanceKurus(undefined);
-      setCapitalBalanceKurus(undefined);
-      setUnpaidProfitKurus(undefined);
       setBalanceError(null);
       setBalanceLoading(false);
       return;
@@ -134,9 +115,6 @@ export function usePeopleRecordDialog(opts: {
       .then((ledger) => {
         if (cancelled) return;
         setBalanceKurus(ledger.balance_kurus);
-        setNetBalanceKurus(extractPartnerBalanceKurus(ledger));
-        setCapitalBalanceKurus(ledger.capital_balance_kurus ?? 0);
-        setUnpaidProfitKurus(ledger.unpaid_profit_kurus ?? 0);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -144,9 +122,6 @@ export function usePeopleRecordDialog(opts: {
           err instanceof Error ? err.message : "Failed to load balance",
         );
         setBalanceKurus(undefined);
-        setNetBalanceKurus(undefined);
-        setCapitalBalanceKurus(undefined);
-        setUnpaidProfitKurus(undefined);
       })
       .finally(() => {
         if (!cancelled) setBalanceLoading(false);

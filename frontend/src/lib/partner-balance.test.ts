@@ -75,11 +75,13 @@ describe("the netted balance reaches every screen", () => {
 
   it("every screen that prints one goes through these", () => {
     /* The fix was applied to the page it was reported on and three other
-     * places were left behind. Named here so the next one cannot be. */
+     * places were left behind. Named here so the next one cannot be.
+     * usePeopleRecordDialog only surfaces ledger.balance_kurus for
+     * reimbursement forms — unused partner net/capital/unpaid state was
+     * removed (eslint); it does not print partner current-account. */
     for (const symbol of [
       "PartnersPage",
       "PartnerDetailPage",
-      "usePeopleRecordDialog",
       "usePartnerBalanceTotal",
     ]) {
       const source = codeOnly(sourceDeclaring(symbol));
