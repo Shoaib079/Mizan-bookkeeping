@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split statement-classification-options (`v0.fe-split-statement-classification-options`):** File-size cleanup only; public import path unchanged.
+- **Split account menu (`v0.fe-split-account-menu`):** File-size cleanup only; top-bar account menu behavior unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split statement-classification-options |
-| **Last tag** | `v0.fe-split-statement-classification-options` |
+| **Last completed slice** | Split account menu |
+| **Last tag** | `v0.fe-split-account-menu` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`account-menu` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`customer-payment-form` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

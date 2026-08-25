@@ -3,41 +3,16 @@
 /** Top-right account menu — avatar, restaurant switch, settings, sign out (Slice 12.0b). */
 
 import { useClerk } from "@clerk/nextjs";
-import {
-  ChevronDown,
-  LogOut,
-  Plus,
-  Settings,
-  User,
-} from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback } from "react";
 
+import { AccountMenuConfirmOverlay } from "@/components/layout/account-menu-confirm-overlay";
+import { AccountMenuDropdown } from "@/components/layout/account-menu-dropdown";
+import { AccountMenuTrigger } from "@/components/layout/account-menu-trigger";
+import { useAccountMenuPanel } from "@/components/layout/use-account-menu-panel";
 import { CreateRestaurantDialog } from "@/components/settings/create-restaurant-dialog";
-import { EntityBadge } from "@/components/layout/entity-badge";
-import { Button } from "@/components/ui/button";
-import { Input, Label } from "@/components/ui/input";
-import {
-  devModeIdentityLabel,
-  discardChangesConfirmLabel,
-  discardChangesMessage,
-  discardChangesTitle,
-  switchConfirmMessage,
-} from "@/lib/account-menu-helpers";
+import { clearMizanStorage } from "@/lib/entity-context";
 import { useApiAuth } from "@/lib/api-auth";
-import { clearMizanStorage, useEntity } from "@/lib/entity-context";
-import { canCreateEntity, canSwitchEntity, canAccessSettings } from "@/lib/entity-access";
-import { entityAccentColor, userInitials } from "@/lib/entity-visual";
-import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
-import { useToast } from "@/lib/toast";
-import { useUnsavedWork } from "@/lib/unsaved-work";
-import { useEntityAccess } from "@/lib/use-entity-access";
-import { cn } from "@/lib/utils";
-
-type PendingAction =
-  | { type: "switch"; entityId: string; name: string }
-  | { type: "sign-out" };
 
 export function AccountMenu() {
   const { clerkEnabled } = useApiAuth();
@@ -64,392 +39,84 @@ function AccountMenuDev() {
   return <AccountMenuPanel devMode onSignOut={undefined} />;
 }
 
-function AccountMenuPanel({
+export function AccountMenuPanel({
   devMode,
   onSignOut,
 }: {
   devMode: boolean;
   onSignOut: (() => void | Promise<void>) | undefined;
 }) {
-  const { toast } = useToast();
-  const { hasUnsavedWork } = useUnsavedWork();
-  const {
-    entityId,
-    setEntityId,
-    actorId,
-    setActorId,
-    entities,
-    visibleEntities,
-    entitiesLoading,
-    entitiesLoaded,
-    entitiesError,
-    userProfile,
-  } = useEntity();
-  const { role, grants } = useEntityAccess();
-  const canSwitch = canSwitchEntity(grants);
-  const canCreate = canCreateEntity(role);
-  const showSettings = canAccessSettings(grants);
-
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [switchTarget, setSwitchTarget] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  const [unsavedConfirm, setUnsavedConfirm] = useState<PendingAction | null>(
-    null,
-  );
-
-  const closeMenu = useCallback(() => {
-    setOpen(false);
-    setSwitchTarget(null);
-  }, []);
-
-  useDismissOnOutsideClick(menuRef, open, closeMenu);
-
-  const activeEntity = useMemo(
-    () => entities.find((entity) => entity.id === entityId),
-    [entities, entityId],
-  );
-
-  const otherEntities = useMemo(
-    () =>
-      (canSwitch ? entities : visibleEntities).filter(
-        (entity) => entity.id !== entityId,
-      ),
-    [canSwitch, entities, visibleEntities, entityId],
-  );
-
-  const displayName = devMode
-    ? devModeIdentityLabel()
-    : userProfile?.display_name?.trim() || "Signed in";
-  const email = devMode ? "" : (userProfile?.email ?? "");
-  const initials = devMode ? "DV" : userInitials(displayName, email);
-  const avatarColor = entityAccentColor(
-    devMode ? "dev-user" : (userProfile?.id ?? "user"),
-  );
-
-  const executeSwitch = useCallback(
-    (targetId: string, targetName: string) => {
-      setEntityId(targetId, { redirectToDashboard: true });
-      closeMenu();
-      toast(`Now working in ${targetName}`);
-    },
-    [closeMenu, setEntityId, toast],
-  );
-
-  const executeSignOut = useCallback(async () => {
-    if (!onSignOut) return;
-    closeMenu();
-    await onSignOut();
-  }, [closeMenu, onSignOut]);
-
-  const runPending = useCallback(
-    (action: PendingAction) => {
-      if (action.type === "switch") {
-        executeSwitch(action.entityId, action.name);
-        return;
-      }
-      void executeSignOut();
-    },
-    [executeSignOut, executeSwitch],
-  );
-
-  const requestAction = useCallback(
-    (action: PendingAction) => {
-      if (hasUnsavedWork) {
-        setUnsavedConfirm(action);
-        return;
-      }
-      runPending(action);
-    },
-    [hasUnsavedWork, runPending],
-  );
-
-  function onPickRestaurant(targetId: string, targetName: string) {
-    if (targetId === entityId) return;
-    setSwitchTarget({ id: targetId, name: targetName });
-  }
-
-  function confirmSwitch() {
-    if (!switchTarget) return;
-    requestAction({
-      type: "switch",
-      entityId: switchTarget.id,
-      name: switchTarget.name,
-    });
-    setSwitchTarget(null);
-  }
-
-  function onSignOutClick() {
-    requestAction({ type: "sign-out" });
-  }
+  const s = useAccountMenuPanel({ devMode, onSignOut });
 
   return (
-    <div ref={menuRef} className="relative flex items-center gap-2">
-      {activeEntity && (
-        <EntityBadge
-          entityId={activeEntity.id}
-          name={activeEntity.name}
-          className="hidden sm:inline-flex"
+    <div ref={s.menuRef} className="relative flex items-center gap-2">
+      <AccountMenuTrigger
+        activeEntity={s.activeEntity}
+        open={s.open}
+        onToggle={() => s.setOpen((value) => !value)}
+        initials={s.initials}
+        avatarColor={s.avatarColor}
+      />
+
+      {s.open && (
+        <AccountMenuDropdown
+          displayName={s.displayName}
+          email={s.email}
+          initials={s.initials}
+          avatarColor={s.avatarColor}
+          devMode={s.devMode}
+          activeEntity={s.activeEntity}
+          canSwitch={s.canSwitch}
+          otherEntities={s.otherEntities}
+          onPickRestaurant={s.onPickRestaurant}
+          entitiesLoaded={s.entitiesLoaded}
+          entitiesLength={s.entities.length}
+          entitiesError={s.entitiesError}
+          entitiesLoading={s.entitiesLoading}
+          entityId={s.entityId}
+          onEntityIdChange={s.setEntityId}
+          actorId={s.actorId}
+          onActorIdChange={s.setActorId}
+          showSettings={s.showSettings}
+          canCreate={s.canCreate}
+          onCloseMenu={s.closeMenu}
+          onAddRestaurant={() => {
+            s.closeMenu();
+            s.setCreateOpen(true);
+          }}
+          onSignOut={s.onSignOut}
+          onSignOutClick={s.onSignOutClick}
         />
-      )}
-
-      <button
-        type="button"
-        className={cn(
-          "inline-flex items-center gap-2 rounded-full border border-border bg-card py-1 pl-1 pr-2 text-sm",
-          "hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
-        )}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <span className="relative inline-flex">
-          <span
-            className="inline-flex size-8 items-center justify-center rounded-full text-xs font-semibold text-white"
-            style={{ backgroundColor: avatarColor }}
-            aria-hidden
-          >
-            {initials}
-          </span>
-          {activeEntity && (
-            <span
-              className="absolute -bottom-0.5 -right-0.5 inline-flex size-4 items-center justify-center rounded-full border-2 border-background text-[8px] font-bold text-white"
-              style={{ backgroundColor: entityAccentColor(activeEntity.id) }}
-              aria-hidden
-            >
-              {activeEntity.name.trim().charAt(0).toUpperCase()}
-            </span>
-          )}
-        </span>
-        <ChevronDown className="size-4 text-muted-foreground" />
-      </button>
-
-      {open && (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-border bg-card py-2 shadow-[var(--shadow-pop)]"
-        >
-          <div className="border-b border-border px-4 pb-3 pt-1">
-            <div className="flex items-center gap-3">
-              <span
-                className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                style={{ backgroundColor: avatarColor }}
-                aria-hidden
-              >
-                {initials}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold">{displayName}</p>
-                {email && (
-                  <p className="truncate text-xs text-muted-foreground">
-                    {email}
-                  </p>
-                )}
-                {devMode && (
-                  <p className="text-xs text-muted-foreground">
-                    Clerk auth is off — use Actor ID below for API calls.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {activeEntity && (
-            <div className="border-b border-border px-4 py-3">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">
-                Active restaurant
-              </p>
-              <EntityBadge entityId={activeEntity.id} name={activeEntity.name} />
-            </div>
-          )}
-
-          {canSwitch && otherEntities.length > 0 && (
-            <div className="border-b border-border px-2 py-2">
-              <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
-                Switch restaurant
-              </p>
-              <ul>
-                {otherEntities.map((entity) => (
-                  <li key={entity.id}>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
-                      onClick={() => onPickRestaurant(entity.id, entity.name)}
-                    >
-                      <span
-                        className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-                        style={{ backgroundColor: entityAccentColor(entity.id) }}
-                        aria-hidden
-                      >
-                        {entity.name.trim().charAt(0).toUpperCase()}
-                      </span>
-                      <span className="truncate">{entity.name}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {devMode && entitiesLoaded && entities.length === 0 && !entitiesError && (
-            <div className="space-y-3 border-b border-border px-4 py-3">
-              <div>
-                <Label htmlFor="account-menu-entity-id">Restaurant ID</Label>
-                <Input
-                  id="account-menu-entity-id"
-                  className="mt-1 font-mono text-xs"
-                  placeholder={entitiesLoading ? "Loading…" : "uuid"}
-                  value={entityId}
-                  onChange={(e) => setEntityId(e.target.value)}
-                />
-              </div>
-            </div>
-          )}
-
-          {devMode && (
-            <div className="border-b border-border px-4 py-3">
-              <Label htmlFor="account-menu-actor-id">Actor ID (dev)</Label>
-              <Input
-                id="account-menu-actor-id"
-                className="mt-1 font-mono text-xs"
-                value={actorId}
-                onChange={(e) => setActorId(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="border-b border-border px-2 py-2">
-            <Link
-              href="/settings/profile"
-              role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
-              onClick={closeMenu}
-            >
-              <User className="size-4 text-muted-foreground" />
-              Your profile
-            </Link>
-            {showSettings && (
-            <>
-            <Link
-              href="/settings/restaurant"
-              role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
-              onClick={closeMenu}
-            >
-              <Settings className="size-4 text-muted-foreground" />
-              Restaurant settings
-            </Link>
-            {canCreate && (
-            <button
-              type="button"
-              role="menuitem"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-primary/10"
-              onClick={() => {
-                closeMenu();
-                setCreateOpen(true);
-              }}
-            >
-              <Plus className="size-4 text-muted-foreground" />
-              Add restaurant
-            </button>
-            )}
-            </>
-            )}
-          </div>
-
-          {onSignOut && (
-            <div className="px-2 pt-1">
-              <button
-                type="button"
-                role="menuitem"
-                className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
-                onClick={onSignOutClick}
-              >
-                <LogOut className="size-4" />
-                Sign out
-              </button>
-            </div>
-          )}
-        </div>
       )}
 
       <CreateRestaurantDialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        open={s.createOpen}
+        onClose={() => s.setCreateOpen(false)}
       />
 
-      {switchTarget && (
-        <ConfirmOverlay
-          title="Switch restaurant?"
-          message={
-            activeEntity
-              ? switchConfirmMessage(activeEntity.name, switchTarget.name)
-              : `Switch to ${switchTarget.name}?`
-          }
+      {s.switchTarget && (
+        <AccountMenuConfirmOverlay
+          title={s.switchConfirmTitle}
+          message={s.switchConfirmBody}
           confirmLabel="Switch"
-          onCancel={() => setSwitchTarget(null)}
-          onConfirm={confirmSwitch}
+          onCancel={() => s.setSwitchTarget(null)}
+          onConfirm={s.confirmSwitch}
         />
       )}
 
-      {unsavedConfirm && (
-        <ConfirmOverlay
-          title={discardChangesTitle()}
-          message={discardChangesMessage()}
-          confirmLabel={discardChangesConfirmLabel()}
-          onCancel={() => setUnsavedConfirm(null)}
+      {s.unsavedConfirm && (
+        <AccountMenuConfirmOverlay
+          title={s.discardChangesTitle}
+          message={s.discardChangesMessage}
+          confirmLabel={s.discardChangesConfirmLabel}
+          onCancel={() => s.setUnsavedConfirm(null)}
           onConfirm={() => {
-            const action = unsavedConfirm;
-            setUnsavedConfirm(null);
-            runPending(action);
+            const action = s.unsavedConfirm;
+            s.setUnsavedConfirm(null);
+            if (action) s.runPending(action);
           }}
         />
       )}
-    </div>
-  );
-}
-
-function ConfirmOverlay({
-  title,
-  message,
-  confirmLabel,
-  onCancel,
-  onConfirm,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 p-4"
-      role="alertdialog"
-      aria-modal
-      aria-labelledby="account-confirm-title"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onCancel();
-      }}
-    >
-      <div className="w-full max-w-sm rounded-lg border border-border bg-card p-4 shadow-[var(--shadow-pop)]">
-        <h3 id="account-confirm-title" className="text-sm font-semibold">
-          {title}
-        </h3>
-        <p className="mt-1 text-sm text-muted-foreground">{message}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="button" variant="primary" onClick={onConfirm}>
-            {confirmLabel}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

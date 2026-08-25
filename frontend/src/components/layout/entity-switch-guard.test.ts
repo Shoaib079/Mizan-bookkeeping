@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 describe("entity switch guard wiring", () => {
   it("mounts EntitySwitchGuard in providers", async () => {
@@ -32,7 +32,12 @@ describe("entity switch guard wiring", () => {
   });
 
   it("account menu hides switch list without canSwitchEntity", async () => {
-    const source = sourceDeclaring("AccountMenu");
+    const source = sourceDeclaringAll(
+      "AccountMenu",
+      "AccountMenuPanel",
+      "useAccountMenuPanel",
+      "AccountMenuDropdown",
+    );
     expect(source).toContain("canSwitch && otherEntities.length > 0");
     expect(source).toContain("canCreateEntity");
     expect(source).toContain("canSwitch ? entities : visibleEntities");

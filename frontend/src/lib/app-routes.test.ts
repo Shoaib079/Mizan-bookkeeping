@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 import {
   appRoutes,
@@ -9,6 +9,15 @@ import {
   navGroups,
   sidebarChildrenForNavItem,
 } from "@/lib/app-routes";
+
+function accountMenuSurface() {
+  return sourceDeclaringAll(
+    "AccountMenu",
+    "AccountMenuPanel",
+    "useAccountMenuPanel",
+    "AccountMenuDropdown",
+  );
+}
 const EXPECTED_SIDEBAR_GROUPS = [
   "Overview",
   "Money in",
@@ -179,20 +188,20 @@ describe("account menu", () => {
   });
 
   it("requires confirm before switching restaurants", () => {
-    const source = sourceDeclaring("AccountMenu");
+    const source = accountMenuSurface();
     expect(source).toContain("switchConfirmMessage");
     expect(source).toContain("Switch restaurant?");
     expect(source).toContain("redirectToDashboard: true");
   });
 
   it("signs out via Clerk and redirects to sign-in", () => {
-    const source = sourceDeclaring("AccountMenu");
+    const source = accountMenuSurface();
     expect(source).toContain("signOut");
     expect(source).toContain("/sign-in");
   });
 
   it("shows dev mode identity and hides sign-out when Clerk is off", () => {
-    const source = sourceDeclaring("AccountMenu");
+    const source = accountMenuSurface();
     expect(source).toContain("devModeIdentityLabel");
     expect(source).toContain("AccountMenuDev");
     expect(source).toContain("Actor ID (dev)");
@@ -200,7 +209,7 @@ describe("account menu", () => {
   });
 
   it("warns before switch or sign-out when unsaved work is registered", () => {
-    const source = sourceDeclaring("AccountMenu");
+    const source = accountMenuSurface();
     expect(source).toContain("hasUnsavedWork");
     expect(source).toContain("discardChangesMessage");
   });
