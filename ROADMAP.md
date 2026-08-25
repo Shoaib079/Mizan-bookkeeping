@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Continue FE file-size splits (partner-profit-allocation / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
-| **Last completed slice** | **Split people-record dialog** (`v0.fe-split-people-record`) |
-| **Last commit/tag**      | `v0.fe-split-people-record` |
+| **Next up**              | Continue FE file-size splits (partner-record-form / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
+| **Last completed slice** | **Split partner profit allocation form** (`v0.fe-split-partner-profit`) |
+| **Last commit/tag**      | `v0.fe-split-partner-profit` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-25 | Split partner profit allocation form (file size)| `v0.fe-split-partner-profit`                           | Form 410→~83; hook + fields + preview + helpers/types; CorrectPartnerProfitAllocationForm left separate; redeemed from baseline; no behavior change |
 | 2026-08-25 | Split people-record dialog (file size)          | `v0.fe-split-people-record`                            | Dialog 414→~105; hook + helpers + embedded form; dropped unused embedded-form balance args; guards → sourceDeclaringAll / usePeopleRecordDialog; redeemed from baseline; no behavior change |
 | 2026-08-25 | Split record-actions (file size)                | `v0.fe-split-record-actions`                           | Module 417→~27 barrel; types + catalog + helpers; public `@/lib/record-actions` unchanged; guards retargeted to RECORD_ACTIONS; redeemed from baseline; no behavior change |
 | 2026-08-25 | Split customer detail page (file size)          | `v0.fe-split-customer-detail`                          | Page 421→~126; hook + ledger + dialogs + helpers; dropped formatForexOutstanding wrapper; reuse write chrome / row actions / forms; redeemed from baseline; no behavior change |

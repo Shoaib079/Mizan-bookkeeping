@@ -65,6 +65,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 - `customers/[id]/page.tsx` **421 → ~126** — `v0.fe-split-customer-detail` (redeemed). Hook + ledger + dialogs + helpers; dropped `formatForexOutstanding` wrapper.
 - `record-actions.ts` **417 → ~27** — `v0.fe-split-record-actions` (redeemed). Types + catalog + helpers; barrel re-exports.
 - `people-record-dialog.tsx` **414 → ~105** — `v0.fe-split-people-record` (redeemed). Hook + helpers + embedded form.
+- `partner-profit-allocation-form.tsx` **410 → ~83** — `v0.fe-split-partner-profit` (redeemed). Hook + fields + preview + helpers.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -93,10 +94,10 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~421~~ | ~~`app/(customers-section)/customers/[id]/page.tsx`~~ → **split** (`v0.fe-split-customer-detail`) |
 | ~~417~~ | ~~`lib/record-actions.ts`~~ → **split** (`v0.fe-split-record-actions`) |
 | ~~414~~ | ~~`components/record/people-record-dialog.tsx`~~ → **split** (`v0.fe-split-people-record`) |
-| 410 | `components/forms/partner-profit-allocation-form.tsx` |
+| ~~410~~ | ~~`components/forms/partner-profit-allocation-form.tsx`~~ → **split** (`v0.fe-split-partner-profit`) |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `components/forms/partner-profit-allocation-form.tsx` (~410).
+**Recommendation:** Continue the existing split pattern. Next: `components/forms/partner-record-form.tsx` (~406).
 
 ---
 

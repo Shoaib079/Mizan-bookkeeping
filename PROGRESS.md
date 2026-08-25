@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split people-record dialog (`v0.fe-split-people-record`):** File-size cleanup only; people picker + embedded forms unchanged.
+- **Split partner profit allocation form (`v0.fe-split-partner-profit`):** File-size cleanup only; allocate-profit UI unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split people-record dialog |
-| **Last tag** | `v0.fe-split-people-record` |
+| **Last completed slice** | Split partner profit allocation form |
+| **Last tag** | `v0.fe-split-partner-profit` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`partner-profit-allocation` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`partner-record-form` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
