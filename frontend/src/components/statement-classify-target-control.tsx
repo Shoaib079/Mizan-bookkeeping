@@ -46,6 +46,8 @@ type Props = {
   pickers: StatementClassificationPickers;
   deliveryPlatformHint: string | null;
   values: StatementClassifyTargetValues;
+  /** Compact bulk-bar copy/layout (no delivery meta; capital note not HTML-required). */
+  variant?: "default" | "bulk";
 };
 
 export function StatementClassifyTargetControl({
@@ -54,7 +56,9 @@ export function StatementClassifyTargetControl({
   pickers,
   deliveryPlatformHint,
   values,
+  variant = "default",
 }: Props) {
+  const bulk = variant === "bulk";
   const targetKind = classificationOption(values.classification)?.target;
 
   if (targetKind === "supplier") {
@@ -95,7 +99,13 @@ export function StatementClassifyTargetControl({
   }
   if (targetKind === "partner") {
     return (
-      <div className="flex w-full min-w-0 flex-col gap-1 sm:flex-row sm:items-center">
+      <div
+        className={
+          bulk
+            ? "flex w-full min-w-0 flex-col gap-1 sm:flex-row"
+            : "flex w-full min-w-0 flex-col gap-1 sm:flex-row sm:items-center"
+        }
+      >
         <Combobox
           id={`${idPrefix}-partner`}
           value={values.partnerId}
@@ -111,7 +121,7 @@ export function StatementClassifyTargetControl({
             onChange={(e) => values.setCapitalNote(e.target.value)}
             placeholder="Note — why they invested…"
             className="h-9 w-full min-w-0 text-xs"
-            required
+            required={!bulk}
           />
         )}
       </div>
@@ -127,7 +137,7 @@ export function StatementClassifyTargetControl({
           value: a.id,
           label: a.name,
         }))}
-        placeholder="Account…"
+        placeholder={bulk ? "Other account…" : "Account…"}
         className="h-9 w-full min-w-0 text-xs"
       />
     );
@@ -142,7 +152,7 @@ export function StatementClassifyTargetControl({
           value: a.id,
           label: a.name,
         }))}
-        placeholder="Card…"
+        placeholder={bulk ? "Credit card…" : "Card…"}
         className="h-9 w-full min-w-0 text-xs"
       />
     );
@@ -156,7 +166,9 @@ export function StatementClassifyTargetControl({
             value={values.expenseAccountId}
             onValueChange={values.setExpenseAccountId}
             options={expenseAccountComboboxOptions(pickers.expenseAccounts)}
-            placeholder="Expense GL — rent, utilities, repairs…"
+            placeholder={
+              bulk ? "Expense GL…" : "Expense GL — rent, utilities, repairs…"
+            }
             className="h-9 w-full min-w-0 text-xs"
           />
         </div>
@@ -180,8 +192,16 @@ export function StatementClassifyTargetControl({
         value={values.incomeAccountId}
         onValueChange={values.setIncomeAccountId}
         options={chartAccountComboboxOptions(pickers.incomeAccounts)}
-        placeholder="Income GL — interest, refunds, other income…"
-        emptyMessage="No income accounts — add one under Chart of accounts"
+        placeholder={
+          bulk
+            ? "Income GL…"
+            : "Income GL — interest, refunds, other income…"
+        }
+        emptyMessage={
+          bulk
+            ? "No income accounts"
+            : "No income accounts — add one under Chart of accounts"
+        }
         className="h-9 w-full min-w-0 text-xs"
       />
     );
@@ -194,20 +214,22 @@ export function StatementClassifyTargetControl({
           value={values.deliveryPlatformId}
           onValueChange={values.setDeliveryPlatformId}
           options={deliveryPlatformComboboxOptions(pickers.deliveryPlatforms)}
-          placeholder="Platform…"
+          placeholder={bulk ? "Delivery platform…" : "Platform…"}
           emptyMessage={
-            pickers.deliveryPlatformsError
-              ? "Could not load platforms"
-              : "No delivery platforms — add under Delivery → Platforms"
+            bulk
+              ? undefined
+              : pickers.deliveryPlatformsError
+                ? "Could not load platforms"
+                : "No delivery platforms — add under Delivery → Platforms"
           }
           className="h-9 w-full min-w-0 text-xs"
         />
-        {pickers.deliveryPlatformsError && (
+        {!bulk && pickers.deliveryPlatformsError && (
           <p className="text-[11px] text-destructive">
             {pickers.deliveryPlatformsError}
           </p>
         )}
-        {deliveryPlatformHint && (
+        {!bulk && deliveryPlatformHint && (
           <p className="text-[11px] text-warning">{deliveryPlatformHint}</p>
         )}
       </div>

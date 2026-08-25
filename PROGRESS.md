@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split command palette (`v0.fe-split-command-palette`):** File-size cleanup only; ⌘K palette behavior unchanged.
+- **Split statement bulk action bar (`v0.fe-split-statement-bulk`):** File-size cleanup only; bulk post/correct bar unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split command palette |
-| **Last tag** | `v0.fe-split-command-palette` |
+| **Last completed slice** | Split statement bulk action bar |
+| **Last tag** | `v0.fe-split-statement-bulk` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`statement-bulk-action-bar` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`fx-hub` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

@@ -84,7 +84,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~455~~ | ~~`components/layout/account-menu.tsx`~~ → **split** (`v0.fe-split-account-menu`) |
 | ~~446~~ | ~~`components/forms/customer-payment-form.tsx`~~ → **split** (`v0.fe-split-customer-payment`) |
 | ~~436~~ | ~~`components/command-palette.tsx`~~ → **split** (`v0.fe-split-command-palette`) |
-| 430 | `components/statement-bulk-action-bar.tsx` |
+| ~~430~~ | ~~`components/statement-bulk-action-bar.tsx`~~ → **split** (`v0.fe-split-statement-bulk`) |
 | 427 | `components/banking/fx-hub-page-content.tsx` |
 | 421 | `app/(customers-section)/customers/[id]/page.tsx` |
 | 417 | `lib/record-actions.ts` |
@@ -92,7 +92,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `components/statement-bulk-action-bar.tsx` (~430).
+**Recommendation:** Continue the existing split pattern. Next: `components/banking/fx-hub-page-content.tsx` (~427).
 
 ---
 
