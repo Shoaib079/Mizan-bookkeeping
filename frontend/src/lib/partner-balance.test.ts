@@ -79,7 +79,7 @@ describe("the netted balance reaches every screen", () => {
     for (const symbol of [
       "PartnersPage",
       "PartnerDetailPage",
-      "PeopleRecordDialog",
+      "usePeopleRecordDialog",
       "usePartnerBalanceTotal",
     ]) {
       const source = codeOnly(sourceDeclaring(symbol));

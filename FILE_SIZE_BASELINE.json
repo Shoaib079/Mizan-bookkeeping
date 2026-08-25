@@ -53,6 +53,5 @@
   "backend/app/features/staff/api.py": 427,
   "backend/app/features/staff/service.py": 823,
   "frontend/src/components/forms/partner-profit-allocation-form.tsx": 410,
-  "frontend/src/components/forms/partner-record-form.tsx": 418,
-  "frontend/src/components/record/people-record-dialog.tsx": 414
+  "frontend/src/components/forms/partner-record-form.tsx": 418
 }

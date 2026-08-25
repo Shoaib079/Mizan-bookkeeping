@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split record-actions (`v0.fe-split-record-actions`):** File-size cleanup only; Record hub / palette action catalog unchanged.
+- **Split people-record dialog (`v0.fe-split-people-record`):** File-size cleanup only; people picker + embedded forms unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split record-actions |
-| **Last tag** | `v0.fe-split-record-actions` |
+| **Last completed slice** | Split people-record dialog |
+| **Last tag** | `v0.fe-split-people-record` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`people-record-dialog` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`partner-profit-allocation` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

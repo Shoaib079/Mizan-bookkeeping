@@ -2,36 +2,19 @@
 
 /** Record hub people actions — pick person and enter fields in one dialog. */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-
-import { GroupSaleForm } from "@/components/forms/group-sale-form";
-import { CustomerPaymentForm } from "@/components/forms/customer-payment-form";
-import type { EmployeeRow } from "@/components/forms/employee-form";
-import type { PartnerRow } from "@/components/forms/partner-form";
-import { StaffAccrualForm } from "@/components/forms/staff-accrual-form";
-import { StaffCashMovementForm } from "@/components/forms/staff-cash-movement-form";
-import { StaffSalaryPaymentDialog } from "@/components/forms/staff-salary-payment-dialog";
-import { SupplierPaymentForm } from "@/components/forms/supplier-payment-form";
-import type { SupplierRow } from "@/components/forms/supplier-form";
+import {
+  kindLabel,
+  pickerLabel,
+} from "@/components/record/people-record-dialog-helpers";
+import { renderEmbeddedForm } from "@/components/record/people-record-embedded-form";
+import { usePeopleRecordDialog } from "@/components/record/use-people-record-dialog";
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
-import { apiFetch } from "@/lib/api";
-import { todayTrDate } from "@/lib/dates";
-import { useEntity } from "@/lib/entity-context";
-import { extractPartnerBalanceKurus } from "@/lib/partner-balance";
-import { parseTrDate } from "@/lib/money";
 import type { PersonPickerKind, RecordActionKey } from "@/lib/record-actions";
 
-type CustomerRow = { id: string; name: string };
-
-export type PersonPickerResult = {
-  id: string;
-  name: string;
-  payCurrency?: string;
-  balanceKurus?: number;
-};
+export type { PersonPickerResult } from "@/components/record/people-record-dialog-helpers";
 
 type Props = {
   open: boolean;
@@ -41,36 +24,6 @@ type Props = {
   onClose: () => void;
 };
 
-type LedgerBalance = {
-  balance_kurus: number;
-  capital_balance_kurus?: number;
-  unpaid_profit_kurus?: number;
-};
-
-const LIST_PATH: Record<PersonPickerKind, string> = {
-  staff: "/staff/employees",
-  partner: "/partners",
-  customer: "/customers",
-  supplier: "/suppliers",
-};
-
-const LEDGER_PATH: Partial<Record<PersonPickerKind, (id: string) => string>> = {
-  partner: (id) => `/partners/${id}/ledger`,
-  customer: (id) => `/customers/${id}/ledger`,
-  supplier: (id) => `/suppliers/${id}/ledger`,
-};
-
-const STAFF_DATE_ACTIONS = new Set<RecordActionKey>([
-  "staffAccrual",
-  "staffAdvance",
-  "staffPayment",
-]);
-
-const NEEDS_REIMBURSEMENT_BALANCE = new Set<RecordActionKey>([
-  "customerPayment",
-  "supplierPayment",
-]);
-
 export function PeopleRecordDialog({
   open,
   action,
@@ -78,183 +31,39 @@ export function PeopleRecordDialog({
   kind,
   onClose,
 }: Props) {
-  const { entityId } = useEntity();
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [items, setItems] = useState<PersonPickerResult[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [balanceKurus, setBalanceKurus] = useState<number | undefined>(
-    undefined,
-  );
-  const [netBalanceKurus, setNetBalanceKurus] = useState<number | undefined>(
-    undefined,
-  );
-  const [capitalBalanceKurus, setCapitalBalanceKurus] = useState<
-    number | undefined
-  >(undefined);
-  const [unpaidProfitKurus, setUnpaidProfitKurus] = useState<number | undefined>(
-    undefined,
-  );
-  const [balanceLoading, setBalanceLoading] = useState(false);
-  const [balanceError, setBalanceError] = useState<string | null>(null);
-  const [dateText, setDateText] = useState("");
-
-  const showStaffDate = kind === "staff" && STAFF_DATE_ACTIONS.has(action);
-  const paymentDateIso = parseTrDate(dateText) ?? undefined;
-
-  const reset = useCallback(() => {
-    setItems([]);
-    setSelectedId("");
-    setLoadError(null);
-    setLoading(false);
-    setBalanceKurus(undefined);
-    setNetBalanceKurus(undefined);
-    setCapitalBalanceKurus(undefined);
-    setUnpaidProfitKurus(undefined);
-    setBalanceLoading(false);
-    setBalanceError(null);
-    setDateText("");
-  }, []);
-
-  useEffect(() => {
-    if (!open) {
-      reset();
-      return;
-    }
-    if (!entityId) return;
-
-    setDateText(todayTrDate());
-    let cancelled = false;
-    setLoading(true);
-    setLoadError(null);
-
-    void apiFetch<{ items: unknown[] }>(
-      `/entities/${entityId}${LIST_PATH[kind]}?limit=100`,
-    )
-      .then((res) => {
-        if (cancelled) return;
-        const mapped = res.items.map((row) => mapRow(kind, row));
-        setItems(mapped);
-        if (mapped[0]) setSelectedId(mapped[0].id);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLoadError(err instanceof Error ? err.message : "Failed to load list");
-        setItems([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, entityId, kind, reset]);
-
-  useEffect(() => {
-    if (!open || !entityId || !selectedId) {
-      setBalanceKurus(undefined);
-      setNetBalanceKurus(undefined);
-      setCapitalBalanceKurus(undefined);
-      setUnpaidProfitKurus(undefined);
-      setBalanceError(null);
-      setBalanceLoading(false);
-      return;
-    }
-    if (!NEEDS_REIMBURSEMENT_BALANCE.has(action)) {
-      setBalanceKurus(undefined);
-      setNetBalanceKurus(undefined);
-      setCapitalBalanceKurus(undefined);
-      setUnpaidProfitKurus(undefined);
-      setBalanceError(null);
-      setBalanceLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setBalanceLoading(true);
-    setBalanceError(null);
-
-    const ledgerPath = LEDGER_PATH[kind]?.(selectedId);
-    if (!ledgerPath) {
-      setBalanceLoading(false);
-      return;
-    }
-
-    void apiFetch<LedgerBalance>(`/entities/${entityId}${ledgerPath}`)
-      .then((ledger) => {
-        if (cancelled) return;
-        setBalanceKurus(ledger.balance_kurus);
-        setNetBalanceKurus(extractPartnerBalanceKurus(ledger));
-        setCapitalBalanceKurus(ledger.capital_balance_kurus ?? 0);
-        setUnpaidProfitKurus(ledger.unpaid_profit_kurus ?? 0);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setBalanceError(
-          err instanceof Error ? err.message : "Failed to load balance",
-        );
-        setBalanceKurus(undefined);
-        setNetBalanceKurus(undefined);
-        setCapitalBalanceKurus(undefined);
-        setUnpaidProfitKurus(undefined);
-      })
-      .finally(() => {
-        if (!cancelled) setBalanceLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, entityId, kind, action, selectedId]);
-
-  const options = useMemo(
-    () => items.map((item) => ({ value: item.id, label: item.name })),
-    [items],
-  );
-
-  const selected = items.find((item) => item.id === selectedId) ?? null;
-  const needsReimbursementBalance = NEEDS_REIMBURSEMENT_BALANCE.has(action);
-  const formReady =
-    Boolean(selected) &&
-    (!needsReimbursementBalance || (!balanceLoading && !balanceError));
-
-  function handleClose() {
-    reset();
-    onClose();
-  }
+  const page = usePeopleRecordDialog({ open, action, kind, onClose });
 
   return (
-    <Dialog open={open} title={title} size="compact" onClose={handleClose}>
-      {!entityId && (
+    <Dialog open={open} title={title} size="compact" onClose={page.handleClose}>
+      {!page.entityId && (
         <p className="text-sm text-muted-foreground">
           Select a restaurant in the sidebar first.
         </p>
       )}
 
-      {entityId && loading && (
+      {page.entityId && page.loading && (
         <p className="text-sm text-muted-foreground">Loading…</p>
       )}
 
-      {entityId && !loading && loadError && (
-        <p className="text-sm text-destructive">{loadError}</p>
+      {page.entityId && !page.loading && page.loadError && (
+        <p className="text-sm text-destructive">{page.loadError}</p>
       )}
 
-      {entityId && !loading && !loadError && items.length === 0 && (
+      {page.entityId && !page.loading && !page.loadError && page.items.length === 0 && (
         <p className="text-sm text-muted-foreground">
           No {kindLabel(kind)} found — add one from the directory first.
         </p>
       )}
 
-      {entityId && !loading && items.length > 0 && (
+      {page.entityId && !page.loading && page.items.length > 0 && (
         <div className="space-y-3">
-          {showStaffDate && (
+          {page.showStaffDate && (
             <div>
               <Label htmlFor="people-record-date">Date (DD.MM.YYYY)</Label>
               <DateInput
                 id="people-record-date"
-                value={dateText}
-                onChange={setDateText}
+                value={page.dateText}
+                onChange={page.setDateText}
                 required
               />
             </div>
@@ -262,32 +71,29 @@ export function PeopleRecordDialog({
           <div>
             <Label>{pickerLabel(kind)}</Label>
             <Combobox
-              value={selectedId}
-              onValueChange={setSelectedId}
-              options={options}
+              value={page.selectedId}
+              onValueChange={page.setSelectedId}
+              options={page.options}
               placeholder={`Choose ${kindLabel(kind)}…`}
             />
           </div>
 
-          {balanceLoading && (
+          {page.balanceLoading && (
             <p className="text-sm text-muted-foreground">Loading balance…</p>
           )}
-          {balanceError && (
-            <p className="text-sm text-destructive">{balanceError}</p>
+          {page.balanceError && (
+            <p className="text-sm text-destructive">{page.balanceError}</p>
           )}
 
-          {formReady && selected && (
+          {page.formReady && page.selected && (
             <div className="border-t border-border pt-3">
               {renderEmbeddedForm(
                 action,
-                selected,
-                balanceKurus,
-                netBalanceKurus,
-                capitalBalanceKurus,
-                unpaidProfitKurus,
-                entityId,
-                handleClose,
-                paymentDateIso,
+                page.selected,
+                page.balanceKurus,
+                page.entityId,
+                page.handleClose,
+                page.paymentDateIso,
               )}
             </div>
           )}
@@ -295,120 +101,4 @@ export function PeopleRecordDialog({
       )}
     </Dialog>
   );
-}
-
-function renderEmbeddedForm(
-  action: RecordActionKey,
-  person: PersonPickerResult,
-  balanceKurus: number | undefined,
-  netBalanceKurus: number | undefined,
-  capitalBalanceKurus: number | undefined,
-  unpaidProfitKurus: number | undefined,
-  entityId: string,
-  onClose: () => void,
-  paymentDateIso?: string,
-) {
-  const payCurrency = person.payCurrency ?? "TRY";
-  const formProps = { embedded: true as const, open: true, onClose };
-
-  switch (action) {
-    case "staffAccrual":
-      return (
-        <StaffAccrualForm
-          {...formProps}
-          employeeId={person.id}
-          payCurrency={payCurrency}
-        />
-      );
-    case "staffAdvance":
-      return (
-        <StaffCashMovementForm
-          {...formProps}
-          employeeId={person.id}
-          payCurrency={payCurrency}
-        />
-      );
-    case "staffPayment":
-      return (
-        <StaffSalaryPaymentDialog
-          {...formProps}
-          entityId={entityId}
-          employeeId={person.id}
-          employeeName={person.name}
-          payCurrency={payCurrency}
-          source="staff"
-          hidePaymentDate
-          paymentDate={paymentDateIso}
-        />
-      );
-    case "customerCreditSale":
-      return (
-        <GroupSaleForm {...formProps} customerId={person.id} />
-      );
-    case "customerPayment":
-      return (
-        <CustomerPaymentForm
-          {...formProps}
-          customerId={person.id}
-          balanceKurus={balanceKurus}
-        />
-      );
-    case "supplierPayment":
-      return (
-        <SupplierPaymentForm
-          {...formProps}
-          supplierId={person.id}
-          balanceKurus={balanceKurus}
-        />
-      );
-    default:
-      return null;
-  }
-}
-
-function mapRow(kind: PersonPickerKind, row: unknown): PersonPickerResult {
-  if (kind === "staff") {
-    const employee = row as EmployeeRow;
-    return {
-      id: employee.id,
-      name: employee.name,
-      payCurrency: employee.pay_currency,
-    };
-  }
-  if (kind === "partner") {
-    const partner = row as PartnerRow;
-    return { id: partner.id, name: partner.name };
-  }
-  if (kind === "customer") {
-    const customer = row as CustomerRow;
-    return { id: customer.id, name: customer.name };
-  }
-  const supplier = row as SupplierRow;
-  return { id: supplier.id, name: supplier.name };
-}
-
-function kindLabel(kind: PersonPickerKind): string {
-  switch (kind) {
-    case "staff":
-      return "employees";
-    case "partner":
-      return "partners";
-    case "customer":
-      return "customers";
-    case "supplier":
-      return "suppliers";
-  }
-}
-
-function pickerLabel(kind: PersonPickerKind): string {
-  switch (kind) {
-    case "staff":
-      return "Employee";
-    case "partner":
-      return "Partner";
-    case "customer":
-      return "Customer";
-    case "supplier":
-      return "Supplier";
-  }
 }

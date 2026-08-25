@@ -34,7 +34,10 @@ describe("unified record dialogs", () => {
   });
 
   it("loads balance when a person is selected in PeopleRecordDialog", () => {
-    const people = sourceDeclaring("PeopleRecordDialog");
+    const people = sourceDeclaringAll(
+      "PeopleRecordDialog",
+      "renderEmbeddedForm",
+    );
     expect(people).toContain("renderEmbeddedForm");
     expect(people).not.toContain("partnerReimbursement");
     expect(people).not.toContain("partnerCapital");
@@ -43,7 +46,12 @@ describe("unified record dialogs", () => {
   });
 
   it("routes staff salary payment through the rich dialog with a picked employee (hidden from Add hub)", () => {
-    const people = sourceDeclaring("PeopleRecordDialog");
+    const people = sourceDeclaringAll(
+      "PeopleRecordDialog",
+      "renderEmbeddedForm",
+      "usePeopleRecordDialog",
+      "mapPersonRow",
+    );
     const salaryDialog = sourceDeclaring("StaffSalaryPaymentDialog");
     /* The endpoint left the dialog when partner-funded salary was added — it
      * lives in `postStaffSalaryPayment` now. This guard is about the feature,
