@@ -52,7 +52,6 @@
   "backend/app/features/reports/pdf_export.py": 642,
   "backend/app/features/staff/api.py": 427,
   "backend/app/features/staff/service.py": 823,
-  "frontend/src/app/(customers-section)/customers/[id]/page.tsx": 434,
   "frontend/src/components/forms/partner-profit-allocation-form.tsx": 410,
   "frontend/src/components/forms/partner-record-form.tsx": 418,
   "frontend/src/components/record/people-record-dialog.tsx": 414,

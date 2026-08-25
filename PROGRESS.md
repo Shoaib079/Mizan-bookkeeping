@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split FX hub page content (`v0.fe-split-fx-hub`):** File-size cleanup only; FX hub UI unchanged.
+- **Split customer detail page (`v0.fe-split-customer-detail`):** File-size cleanup only; customer detail UI unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split FX hub page content |
-| **Last tag** | `v0.fe-split-fx-hub` |
+| **Last completed slice** | Split customer detail page |
+| **Last tag** | `v0.fe-split-customer-detail` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`customers/[id]` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`record-actions` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
