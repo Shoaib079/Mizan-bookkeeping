@@ -52,7 +52,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 
 ## Oversized files (>400 lines, non-test)
 
-**Progress (2026-08-24):**
+**Progress (2026-08-24 / 2026-08-25):**
 - `statement-import-panel.tsx` **889 → 115** — `v0.fe-split-statement-import` (redeemed from baseline)
 - `invoice-draft-review.tsx` **883 → 80** — `v0.fe-split-invoice-draft` (redeemed from baseline). Types + capabilities libs; hook; summary (incl. GlEntryActions); action forms.
 - `manual-expense-form.tsx` **832 → ~150** — `v0.fe-split-manual-expense` (redeemed). Draft/submit libs; hook; fields + salary panel; reuses existing typeahead/category/toggle.
@@ -61,6 +61,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 - `statement-classify-bar.tsx` **770 → ~279** — `v0.fe-split-statement-classify` (redeemed). Hook + target control + correct dialog; reuses classify payload helpers.
 - `statement-line-review-row.tsx` **632 → ~126** — `v0.fe-split-statement-line-review` (redeemed). Hook + header/actions/correct dialog.
 - `nav-sections.ts` **608 → ~40** — `v0.fe-split-nav-sections` (redeemed). Types + sections data + route registry + path helpers; barrel re-exports.
+- `fx-hub-page-content.tsx` **427 → ~73** — `v0.fe-split-fx-hub` (redeemed). Hook + wallet chips + actions + ledger + dialogs; reuses FX forms / tree helpers.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -85,14 +86,14 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~446~~ | ~~`components/forms/customer-payment-form.tsx`~~ → **split** (`v0.fe-split-customer-payment`) |
 | ~~436~~ | ~~`components/command-palette.tsx`~~ → **split** (`v0.fe-split-command-palette`) |
 | ~~430~~ | ~~`components/statement-bulk-action-bar.tsx`~~ → **split** (`v0.fe-split-statement-bulk`) |
-| 427 | `components/banking/fx-hub-page-content.tsx` |
+| ~~427~~ | ~~`components/banking/fx-hub-page-content.tsx`~~ → **split** (`v0.fe-split-fx-hub`) |
 | 421 | `app/(customers-section)/customers/[id]/page.tsx` |
 | 417 | `lib/record-actions.ts` |
 | 414 | `components/record/people-record-dialog.tsx` |
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `components/banking/fx-hub-page-content.tsx` (~427).
+**Recommendation:** Continue the existing split pattern. Next: `app/(customers-section)/customers/[id]/page.tsx` (~421).
 
 ---
 

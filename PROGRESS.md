@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split statement bulk action bar (`v0.fe-split-statement-bulk`):** File-size cleanup only; bulk post/correct bar unchanged.
+- **Split FX hub page content (`v0.fe-split-fx-hub`):** File-size cleanup only; FX hub UI unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split statement bulk action bar |
-| **Last tag** | `v0.fe-split-statement-bulk` |
+| **Last completed slice** | Split FX hub page content |
+| **Last tag** | `v0.fe-split-fx-hub` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`fx-hub` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`customers/[id]` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
