@@ -187,6 +187,14 @@ export async function loadPaymentReceiveAccounts(
     .map(toOption);
 }
 
+/** Combobox label for a payment-receive money account. */
+export function paymentReceiveAccountLabel(account: MoneyAccountOption): string {
+  if (account.account_kind === "foreign_currency" && account.currency) {
+    return `${account.name} (${account.currency} wallet)`;
+  }
+  return `${account.name} (${account.account_kind})`;
+}
+
 /** FX wallet accounts for a given pay currency (USD, EUR, GBP). */
 export async function loadForeignCurrencyAccounts(
   entityId: string,

@@ -14,6 +14,7 @@ import { formatFxNativeInput, parseFxNative } from "@/lib/fx-money";
 import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
 import {
   loadPaymentReceiveAccounts,
+  paymentReceiveAccountLabel,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { formatKurus, formatTrDate, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -42,13 +43,6 @@ type Props = {
   onClose: () => void;
   onSaved: () => void;
 };
-
-function accountLabel(account: MoneyAccountOption): string {
-  if (account.account_kind === "foreign_currency" && account.currency) {
-    return `${account.name} (${account.currency} wallet)`;
-  }
-  return `${account.name} (${account.account_kind})`;
-}
 
 export function CorrectCustomerPaymentForm({
   open,
@@ -286,7 +280,7 @@ export function CorrectCustomerPaymentForm({
               onValueChange={setPaymentGlAccountId}
               options={accounts.map((a) => ({
                 value: a.gl_account_id,
-                label: accountLabel(a),
+                label: paymentReceiveAccountLabel(a),
               }))}
               placeholder="Bank, cash, or FX wallet…"
             />

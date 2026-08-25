@@ -1,7 +1,6 @@
-
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaringAll } from "@/test-support/source";
 
 /** Warn about an overpayment; never refuse it.
  *
@@ -19,7 +18,11 @@ import { sourceDeclaring } from "@/test-support/source";
  * appears, and that it never becomes a barrier.
  */
 
-const SOURCE = sourceDeclaring("CustomerPaymentForm");
+const SOURCE = sourceDeclaringAll(
+  "CustomerPaymentForm",
+  "useCustomerPaymentForm",
+  "CustomerPaymentFields",
+);
 
 /** Source with comments removed — the rules below are about behaviour, and
  * the prose explaining them names the very things being forbidden. */

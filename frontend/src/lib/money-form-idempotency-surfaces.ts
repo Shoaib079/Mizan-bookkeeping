@@ -6,7 +6,7 @@
 export const MONEY_FORM_IDEMPOTENCY_SURFACES = [
   "components/forms/group-sale-discount-dialog.tsx",
   "components/forms/use-group-sale-form.ts",
-  "components/forms/customer-payment-form.tsx",
+  "components/forms/use-customer-payment-form.ts",
 ] as const;
 
 export type MoneyFormIdempotencySurface =

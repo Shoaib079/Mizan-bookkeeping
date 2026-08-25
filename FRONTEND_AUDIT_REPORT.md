@@ -82,7 +82,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~498~~ | ~~`app/split/page.tsx`~~ → **split** (`v0.fe-split-split-page`) |
 | ~~466~~ | ~~`lib/statement-classification-options.ts`~~ → **split** (`v0.fe-split-statement-classification-options`) |
 | ~~455~~ | ~~`components/layout/account-menu.tsx`~~ → **split** (`v0.fe-split-account-menu`) |
-| 446 | `components/forms/customer-payment-form.tsx` |
+| ~~446~~ | ~~`components/forms/customer-payment-form.tsx`~~ → **split** (`v0.fe-split-customer-payment`) |
 | 436 | `components/command-palette.tsx` |
 | 430 | `components/statement-bulk-action-bar.tsx` |
 | 427 | `components/banking/fx-hub-page-content.tsx` |
@@ -92,7 +92,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `components/forms/customer-payment-form.tsx` (~446).
+**Recommendation:** Continue the existing split pattern. Next: `components/command-palette.tsx` (~436).
 
 ---
 

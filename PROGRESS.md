@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split account menu (`v0.fe-split-account-menu`):** File-size cleanup only; top-bar account menu behavior unchanged.
+- **Split customer-payment form (`v0.fe-split-customer-payment`):** File-size cleanup only; record-payment dialog behavior unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split account menu |
-| **Last tag** | `v0.fe-split-account-menu` |
+| **Last completed slice** | Split customer-payment form |
+| **Last tag** | `v0.fe-split-customer-payment` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`customer-payment-form` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`command-palette` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
