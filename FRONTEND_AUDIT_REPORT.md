@@ -63,6 +63,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 - `nav-sections.ts` **608 → ~40** — `v0.fe-split-nav-sections` (redeemed). Types + sections data + route registry + path helpers; barrel re-exports.
 - `fx-hub-page-content.tsx` **427 → ~73** — `v0.fe-split-fx-hub` (redeemed). Hook + wallet chips + actions + ledger + dialogs; reuses FX forms / tree helpers.
 - `customers/[id]/page.tsx` **421 → ~126** — `v0.fe-split-customer-detail` (redeemed). Hook + ledger + dialogs + helpers; dropped `formatForexOutstanding` wrapper.
+- `record-actions.ts` **417 → ~27** — `v0.fe-split-record-actions` (redeemed). Types + catalog + helpers; barrel re-exports.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -89,12 +90,12 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~430~~ | ~~`components/statement-bulk-action-bar.tsx`~~ → **split** (`v0.fe-split-statement-bulk`) |
 | ~~427~~ | ~~`components/banking/fx-hub-page-content.tsx`~~ → **split** (`v0.fe-split-fx-hub`) |
 | ~~421~~ | ~~`app/(customers-section)/customers/[id]/page.tsx`~~ → **split** (`v0.fe-split-customer-detail`) |
-| 417 | `lib/record-actions.ts` |
+| ~~417~~ | ~~`lib/record-actions.ts`~~ → **split** (`v0.fe-split-record-actions`) |
 | 414 | `components/record/people-record-dialog.tsx` |
 | 410 | `components/forms/partner-profit-allocation-form.tsx` |
 | 406 | `components/forms/partner-record-form.tsx` |
 
-**Recommendation:** Continue the existing split pattern. Next: `lib/record-actions.ts` (~417).
+**Recommendation:** Continue the existing split pattern. Next: `components/record/people-record-dialog.tsx` (~414).
 
 ---
 

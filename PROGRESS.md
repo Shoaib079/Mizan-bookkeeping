@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split customer detail page (`v0.fe-split-customer-detail`):** File-size cleanup only; customer detail UI unchanged.
+- **Split record-actions (`v0.fe-split-record-actions`):** File-size cleanup only; Record hub / palette action catalog unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split customer detail page |
-| **Last tag** | `v0.fe-split-customer-detail` |
+| **Last completed slice** | Split record-actions |
+| **Last tag** | `v0.fe-split-record-actions` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`record-actions` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`people-record-dialog` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

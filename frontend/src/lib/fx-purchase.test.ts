@@ -5,7 +5,8 @@ import { sourceDeclaring } from "@/test-support/source";
 
 describe("FX unified Add hub", () => {
   it("registers fx in record actions and opens FxUnifiedDialog", async () => {
-    const registry = sourceDeclaring("PERSON_PICKER_ACTIONS");
+    // Catalog owns the fx card; PERSON_PICKER_ACTIONS is only the person-kind set.
+    const registry = sourceDeclaring("RECORD_ACTIONS");
     const modals = sourceDeclaring("RecordActionModals");
     expect(registry).toContain('"fx"');
     expect(registry).toContain("Foreign exchange");

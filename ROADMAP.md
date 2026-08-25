@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Continue FE file-size splits (record-actions / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
-| **Last completed slice** | **Split customer detail page** (`v0.fe-split-customer-detail`) |
-| **Last commit/tag**      | `v0.fe-split-customer-detail` |
+| **Next up**              | Continue FE file-size splits (people-record-dialog / …) per `FRONTEND_AUDIT_REPORT.md`; per-menu period report deferred |
+| **Last completed slice** | **Split record-actions** (`v0.fe-split-record-actions`) |
+| **Last commit/tag**      | `v0.fe-split-record-actions` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-25 | Split record-actions (file size)                | `v0.fe-split-record-actions`                           | Module 417→~27 barrel; types + catalog + helpers; public `@/lib/record-actions` unchanged; guards retargeted to RECORD_ACTIONS; redeemed from baseline; no behavior change |
 | 2026-08-25 | Split customer detail page (file size)          | `v0.fe-split-customer-detail`                          | Page 421→~126; hook + ledger + dialogs + helpers; dropped formatForexOutstanding wrapper; reuse write chrome / row actions / forms; redeemed from baseline; no behavior change |
 | 2026-08-25 | Split FX hub page content (file size)           | `v0.fe-split-fx-hub`                                   | Page 427→~73; hook + wallet chips + actions + ledger + dialogs; reuse FX forms / tree helpers / ReportDateRange; redeemed from baseline; no behavior change |
 | 2026-08-25 | Split statement bulk action bar (file size)     | `v0.fe-split-statement-bulk`                           | Bar 430→~74; hook + form; reuse StatementClassifyTargetControl (bulk variant); redeemed from baseline; no behavior change |

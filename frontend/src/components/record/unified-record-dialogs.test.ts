@@ -55,7 +55,9 @@ describe("unified record dialogs", () => {
     );
     const cashForm = sourceDeclaring("StaffCashMovementForm");
     const staffPage = sourceDeclaring("StaffDetailPage");
-    const actions = sourceDeclaring("PERSON_PICKER_ACTIONS");
+    // staffPayment metadata lives on the catalog entry; the person-picker set
+    // is derived from it and no longer co-located after the file-size split.
+    const actions = sourceDeclaring("RECORD_ACTIONS");
 
     expect(actions).toContain('id: "staffPayment"');
     expect(actions).toContain("hidden: true");
