@@ -18,6 +18,15 @@ function accountMenuSurface() {
     "AccountMenuDropdown",
   );
 }
+
+function commandPaletteSurface() {
+  return sourceDeclaringAll(
+    "CommandPalette",
+    "useCommandPalette",
+    "CommandPalettePanel",
+    "rowBadge",
+  );
+}
 const EXPECTED_SIDEBAR_GROUPS = [
   "Overview",
   "Money in",
@@ -293,7 +302,7 @@ describe("delivery gating", () => {
 
 describe("command palette (UX-B data-first search)", () => {
   it("searches suppliers, expense items, pages, and actions", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("searchSuppliers");
     expect(source).toContain("searchExpenseItems");
     expect(source).toContain("appRoutes");
@@ -301,7 +310,7 @@ describe("command palette (UX-B data-first search)", () => {
   });
 
   it("has debounce + stale entity guard", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("PALETTE_SEARCH_DEBOUNCE_MS");
     expect(source).toContain("nextSearchGeneration");
     expect(source).toContain("isStale");
@@ -309,23 +318,23 @@ describe("command palette (UX-B data-first search)", () => {
   });
 
   it("gates actions behind canWriteDailyTransactions", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("canWriteDailyTransactions(grants)");
     expect(source).toContain("filterRecordActions");
   });
 
   it("navigates to supplier detail on supplier select", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("router.push(`/suppliers/${row.supplier.id}`)");
   });
 
   it("opens action via openRecordAction on action select", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("openRecordAction(row.action.id)");
   });
 
   it("shows spend totals in subtitle slot (SRCH-B)", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("supplierSpend");
     expect(source).toContain("itemSpend");
     expect(source).toContain("formatTry(spend)");
@@ -333,31 +342,31 @@ describe("command palette (UX-B data-first search)", () => {
   });
 
   it("fetches spend data on palette open", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("spend_by_supplier");
     expect(source).toContain("expenses_by_item");
     expect(source).toContain("currentMonthRange");
   });
 
   it("builds spend lookup maps from time-series response", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("new Map(ts.spend_by_supplier");
     expect(source).toContain("new Map(ts.expenses_by_item");
   });
 
   it("falls back to type label when no spend data", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain('spend ? formatTry(spend) : "Supplier"');
     expect(source).toContain('spend ? formatTry(spend) : "Item"');
   });
 
   it("filters hidden actions from palette action list", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("!a.hidden");
   });
 
   it("routes item click to filtered review expenses", () => {
-    const source = sourceDeclaring("CommandPalette");
+    const source = commandPaletteSurface();
     expect(source).toContain("reviewExpensesFilteredHref");
   });
 });

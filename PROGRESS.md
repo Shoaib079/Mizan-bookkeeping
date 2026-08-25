@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split customer-payment form (`v0.fe-split-customer-payment`):** File-size cleanup only; record-payment dialog behavior unchanged.
+- **Split command palette (`v0.fe-split-command-palette`):** File-size cleanup only; ⌘K palette behavior unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split customer-payment form |
-| **Last tag** | `v0.fe-split-customer-payment` |
+| **Last completed slice** | Split command palette |
+| **Last tag** | `v0.fe-split-command-palette` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`command-palette` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`statement-bulk-action-bar` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |
