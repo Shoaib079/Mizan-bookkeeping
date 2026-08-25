@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split split hub page (`v0.fe-split-split-page`):** File-size cleanup only; `/split` behavior unchanged.
+- **Split statement-classification-options (`v0.fe-split-statement-classification-options`):** File-size cleanup only; public import path unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split split hub page |
-| **Last tag** | `v0.fe-split-split-page` |
+| **Last completed slice** | Split statement-classification-options |
+| **Last tag** | `v0.fe-split-statement-classification-options` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`statement-classification-options` / …); per-menu period report deferred |
+| **Next up** | Continue FE file-size splits (`account-menu` / …); per-menu period report deferred |
 | **Exact next action** | Await next owner slice |

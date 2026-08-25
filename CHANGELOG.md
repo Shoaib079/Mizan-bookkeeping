@@ -8,6 +8,7 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-25
 
+- **Split statement-classification-options (`v0.fe-split-statement-classification-options`).** Cleanup-only: `lib/statement-classification-options.ts` 466→~25 re-export barrel. Extracted types, catalog (`STATEMENT_CLASSIFICATION_OPTIONS` + search keywords), helpers (amount filter / suggest / match / truncate). Consumers still import `@/lib/statement-classification-options`. Redeemed from `FILE_SIZE_BASELINE.json`. Vitest + eslint + tsc + next build + ratchet + pytest green. No behavior/API/permission changes.
 - **Split split hub page (`v0.fe-split-split-page`).** Cleanup-only: `app/split/page.tsx` 498→~85. Extracted `useSplitHubPage`, toolbar, expense/payment lists, dialog. Reused FormDialogShell / DataTable / Combobox / MoneyInput / expense-account helpers. PageHeader archetype kept on `SplitHubPage`. Redeemed from `FILE_SIZE_BASELINE.json`. Vitest + eslint + tsc + next build + ratchet + pytest green. No visual/behavior/API/permission changes.
 
 ## 2026-08-24
