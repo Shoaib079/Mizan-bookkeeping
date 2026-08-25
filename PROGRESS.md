@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split partner profit allocation form (`v0.fe-split-partner-profit`):** File-size cleanup only; allocate-profit UI unchanged.
+- **Split partner record form (`v0.fe-split-partner-record`):** File-size cleanup only; partner Record / Pay profit UI unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split partner profit allocation form |
-| **Last tag** | `v0.fe-split-partner-profit` |
+| **Last completed slice** | Split partner record form |
+| **Last tag** | `v0.fe-split-partner-record` |
 | **Unpushed** | no (after push) |
-| **Next up** | Continue FE file-size splits (`partner-record-form` / …); per-menu period report deferred |
+| **Next up** | FE audit oversized list cleared for those paths; next from live baseline or deferred per-menu period report |
 | **Exact next action** | Await next owner slice |

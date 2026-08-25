@@ -66,6 +66,7 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 - `record-actions.ts` **417 → ~27** — `v0.fe-split-record-actions` (redeemed). Types + catalog + helpers; barrel re-exports.
 - `people-record-dialog.tsx` **414 → ~105** — `v0.fe-split-people-record` (redeemed). Hook + helpers + embedded form.
 - `partner-profit-allocation-form.tsx` **410 → ~83** — `v0.fe-split-partner-profit` (redeemed). Hook + fields + preview + helpers.
+- `partner-record-form.tsx` **406 → ~67** — `v0.fe-split-partner-record` (redeemed). Hook + fields + types; dropped dead defaultDescription.
 
 **Remaining** production files still over 400 (see live tree / baseline). Top offenders after these splits:
 
@@ -95,9 +96,9 @@ rg -n 'apiFetch\(' frontend/src --glob '*.{ts,tsx}'
 | ~~417~~ | ~~`lib/record-actions.ts`~~ → **split** (`v0.fe-split-record-actions`) |
 | ~~414~~ | ~~`components/record/people-record-dialog.tsx`~~ → **split** (`v0.fe-split-people-record`) |
 | ~~410~~ | ~~`components/forms/partner-profit-allocation-form.tsx`~~ → **split** (`v0.fe-split-partner-profit`) |
-| 406 | `components/forms/partner-record-form.tsx` |
+| ~~406~~ | ~~`components/forms/partner-record-form.tsx`~~ → **split** (`v0.fe-split-partner-record`) |
 
-**Recommendation:** Continue the existing split pattern. Next: `components/forms/partner-record-form.tsx` (~406).
+**Recommendation:** The listed FE mega-files from this audit queue are redeemed. Next oversized work: scan live tree / `FILE_SIZE_BASELINE.json` (mostly backend), or deferred product work (per-menu period report).
 
 ---
 

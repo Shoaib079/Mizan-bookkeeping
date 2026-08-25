@@ -2,11 +2,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaringAll } from "@/test-support/source";
 
 describe("PartnerRecordForm — cash taken copy", () => {
   it("shows the net headline and a plain settle sentence, no fronted breakdown", () => {
-    const src = sourceDeclaring("PartnerRecordForm");
+    // Copy lives in PartnerRecordFields after the file-size split.
+    const src = sourceDeclaringAll("PartnerRecordForm", "PartnerRecordFields");
 
     expect(src).toContain("partnerBalanceHeading");
     expect(src).toContain("partnerBalanceAmount");

@@ -51,6 +51,5 @@
   "backend/app/features/reports/month_pack_pdf.py": 1048,
   "backend/app/features/reports/pdf_export.py": 642,
   "backend/app/features/staff/api.py": 427,
-  "backend/app/features/staff/service.py": 823,
-  "frontend/src/components/forms/partner-record-form.tsx": 418
+  "backend/app/features/staff/service.py": 823
 }
