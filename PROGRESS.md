@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Split partner record form (`v0.fe-split-partner-record`):** File-size cleanup only; partner Record / Pay profit UI unchanged.
+- **Design guards (`v0.design-guards`):** No duplicate section H1s; hex only in token file; one component per job.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Split partner record form |
-| **Last tag** | `v0.fe-split-partner-record` |
+| **Last completed slice** | Design guards — headings, colors, components |
+| **Last tag** | `v0.design-guards` |
 | **Unpushed** | no (after push) |
-| **Next up** | FE audit oversized list cleared for those paths; next from live baseline or deferred per-menu period report |
+| **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

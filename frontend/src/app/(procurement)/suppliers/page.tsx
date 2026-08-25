@@ -180,7 +180,7 @@ export default function SuppliersPage() {
 
   return (
     <ListPage
-      title="Suppliers"
+      title="Supplier directory"
       loading={loading}
       error={error}
       forbidden={

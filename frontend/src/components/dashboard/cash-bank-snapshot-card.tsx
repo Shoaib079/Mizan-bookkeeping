@@ -37,7 +37,7 @@ const ACCOUNT_ROW =
   "flex items-center justify-between gap-3 py-1.5";
 /** Accepted-live Cash / Banks subtotal labels (owner-approved; restored after parity muted them). */
 const SUBTOTAL_LABEL =
-  "text-[13px] font-bold text-[#3D4A63] hover:text-foreground hover:underline";
+  "text-[13px] font-bold text-ink-soft hover:text-foreground hover:underline";
 
 function SubtotalRow({
   label,
@@ -120,7 +120,7 @@ export function CashBankSnapshotCard({
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span
             data-testid="cash-bank-total-label"
-            className="text-[13px] font-semibold text-[#3D4A63]"
+            className="text-[13px] font-semibold text-ink-soft"
           >
             Total balance
           </span>
@@ -133,7 +133,7 @@ export function CashBankSnapshotCard({
         </div>
         <p
           data-testid="cash-bank-total-figure"
-          className="mt-1 w-full text-[20px] font-extrabold tabular-nums text-[#0B1526]"
+          className="mt-1 w-full text-[20px] font-extrabold tabular-nums text-ink-strong"
         >
           {formatTry(combined)}
         </p>
@@ -192,13 +192,13 @@ export function CashBankSnapshotCard({
         <div
           data-testid="cash-bank-column-divider"
           aria-hidden
-          className="hidden w-px self-stretch bg-[#E6EAF2] sm:block"
+          className="hidden w-px self-stretch bg-rule-soft sm:block"
         />
 
         <div
           data-testid="cash-bank-stack-divider"
           aria-hidden
-          className="h-px w-full bg-[#E6EAF2] sm:hidden"
+          className="h-px w-full bg-rule-soft sm:hidden"
         />
 
         <div

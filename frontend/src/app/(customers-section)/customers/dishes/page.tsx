@@ -132,7 +132,7 @@ export default function DishesPage() {
 
   return (
     <ListPage
-      title="Dishes"
+      title="Dish catalogue"
       loading={loading}
       error={error}
       forbidden={

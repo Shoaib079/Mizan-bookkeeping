@@ -78,7 +78,7 @@ export default function GroupSalesPage() {
 
   return (
     <ListPage
-      title="Group sales"
+      title="Group sale records"
       loading={loading}
       error={error}
       primaryAction={

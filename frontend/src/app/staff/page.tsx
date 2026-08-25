@@ -198,7 +198,7 @@ export default function StaffPage() {
   return (
     <AppShell title="Staff">
       <ListPage
-        title="Staff"
+        title="Team directory"
         loading={loading}
         error={error}
         forbidden={

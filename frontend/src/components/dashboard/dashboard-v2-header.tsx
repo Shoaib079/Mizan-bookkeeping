@@ -23,7 +23,7 @@ export function DashboardV2Header({ displayName, className, now }: Props) {
       <div data-testid="dashboard-v2-header-row">
         <h1
           data-testid="dashboard-v2-greeting"
-          className="min-w-0 text-base font-bold leading-snug text-[#0B1526]"
+          className="min-w-0 text-base font-bold leading-snug text-ink-strong"
         >
           {greeting}
         </h1>

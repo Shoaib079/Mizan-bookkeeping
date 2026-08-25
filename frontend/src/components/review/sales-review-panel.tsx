@@ -49,7 +49,7 @@ type Props = {
 export function SalesReviewPanel({
   defaultFilter = "all",
   showCreate = false,
-  title = "Daily sales",
+  title = "Sales activity",
 }: Props) {
   const { entityId } = useEntity();
   const { grants } = useEntityAccess();

@@ -3,11 +3,11 @@
 /** Shared muted left accent bar for meaning cards (accepted-live). */
 
 export const ACCENT_BAR = {
-  green: "var(--accent-bar-green, #4E9E77)",
-  red: "var(--accent-bar-red, #C05B62)",
-  amber: "var(--accent-bar-amber, #BE8A3F)",
-  blue: "var(--accent-bar-blue, #4C7FC4)",
-  gray: "var(--accent-bar-gray, #A7B0BD)",
+  green: "var(--accent-bar-green)",
+  red: "var(--accent-bar-red)",
+  amber: "var(--accent-bar-amber)",
+  blue: "var(--accent-bar-blue)",
+  gray: "var(--accent-bar-gray)",
 } as const;
 
 export type AccentBarTone = keyof typeof ACCENT_BAR;

@@ -76,7 +76,7 @@ describe("CashBankSnapshotCard", () => {
     for (const label of screen.getAllByTestId("cash-bank-subtotal-label")) {
       expect(label.className).toContain("text-[13px]");
       expect(label.className).toContain("font-bold");
-      expect(label.className).toContain("text-[#3D4A63]");
+      expect(label.className).toContain("text-ink-soft");
       expect(label.className).not.toContain("text-muted-foreground");
     }
 
@@ -88,13 +88,13 @@ describe("CashBankSnapshotCard", () => {
     expect(columns.className).toContain("grid-cols-1");
 
     const vertical = screen.getByTestId("cash-bank-column-divider");
-    expect(vertical.className).toContain("bg-[#E6EAF2]");
+    expect(vertical.className).toContain("bg-rule-soft");
     expect(vertical.className).toContain("sm:block");
     expect(vertical.className).toContain("hidden");
     expect(vertical.className).toContain("w-px");
 
     const stack = screen.getByTestId("cash-bank-stack-divider");
-    expect(stack.className).toContain("bg-[#E6EAF2]");
+    expect(stack.className).toContain("bg-rule-soft");
     expect(stack.className).toContain("sm:hidden");
     expect(stack.className).toContain("h-px");
 
@@ -136,7 +136,7 @@ describe("CashBankSnapshotCard", () => {
     expect(src).toContain("SUBTOTAL_LABEL");
     expect(src).toContain("text-[13px]");
     expect(src).toContain("font-bold");
-    expect(src).toContain("text-[#3D4A63]");
+    expect(src).toContain("text-ink-soft");
     expect(src).toMatch(
       /cash-bank-subtotal-label[\s\S]{0,120}className=\{SUBTOTAL_LABEL\}/,
     );
@@ -149,7 +149,7 @@ describe("CashBankSnapshotCard", () => {
     const src = sourceDeclaring("CashBankSnapshotCard");
     expect(src).toContain("cash-bank-column-divider");
     expect(src).toContain("cash-bank-stack-divider");
-    expect(src).toContain("bg-[#E6EAF2]");
+    expect(src).toContain("bg-rule-soft");
     expect(src).toContain("sm:gap-x-6");
     expect(src).toContain(
       "sm:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)]",

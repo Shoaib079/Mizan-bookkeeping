@@ -22,7 +22,7 @@ const SAMPLE_PAGES: { label: string; source: () => string; titleHint: string }[]
     {
       label: "sales",
       source: () => sourceDeclaring("SalesReviewPanel"),
-      titleHint: "Daily sales",
+      titleHint: "Sales activity",
     },
     {
       label: "expenses",
@@ -32,12 +32,12 @@ const SAMPLE_PAGES: { label: string; source: () => string; titleHint: string }[]
     {
       label: "suppliers",
       source: () => sourceDeclaring("SuppliersPage"),
-      titleHint: "Suppliers",
+      titleHint: "Supplier directory",
     },
     {
       label: "banking",
       source: () => sourceDeclaring("BankingHubContent"),
-      titleHint: "Banking",
+      titleHint: "Account overview",
     },
     {
       label: "reports",

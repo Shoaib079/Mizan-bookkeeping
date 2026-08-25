@@ -17,7 +17,7 @@ describe("balances overview direction figures", () => {
     expect(d.tone).toBe("they_owe");
     expect(d.amountKurus).toBe(250_000_00);
     expect(d.hint).toContain("suppliers owe you");
-    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-[#DC2626]");
+    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-destructive");
     expect(formatTry(d.amountKurus)).not.toMatch(/[-−]/);
   });
 
@@ -26,7 +26,7 @@ describe("balances overview direction figures", () => {
     expect(d.tone).toBe("you_owe");
     expect(d.amountKurus).toBe(119_390_00);
     expect(d.hint).toBe("Total owed to suppliers");
-    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-[#16A34A]");
+    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-success");
   });
 
   it("positive receivables → red + Total owed to you", () => {
@@ -34,7 +34,7 @@ describe("balances overview direction figures", () => {
     expect(d.tone).toBe("they_owe");
     expect(d.amountKurus).toBe(80_000_00);
     expect(d.hint).toBe("Total owed to you");
-    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-[#DC2626]");
+    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-destructive");
   });
 
   it("zero → gray + Nothing outstanding", () => {
@@ -61,15 +61,15 @@ describe("balances overview direction figures", () => {
     expect(d.tone).toBe("you_owe");
     expect(d.amountKurus).toBe(32_500_00);
     expect(d.hint).toBe(hint);
-    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-[#16A34A]");
+    expect(OVERVIEW_FIGURE_CLASS[d.tone]).toBe("text-success");
     expect(formatTry(d.amountKurus)).not.toMatch(/[-−]/);
   });
 
   it("staff owed → green; staff advances → red", () => {
     expect(staffOverviewTone(10_000)).toBe("you_owe");
     expect(staffOverviewTone(-10_000)).toBe("they_owe");
-    expect(OVERVIEW_FIGURE_CLASS.you_owe).toBe("text-[#16A34A]");
-    expect(OVERVIEW_FIGURE_CLASS.they_owe).toBe("text-[#DC2626]");
+    expect(OVERVIEW_FIGURE_CLASS.you_owe).toBe("text-success");
+    expect(OVERVIEW_FIGURE_CLASS.they_owe).toBe("text-destructive");
   });
 
   it("no minus character in any formatted absolute figure", () => {
@@ -91,8 +91,8 @@ describe("balances overview direction figures", () => {
     const overview = sourceDeclaring("BalancesOverview");
 
     expect(display).toContain("Math.abs");
-    expect(display).toContain("text-[#16A34A]");
-    expect(display).toContain("text-[#DC2626]");
+    expect(display).toContain("text-success");
+    expect(display).toContain("text-destructive");
     expect(overview).toContain("payablesOverviewDisplay");
     expect(overview).toContain("receivablesOverviewDisplay");
     expect(overview).toContain("partnerOverviewDisplay");

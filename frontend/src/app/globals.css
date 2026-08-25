@@ -31,6 +31,10 @@
   --color-brand-1: var(--brand-1);
   --color-brand-2: var(--brand-2);
   --color-brand-3: var(--brand-3);
+  /* Dashboard / overview ink (accepted-live navy) — never hardcode in TSX */
+  --color-ink-strong: var(--ink-strong);
+  --color-ink-soft: var(--ink-soft);
+  --color-rule-soft: var(--rule-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -139,6 +143,10 @@
   --icon-amber: #d97706;
   --icon-red: #dc2626;
   --icon-gray: #64748b;
+  /* Strong/soft ink + hairline rule — dashboard snapshot / overview figures */
+  --ink-strong: #0b1526;
+  --ink-soft: #3d4a63;
+  --rule-soft: #e6eaf2;
   /* Component shells — v1 defaults; v2 overrides below */
   --radius-card: var(--radius);
   --radius-pill: 9999px;

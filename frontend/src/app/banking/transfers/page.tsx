@@ -70,7 +70,7 @@ export default function TransfersPage() {
 
   return (
     <ListPage
-      title="Transfers"
+      title="Account transfers"
       loading={loading}
       error={error}
       primaryAction={

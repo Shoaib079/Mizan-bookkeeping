@@ -34,7 +34,7 @@ export function Button({
         variant === "ghost" && "text-primary hover:bg-primary/15",
         // Positive money actions (Pay / Allocate profit) — sticker green.
         variant === "positive" &&
-          "bg-[#16A34A] text-white hover:bg-[#16A34A]/90",
+          "bg-success text-primary-foreground hover:bg-success/90",
         // For actions that destroy something and cannot be undone. Filled, for
         // the same reason secondary is: an outline did not read as a button.
         //

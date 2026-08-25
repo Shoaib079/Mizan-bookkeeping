@@ -55,7 +55,7 @@ export function BankingHubContent() {
 
   return (
     <HubPage
-      title="Banking"
+      title="Account overview"
       meta="Choose an area to view accounts, balances, and history."
       error={error}
       primaryAction={

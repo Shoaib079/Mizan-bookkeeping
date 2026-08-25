@@ -220,7 +220,7 @@ export function PosSummaryReview({ summaryId, onUpdated }: Props) {
 
   return (
     <DocumentReviewPage
-      title="Daily sales"
+      title="Review daily sales"
       meta={
         <MetaFacts
           items={[

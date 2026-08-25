@@ -238,7 +238,7 @@ export default function PartnersPage() {
   return (
     <AppShell title="Partners">
       <ListPage
-        title="Partners"
+        title="Partner directory"
         loading={loading}
         error={error}
         primaryAction={

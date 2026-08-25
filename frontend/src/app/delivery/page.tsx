@@ -55,7 +55,7 @@ export default function DeliveryPage() {
   return (
     <>
       <PageHeader
-        title="Delivery"
+        title="Delivery overview"
         meta="Platform sales, commission, and settlement reconciliation."
         primaryAction={
           showWrite ? (

@@ -217,7 +217,7 @@ Many of these are **accepted-live** from recent dashboard/balances slices. For v
 12. **Normalize export wrappers** — keep `DownloadMenu` as the only interactive shell  
 13. **Split remaining mega-files** — cash-close, group-sale, GL panel, …  
 14. **Cash close UX consolidation**  
-15. **Tokenize remaining accepted hex** (without visual regressions)  
+15. ~~**Tokenize remaining accepted hex**~~ — **DONE** `v0.design-guards` (`no-hardcoded-colors` + `--ink-*` / token wiring)  
 16. **Ledger-description FE libs** — wire for display or delete + keep backend as source of truth  
 
 ---

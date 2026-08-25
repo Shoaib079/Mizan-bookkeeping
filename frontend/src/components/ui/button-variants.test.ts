@@ -51,8 +51,8 @@ describe("button variants carry colour", () => {
   it("positive is filled sticker green", () => {
     const positiveLine =
       source.match(/variant === "positive" &&[\s\S]{0,120}/)?.[0] ?? "";
-    expect(positiveLine).toContain("bg-[#16A34A]");
-    expect(positiveLine).toContain("text-white");
+    expect(positiveLine).toContain("bg-success");
+    expect(positiveLine).toContain("text-primary-foreground");
   });
 
   it("a caller's own colour still wins", () => {

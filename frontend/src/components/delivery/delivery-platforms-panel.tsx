@@ -51,7 +51,7 @@ export function DeliveryPlatformsPanel() {
 
   return (
     <ListPage
-      title="Delivery platforms"
+      title="Platform accounts"
       loading={loading}
       error={error}
       primaryAction={

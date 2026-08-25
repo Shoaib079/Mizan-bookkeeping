@@ -39,9 +39,9 @@ function toneClass(tone: StatLine["tone"]): string | undefined {
 }
 
 function accentForTint(tint: IconTint, fallback: string): string {
-  if (tint === "mint") return "var(--accent-bar-green, #4E9E77)";
-  if (tint === "blush") return "var(--accent-bar-red, #C05B62)";
-  if (tint === "gray") return "var(--accent-bar-gray, #A7B0BD)";
+  if (tint === "mint") return "var(--accent-bar-green)";
+  if (tint === "blush") return "var(--accent-bar-red)";
+  if (tint === "gray") return "var(--accent-bar-gray)";
   return fallback;
 }
 

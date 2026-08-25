@@ -7,10 +7,10 @@
 export type OverviewFigureTone = "you_owe" | "they_owe" | "settled" | "ink";
 
 export const OVERVIEW_FIGURE_CLASS: Record<OverviewFigureTone, string> = {
-  you_owe: "text-[#16A34A]",
-  they_owe: "text-[#DC2626]",
+  you_owe: "text-success",
+  they_owe: "text-destructive",
   settled: "text-muted-foreground",
-  ink: "text-[#0B1526]",
+  ink: "text-ink-strong",
 };
 
 export type OverviewFigureDisplay = {

@@ -35,8 +35,8 @@ function expectFilledBlue(el: HTMLElement) {
 }
 
 function expectPositiveGreen(el: HTMLElement) {
-  expect(el.className).toContain("bg-[#16A34A]");
-  expect(el.className).toContain("text-white");
+  expect(el.className).toContain("bg-success");
+  expect(el.className).toContain("text-primary-foreground");
   expect(el.className).not.toContain("text-muted-foreground");
 }
 
@@ -117,7 +117,7 @@ describe("button colour wiring (source + mutation)", () => {
     const btn = sourceDeclaring("Button");
     expect(btn).toContain("data-button-variant={variant}");
     expect(btn).toContain("bg-primary text-primary-foreground");
-    expect(btn).toContain("bg-[#16A34A]");
+    expect(btn).toContain("bg-success");
     expect(btn).toContain('variant === "positive"');
 
     const globals = sourceAt("app/globals.css");

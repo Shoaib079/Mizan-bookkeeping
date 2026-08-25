@@ -11,19 +11,19 @@ export type IconTint = "mint" | "sky" | "sand" | "blush" | "gray";
 export type IconStroke = "green" | "blue" | "amber" | "red" | "gray";
 
 const TINT_CLASS: Record<IconTint, string> = {
-  mint: "bg-[var(--tint-mint,#E7F7EE)]",
-  sky: "bg-[var(--tint-sky,#E4F2FB)]",
-  sand: "bg-[var(--tint-sand,#FBF0E0)]",
-  blush: "bg-[var(--tint-blush,#FEECEC)]",
-  gray: "bg-[var(--tint-gray,#F1F5F9)]",
+  mint: "bg-[var(--tint-mint)]",
+  sky: "bg-[var(--tint-sky)]",
+  sand: "bg-[var(--tint-sand)]",
+  blush: "bg-[var(--tint-blush)]",
+  gray: "bg-[var(--tint-gray)]",
 };
 
 const STROKE_CLASS: Record<IconStroke, string> = {
-  green: "text-[var(--icon-green,#16A34A)]",
-  blue: "text-[var(--icon-blue,#2563EB)]",
-  amber: "text-[var(--icon-amber,#D97706)]",
-  red: "text-[var(--icon-red,#DC2626)]",
-  gray: "text-[var(--icon-gray,#64748B)]",
+  green: "text-[var(--icon-green)]",
+  blue: "text-[var(--icon-blue)]",
+  amber: "text-[var(--icon-amber)]",
+  red: "text-[var(--icon-red)]",
+  gray: "text-[var(--icon-gray)]",
 };
 
 export function IconSquare({
@@ -71,20 +71,20 @@ export function toneToIconLook(
     return {
       tint: "mint",
       stroke: "green",
-      accent: "var(--accent-bar-green, #4E9E77)",
+      accent: "var(--accent-bar-green)",
     };
   }
   if (tone === "bad") {
     return {
       tint: "blush",
       stroke: "red",
-      accent: "var(--accent-bar-red, #C05B62)",
+      accent: "var(--accent-bar-red)",
     };
   }
   return {
     tint: "sky",
     stroke: "blue",
-    accent: "var(--accent-bar-blue, #4C7FC4)",
+    accent: "var(--accent-bar-blue)",
   };
 }
 
@@ -96,19 +96,19 @@ export function stickerDirectionLook(
     return {
       tint: "mint",
       stroke: "green",
-      accent: "var(--accent-bar-green, #4E9E77)",
+      accent: "var(--accent-bar-green)",
     };
   }
   if (direction === "they_owe") {
     return {
       tint: "blush",
       stroke: "red",
-      accent: "var(--accent-bar-red, #C05B62)",
+      accent: "var(--accent-bar-red)",
     };
   }
   return {
     tint: "gray",
     stroke: "gray",
-    accent: "var(--accent-bar-gray, #A7B0BD)",
+    accent: "var(--accent-bar-gray)",
   };
 }
