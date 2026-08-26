@@ -22,6 +22,14 @@ describe("AppShell page trail — never duplicates the H1", () => {
     );
   });
 
+  it("Settings is a top-level crumb — never Understand / Settings", () => {
+    const src = source();
+    expect(src).toContain('item.href === "/settings/restaurant"');
+    expect(src).toContain(
+      'group.label === "Overview" || item.href === "/settings/restaurant"',
+    );
+  });
+
   it("mutation: trail appends title again → red", () => {
     const src = source();
     expect(src).not.toMatch(

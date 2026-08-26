@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Settings tabs without Your Profile (`v0.settings-tabs-no-profile`):** Six restaurant tabs only; personal profile stays on `/settings/profile`.
+- **Settings breadcrumb + mobile hub (`v0.settings-breadcrumb-hub`):** Settings trail is top-level (no Understand/); mobile hub lists all six settings tabs via `SETTINGS_PAGE_TABS`.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Settings tabs without Your Profile |
-| **Last tag** | `v0.settings-tabs-no-profile` |
+| **Last completed slice** | Settings breadcrumb + mobile hub |
+| **Last tag** | `v0.settings-breadcrumb-hub` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

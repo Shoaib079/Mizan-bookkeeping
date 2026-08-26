@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Settings tabs without Your Profile** (`v0.settings-tabs-no-profile`) |
-| **Last commit/tag**      | `v0.settings-tabs-no-profile` |
+| **Last completed slice** | **Settings breadcrumb + mobile hub** (`v0.settings-breadcrumb-hub`) |
+| **Last commit/tag**      | `v0.settings-breadcrumb-hub` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Settings breadcrumb + mobile hub (no Understand/; hub = 6 tabs)                  | `v0.settings-breadcrumb-hub`                      | done           | Re-add Understand/Settings crumb; restore inline MobileSettingsModules hub; drop Menu & Documents from hub |
 | Settings tabs without Your Profile (6 restaurant tabs only)                      | `v0.settings-tabs-no-profile`                     | done           | Re-add Your Profile as a settings tab; profile stays on `/settings/profile` only |
 | Settings tabbed layout (all sections kept; Team→Teams)                           | `v0.settings-tabs`                                | done           | Re-stack settings as one long scroll; drop Menu & Documents tab; rename Teams back to Team; remove profile tab link |
 | UX polish 5 (record titles, Z CTA, delivery grid, sidebar active, larger tabs)   | `v0.ux-polish-5`                                  | done           | Revert form headers to tile labels; restore "Upload via Record"; single-column delivery cards; weak sidebar active; shrink SectionTabs |
@@ -1935,6 +1936,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | Settings breadcrumb + mobile hub                | `v0.settings-breadcrumb-hub`                           | Settings crumb top-level; mobile hub mirrors SETTINGS_PAGE_TABS |
 | 2026-08-26 | Settings tabs without Your Profile              | `v0.settings-tabs-no-profile`                          | Drop Your Profile tab; six restaurant tabs only; profile stays separate |
 | 2026-08-26 | Settings tabbed layout                          | `v0.settings-tabs`                                     | Restaurant settings → 7 tabs + delete below; Team→Teams; hash deep-links kept |
 | 2026-08-26 | UX polish 5                                     | `v0.ux-polish-5`                                       | Record formTitle; Upload Z report; delivery 2-col; stronger sidebar active; larger SectionTabs |

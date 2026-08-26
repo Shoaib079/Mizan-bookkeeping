@@ -30,12 +30,6 @@ vi.mock("@/lib/use-submit-idempotency", () => ({
 vi.mock("@/lib/entity-context", () => ({
   useEntity: () => ({ entityId: "ent-1", actorId: "act-1" }),
 }));
-vi.mock("@/lib/quick-actions", () => ({
-  useQuickActions: () => ({ refreshDeliveryEnabled: vi.fn() }),
-}));
-vi.mock("@/components/layout/mobile-settings-modules", () => ({
-  MobileSettingsModules: () => <div data-testid="settings-modules-stub" />,
-}));
 
 afterEach(cleanup);
 

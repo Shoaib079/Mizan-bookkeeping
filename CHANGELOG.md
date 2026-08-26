@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Settings breadcrumb + mobile hub (`v0.settings-breadcrumb-hub`).** Settings page trail is top-level (**Settings**, not Understand / Settings). Mobile settings hub mirrors the six restaurant tabs via `SETTINGS_PAGE_TABS` (Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups). Removed dead `MobileSettingsModules` inline toggles from the hub.
+
 - **Settings tabs without Your Profile (`v0.settings-tabs-no-profile`).** Removed the Your Profile tab from restaurant settings — profile stays on `/settings/profile` only. Six tabs remain: Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups; delete still below.
 
 - **Settings tabbed layout (`v0.settings-tabs`).** Restaurant settings is one page with seven tabs (Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups, Your Profile → `/settings/profile`). All existing panels reused; Team renamed to Teams; Delete restaurant stays below tabs; mobile `#hash` deep-links still select the right tab. Vitest 1504 + eslint + tsc + next build + symbol guards + ratchet + pytest green.

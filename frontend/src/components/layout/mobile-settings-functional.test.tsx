@@ -1,101 +1,70 @@
 // @vitest-environment jsdom
 
-/** Mobile settings functional audit — hub links, toggles, hash targets. */
+/** Mobile settings hub — drill-ins match SETTINGS_PAGE_TABS. */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { MobileSettingsHub } from "@/components/layout/mobile-settings-hub";
-import { MobileSettingsModules } from "@/components/layout/mobile-settings-modules";
 import { hasMobileMoreTab } from "@/lib/entity-access";
 import { grantsForRole } from "@/lib/member-grants";
+import {
+  SETTINGS_PAGE_TABS,
+  hashForSettingsTab,
+} from "@/lib/settings-page-tabs";
 import { sourceDeclaring } from "@/test-support/source";
-
-const apiFetch = vi.fn();
-const toast = vi.fn();
-
-vi.mock("@/lib/api", () => ({ apiFetch: (...args: unknown[]) => apiFetch(...args) }));
-vi.mock("@/lib/toast", () => ({ useToast: () => ({ toast }) }));
-vi.mock("@/lib/entity-context", () => ({
-  useEntity: () => ({ entityId: "ent-1", refreshEntities: vi.fn() }),
-}));
-vi.mock("@/components/quick-actions", () => ({
-  useQuickActions: () => ({ refreshDeliveryEnabled: vi.fn() }),
-}));
-vi.mock("@/lib/use-submit-idempotency", () => ({
-  useSubmitIdempotency: () => ({
-    beginSubmit: () => "idem-key",
-    completeSubmit: vi.fn(),
-    resetSubmit: vi.fn(),
-  }),
-}));
 
 afterEach(cleanup);
 
 describe("MobileSettingsHub navigation", () => {
-  it("Company profile opens full settings at company-profile (not the hub again)", () => {
+  it("lists every restaurant settings tab in catalog order", () => {
     render(<MobileSettingsHub />);
-    const link = screen.getByRole("link", { name: /Company profile/i });
-    expect(link.getAttribute("href")).toBe(
-      "/settings/restaurant?full=1#company-profile",
-    );
+    for (const tab of SETTINGS_PAGE_TABS) {
+      const link = screen.getByRole("link", { name: new RegExp(tab.label, "i") });
+      expect(link.getAttribute("href")).toBe(
+        `/settings/restaurant?full=1${hashForSettingsTab(tab.id)}`,
+      );
+    }
   });
 
-  it("Teams drill-in lands on the team section", () => {
-    render(<MobileSettingsHub />);
-    expect(screen.getByRole("link", { name: /Teams/i }).getAttribute("href")).toBe(
-      "/settings/restaurant?full=1#team",
-    );
-  });
-
-  it("Backups drill-in lands on the backups section", () => {
-    render(<MobileSettingsHub />);
-    expect(screen.getByRole("link", { name: /Backups/i }).getAttribute("href")).toBe(
-      "/settings/restaurant?full=1#backups",
-    );
-  });
-
-  it("Opening balances navigates to onboarding flow", () => {
+  it("Company Profile opens full settings at company-profile", () => {
     render(<MobileSettingsHub />);
     expect(
-      screen.getByRole("link", { name: /Opening balances/i }).getAttribute("href"),
-    ).toBe("/onboarding/opening-balances");
+      screen.getByRole("link", { name: /Company Profile/i }).getAttribute("href"),
+    ).toBe("/settings/restaurant?full=1#company-profile");
+  });
+
+  it("Menu & Documents, Teams, Modules, Opening Balances, Backups deep-link", () => {
+    render(<MobileSettingsHub />);
+    expect(
+      screen.getByRole("link", { name: /Menu & Documents/i }).getAttribute("href"),
+    ).toBe("/settings/restaurant?full=1#branding");
+    expect(
+      screen.getByRole("link", { name: /^Teams/i }).getAttribute("href"),
+    ).toBe("/settings/restaurant?full=1#team");
+    expect(
+      screen.getByRole("link", { name: /^Modules/i }).getAttribute("href"),
+    ).toBe("/settings/restaurant?full=1#modules");
+    expect(
+      screen
+        .getByRole("link", { name: /Opening Balances/i })
+        .getAttribute("href"),
+    ).toBe("/settings/restaurant?full=1#opening-balances");
+    expect(
+      screen.getByRole("link", { name: /^Backups/i }).getAttribute("href"),
+    ).toBe("/settings/restaurant?full=1#backups");
+  });
+
+  it("does not embed inline module toggles (Modules is a drill-in)", () => {
+    const source = sourceDeclaring("MobileSettingsHub");
+    expect(source).not.toContain("MobileSettingsModules");
+    expect(source).toContain("SETTINGS_PAGE_TABS");
   });
 
   it("mutation: company profile linking to the hub alone goes red", () => {
     const source = sourceDeclaring("MobileSettingsHub");
-    const broken = source.replace(
-      '/settings/restaurant?full=1#company-profile',
-      '"/settings/restaurant"',
-    );
-    expect(broken).not.toContain("?full=1#company-profile");
-    expect(source).toContain("?full=1#company-profile");
-  });
-});
-
-describe("MobileSettingsModules toggle errors", () => {
-  beforeEach(() => {
-    apiFetch.mockReset();
-    toast.mockReset();
-    apiFetch.mockResolvedValue({ items: [{ key: "delivery_enabled", value: "false" }] });
-  });
-
-  it("shows a visible error when the API fails on toggle", async () => {
-    apiFetch.mockImplementation(async (url: string, init?: RequestInit) => {
-      if (init?.method === "PATCH" || init?.method === "POST") {
-        throw new Error("Network down");
-      }
-      return { items: [{ key: "delivery_enabled", value: "false" }] };
-    });
-
-    render(<MobileSettingsModules />);
-    const switches = await screen.findAllByRole("switch");
-    fireEvent.click(switches[1]!);
-
-    await waitFor(() => {
-      expect(screen.getByText("Network down")).toBeTruthy();
-    });
-    expect(toast).not.toHaveBeenCalled();
+    expect(source).toContain("?full=1");
+    expect(source).toContain("hashForSettingsTab");
   });
 });
 

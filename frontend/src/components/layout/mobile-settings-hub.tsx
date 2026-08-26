@@ -4,15 +4,39 @@ import Link from "next/link";
 import {
   ChevronRight,
   Cloud,
+  FileText,
   Flag,
   Landmark,
   Settings,
+  ToggleLeft,
   Users,
   type LucideIcon,
 } from "lucide-react";
 
-import { MobileSettingsModules } from "@/components/layout/mobile-settings-modules";
 import { IconSquare } from "@/components/ui/icon-square";
+import {
+  SETTINGS_PAGE_TABS,
+  hashForSettingsTab,
+  type SettingsPageTabId,
+} from "@/lib/settings-page-tabs";
+
+const TAB_ICONS: Record<SettingsPageTabId, LucideIcon> = {
+  company: Settings,
+  menu: FileText,
+  teams: Users,
+  modules: ToggleLeft,
+  opening: Landmark,
+  backups: Cloud,
+};
+
+const TAB_SUBLABELS: Record<SettingsPageTabId, string> = {
+  company: "Display name, legal name, VKN",
+  menu: "Logo, address, phones, menu text",
+  teams: "Members and roles",
+  modules: "Feature toggles for this restaurant",
+  opening: "Go-live date, cash, bank, equity",
+  backups: "Nightly R2 backups and Backup now",
+};
 
 function SettingsSection({
   title,
@@ -23,9 +47,11 @@ function SettingsSection({
 }) {
   return (
     <section className="mb-5">
-      <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
-        {title}
-      </h2>
+      {title ? (
+        <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
+          {title}
+        </h2>
+      ) : null}
       <div className="overflow-hidden rounded-[var(--radius-list)] border border-border bg-card shadow-[var(--shadow-card)]">
         {children}
       </div>
@@ -38,13 +64,11 @@ function SettingsRow({
   label,
   sublabel,
   icon: Icon,
-  meta,
 }: {
   href: string;
   label: string;
   sublabel?: string;
   icon: LucideIcon;
-  meta?: React.ReactNode;
 }) {
   return (
     <Link
@@ -58,49 +82,25 @@ function SettingsRow({
           <span className="block text-xs text-muted-foreground">{sublabel}</span>
         ) : null}
       </span>
-      {meta}
       <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
     </Link>
   );
 }
 
-/** iOS-style settings hub — drill-ins replace long scroll on phone (C4). */
+/** iOS-style settings hub — one row per restaurant settings tab (C4). */
 export function MobileSettingsHub() {
   return (
     <div className="pb-4">
-      <SettingsSection title="Restaurant">
-        <SettingsRow
-          href="/settings/restaurant?full=1#company-profile"
-          label="Company profile"
-          sublabel="Name, address, tax details"
-          icon={Settings}
-        />
-        <SettingsRow
-          href="/settings/restaurant?full=1#team"
-          label="Teams"
-          sublabel="Members and roles"
-          icon={Users}
-        />
-      </SettingsSection>
-
-      <SettingsSection title="Books">
-        <SettingsRow
-          href="/onboarding/opening-balances"
-          label="Opening balances"
-          sublabel="Start-of-period figures"
-          icon={Landmark}
-        />
-      </SettingsSection>
-
-      <MobileSettingsModules />
-
-      <SettingsSection title="Account">
-        <SettingsRow
-          href="/settings/restaurant?full=1#backups"
-          label="Backups"
-          sublabel="Download full backup"
-          icon={Cloud}
-        />
+      <SettingsSection title="Restaurant settings">
+        {SETTINGS_PAGE_TABS.map((tab) => (
+          <SettingsRow
+            key={tab.id}
+            href={`/settings/restaurant?full=1${hashForSettingsTab(tab.id)}`}
+            label={tab.label}
+            sublabel={TAB_SUBLABELS[tab.id]}
+            icon={TAB_ICONS[tab.id]}
+          />
+        ))}
       </SettingsSection>
 
       <p className="px-3 text-xs text-muted-foreground">

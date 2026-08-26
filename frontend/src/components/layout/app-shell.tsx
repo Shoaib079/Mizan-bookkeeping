@@ -34,8 +34,10 @@ function breadcrumbForPathname(pathname: string, title: string): string | null {
   for (const group of navGroups) {
     for (const item of group.items) {
       if (item.href === "/" || !isNavItemActive(pathname, item)) continue;
-      const parts =
-        group.label === "Overview" ? [item.label] : [group.label, item.label];
+      // Settings is a top-level destination — never "Understand / Settings".
+      const topLevel =
+        group.label === "Overview" || item.href === "/settings/restaurant";
+      const parts = topLevel ? [item.label] : [group.label, item.label];
       if (parts[parts.length - 1] === title) parts.pop();
       return parts.length > 0 ? parts.join(" / ") : null;
     }
