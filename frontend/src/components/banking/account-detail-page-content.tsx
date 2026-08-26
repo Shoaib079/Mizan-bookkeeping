@@ -8,23 +8,19 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  AccountCardPaymentsList,
+  AccountStatementsList,
+} from "@/components/banking/account-detail-lists";
+import { BankActivityPanel } from "@/components/banking/bank-activity-panel";
+import {
   DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { ReportDateRange } from "@/components/reports/report-date-range";
-import { BankActivityPanel } from "@/components/banking/bank-activity-panel";
 import { TransferForm } from "@/components/forms/transfer-form";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { apiFetch } from "@/lib/api";
 import type {
   BankStatementRead,
@@ -33,13 +29,15 @@ import type {
 } from "@/lib/banking-types";
 import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
+import { formatTry } from "@/lib/money";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
 export function AccountDetailPageContent() {
   const params = useParams<{ id: string }>();
   const accountId = params.id;
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange } = useReportRangeFromUrl();
   const [account, setAccount] = useState<MoneyAccountRead | null>(null);
   const [statements, setStatements] = useState<BankStatementRead[]>([]);
@@ -199,44 +197,10 @@ export function AccountDetailPageContent() {
                   No statements imported yet.
                 </p>
               ) : (
-                <DataTable wide>
-                  <DataTableHead>
-                    <tr>
-                      <DataTableHeaderCell>Period</DataTableHeaderCell>
-                      <DataTableHeaderCell>File</DataTableHeaderCell>
-                      <DataTableHeaderCell align="right">
-                        Lines
-                      </DataTableHeaderCell>
-                      <DataTableHeaderCell align="right">
-                        Closing
-                      </DataTableHeaderCell>
-                    </tr>
-                  </DataTableHead>
-                  <DataTableBody>
-                    {statements.map((stmt) => (
-                      <DataTableRow key={stmt.id}>
-                        <DataTableCell>
-                          <Link
-                            href={`/banking/statements/${stmt.id}`}
-                            className="text-primary hover:underline"
-                          >
-                            {formatTrDate(stmt.period_start)} –{" "}
-                            {formatTrDate(stmt.period_end)}
-                          </Link>
-                        </DataTableCell>
-                        <DataTableCell>{stmt.original_filename}</DataTableCell>
-                        <DataTableCell align="right">
-                          {stmt.line_count}
-                        </DataTableCell>
-                        <DataTableCell align="right" className="tabular-nums">
-                          {stmt.closing_balance_kurus != null
-                            ? formatTry(stmt.closing_balance_kurus)
-                            : "—"}
-                        </DataTableCell>
-                      </DataTableRow>
-                    ))}
-                  </DataTableBody>
-                </DataTable>
+                <AccountStatementsList
+                  statements={statements}
+                  isMobile={isMobile}
+                />
               )}
             </DetailSection>
           )}
@@ -264,33 +228,11 @@ export function AccountDetailPageContent() {
                   record via statement review.
                 </p>
               ) : (
-                <DataTable wide>
-                  <DataTableHead>
-                    <tr>
-                      <DataTableHeaderCell>Date</DataTableHeaderCell>
-                      <DataTableHeaderCell>Bank account</DataTableHeaderCell>
-                      <DataTableHeaderCell>Description</DataTableHeaderCell>
-                      <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                    </tr>
-                  </DataTableHead>
-                  <DataTableBody>
-                    {cardPayments.map((row) => (
-                      <DataTableRow key={row.id}>
-                        <DataTableCell>
-                          {formatTrDate(row.payment_date)}
-                        </DataTableCell>
-                        <DataTableCell>
-                          {bankNames[row.bank_money_account_id] ??
-                            row.bank_money_account_id.slice(0, 8)}
-                        </DataTableCell>
-                        <DataTableCell>{row.description}</DataTableCell>
-                        <DataTableCell align="right">
-                          {formatTry(row.amount_kurus)}
-                        </DataTableCell>
-                      </DataTableRow>
-                    ))}
-                  </DataTableBody>
-                </DataTable>
+                <AccountCardPaymentsList
+                  payments={cardPayments}
+                  bankNames={bankNames}
+                  isMobile={isMobile}
+                />
               )}
             </DetailSection>
           )}

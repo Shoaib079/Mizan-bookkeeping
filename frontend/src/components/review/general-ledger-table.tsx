@@ -1,6 +1,6 @@
 "use client";
 
-/** GL results: count/pager + expandable entry table. */
+/** GL results: count/pager + expandable entry table (desktop) / cards (phone). */
 
 import { Fragment, type Dispatch, type SetStateAction } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
@@ -21,10 +21,16 @@ import {
   DataTableHead,
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { journalEntryRowClassName } from "@/lib/ledger-display";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { ledgerRowSourceLabel } from "@/lib/transaction-registry";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
 function entryTotalKurus(lines: JournalEntryLine[]): number {
@@ -69,6 +75,8 @@ export function GeneralLedgerTable({
   accountLabel,
   onNavigateEntry,
 }: GeneralLedgerTableProps) {
+  const isMobile = useIsMobileShell();
+
   return (
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -117,96 +125,181 @@ export function GeneralLedgerTable({
         </p>
       )}
 
-      {items.length > 0 && (
-        <DataTable wide>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>&nbsp;</DataTableHeaderCell>
-              <DataTableHeaderCell>Date</DataTableHeaderCell>
-              <DataTableHeaderCell>Source</DataTableHeaderCell>
-              <DataTableHeaderCell>Description</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-              <DataTableHeaderCell>Actions</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => {
-              const expanded = expandedId === row.id;
-              return (
-                <Fragment key={row.id}>
-                  <tr
-                    id={`ledger-entry-${row.id}`}
-                    className={cn(
-                      row.id === focusId
-                        ? "bg-primary/5 hover:bg-muted/20"
-                        : "hover:bg-muted/20",
-                      journalEntryRowClassName(row.status),
-                    )}
-                  >
-                    <DataTableCell>
-                      <button
-                        type="button"
-                        className="rounded p-1 text-muted-foreground hover:text-foreground"
-                        aria-expanded={expanded}
-                        aria-label={expanded ? "Collapse entry" : "Expand entry"}
-                        onClick={() =>
-                          onExpandedIdChange((current) =>
-                            current === row.id ? null : row.id,
-                          )
-                        }
-                      >
-                        {expanded ? (
-                          <ChevronDown className="size-4" />
-                        ) : (
-                          <ChevronRight className="size-4" />
-                        )}
-                      </button>
-                    </DataTableCell>
-                    <DataTableCell>{formatTrDate(row.entry_date)}</DataTableCell>
-                    <DataTableCell>
-                      {ledgerRowSourceLabel(row.source, row.reverses_entry_id)}
-                    </DataTableCell>
-                    <DataTableCell>{row.description}</DataTableCell>
-                    <DataTableCell>
-                      <StatusBadge status={row.status} />
-                    </DataTableCell>
-                    <DataTableCell align="right" className="tabular-nums">
-                      {formatTry(entryTotalKurus(row.lines))}
-                    </DataTableCell>
-                    <DataTableCell align="right">
-                      <GlEntryActions
-                        row={row}
-                        onGenericEdit={() =>
-                          onCorrectTarget({
-                            id: row.id,
-                            entry_date: row.entry_date,
-                            description: row.description,
-                            source: row.source,
-                            lines: row.lines,
-                          })
-                        }
-                        onSaved={onSaved}
-                      />
-                    </DataTableCell>
-                  </tr>
-                  {expanded && (
-                    <tr>
-                      <td colSpan={7} className="p-0">
-                        <EntryDetailPanel
+      {items.length > 0 &&
+        (isMobile ? (
+          <div className="space-y-3">
+            <MobileCardList>
+              {items.map((row) => {
+                const totalKurus = entryTotalKurus(row.lines);
+                const expanded = expandedId === row.id;
+                return (
+                  <MobileCardRow
+                    key={row.id}
+                    title={row.description}
+                    meta={
+                      <>
+                        <span>
+                          {ledgerRowSourceLabel(
+                            row.source,
+                            row.reverses_entry_id,
+                          )}
+                        </span>
+                        <span>·</span>
+                        <span>{formatTrDate(row.entry_date)}</span>
+                        <StatusBadge status={row.status} />
+                      </>
+                    }
+                    amount={formatTry(totalKurus)}
+                    amountClassName={moneyAmountClassName(totalKurus)}
+                    leadingIcon={moneyLeadingIcon(totalKurus)}
+                    trailing={
+                      <div className="mt-1 flex flex-wrap justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="h-8 px-2 text-xs"
+                          aria-expanded={expanded}
+                          onClick={() =>
+                            onExpandedIdChange((current) =>
+                              current === row.id ? null : row.id,
+                            )
+                          }
+                        >
+                          {expanded ? "Hide" : "Lines"}
+                        </Button>
+                        <GlEntryActions
                           row={row}
-                          accountLabel={accountLabel}
-                          onNavigateEntry={onNavigateEntry}
+                          onGenericEdit={() =>
+                            onCorrectTarget({
+                              id: row.id,
+                              entry_date: row.entry_date,
+                              description: row.description,
+                              source: row.source,
+                              lines: row.lines,
+                            })
+                          }
+                          onSaved={onSaved}
                         />
-                      </td>
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </MobileCardList>
+            {expandedId &&
+              items
+                .filter((row) => row.id === expandedId)
+                .map((row) => (
+                  <div
+                    key={row.id}
+                    id={`ledger-entry-${row.id}`}
+                    className="rounded-[var(--radius-list)] border border-border bg-card p-3"
+                  >
+                    <EntryDetailPanel
+                      row={row}
+                      accountLabel={accountLabel}
+                      onNavigateEntry={onNavigateEntry}
+                    />
+                  </div>
+                ))}
+          </div>
+        ) : (
+          <DataTable wide>
+            <DataTableHead>
+              <tr>
+                <DataTableHeaderCell>&nbsp;</DataTableHeaderCell>
+                <DataTableHeaderCell>Date</DataTableHeaderCell>
+                <DataTableHeaderCell>Source</DataTableHeaderCell>
+                <DataTableHeaderCell>Description</DataTableHeaderCell>
+                <DataTableHeaderCell>Status</DataTableHeaderCell>
+                <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                <DataTableHeaderCell>Actions</DataTableHeaderCell>
+              </tr>
+            </DataTableHead>
+            <DataTableBody>
+              {items.map((row) => {
+                const expanded = expandedId === row.id;
+                return (
+                  <Fragment key={row.id}>
+                    <tr
+                      id={`ledger-entry-${row.id}`}
+                      className={cn(
+                        row.id === focusId
+                          ? "bg-primary/5 hover:bg-muted/20"
+                          : "hover:bg-muted/20",
+                        journalEntryRowClassName(row.status),
+                      )}
+                    >
+                      <DataTableCell>
+                        <button
+                          type="button"
+                          className="rounded p-1 text-muted-foreground hover:text-foreground"
+                          aria-expanded={expanded}
+                          aria-label={
+                            expanded ? "Collapse entry" : "Expand entry"
+                          }
+                          onClick={() =>
+                            onExpandedIdChange((current) =>
+                              current === row.id ? null : row.id,
+                            )
+                          }
+                        >
+                          {expanded ? (
+                            <ChevronDown className="size-4" />
+                          ) : (
+                            <ChevronRight className="size-4" />
+                          )}
+                        </button>
+                      </DataTableCell>
+                      <DataTableCell>
+                        {formatTrDate(row.entry_date)}
+                      </DataTableCell>
+                      <DataTableCell>
+                        {ledgerRowSourceLabel(
+                          row.source,
+                          row.reverses_entry_id,
+                        )}
+                      </DataTableCell>
+                      <DataTableCell>{row.description}</DataTableCell>
+                      <DataTableCell>
+                        <StatusBadge status={row.status} />
+                      </DataTableCell>
+                      <DataTableCell align="right" className="tabular-nums">
+                        {formatTry(entryTotalKurus(row.lines))}
+                      </DataTableCell>
+                      <DataTableCell align="right">
+                        <GlEntryActions
+                          row={row}
+                          onGenericEdit={() =>
+                            onCorrectTarget({
+                              id: row.id,
+                              entry_date: row.entry_date,
+                              description: row.description,
+                              source: row.source,
+                              lines: row.lines,
+                            })
+                          }
+                          onSaved={onSaved}
+                        />
+                      </DataTableCell>
                     </tr>
-                  )}
-                </Fragment>
-              );
-            })}
-          </DataTableBody>
-        </DataTable>
-      )}
+                    {expanded && (
+                      <tr>
+                        <td colSpan={7} className="p-0">
+                          <EntryDetailPanel
+                            row={row}
+                            accountLabel={accountLabel}
+                            onNavigateEntry={onNavigateEntry}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </DataTableBody>
+          </DataTable>
+        ))}
     </>
   );
 }

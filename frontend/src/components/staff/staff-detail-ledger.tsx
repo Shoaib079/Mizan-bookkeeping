@@ -7,6 +7,7 @@ import {
   DataTableCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { entityPath } from "@/lib/api";
 import type { GlEditTarget } from "@/components/ledger/gl-edit-dialogs";
 import { editTargetFor } from "@/lib/gl-edit-target";
@@ -15,6 +16,10 @@ import {
   ledgerVoidConfirmDetail,
   staffMovementTypeLabel,
 } from "@/lib/ledger-void-confirm-detail";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate } from "@/lib/money";
 import { extraDaysLabel, salaryPeriodLabel } from "@/lib/staff-ledger-labels";
 import type { StaffDisplayRow } from "@/lib/staff-ledger-display";
@@ -68,6 +73,18 @@ export function StaffDetailLedger({
   onEditTarget,
   onVoidTarget,
 }: Props) {
+  const typeLabel = (group: StaffDisplayRow<StaffLedgerEntry>) => {
+    const entry = group.primary;
+    if (group.isAdvanceOffset) return "Advance applied";
+    return staffMovementLabels[entry.movement_type] ?? entry.movement_type;
+  };
+
+  const descriptionLabel = (group: StaffDisplayRow<StaffLedgerEntry>) => {
+    const entry = group.primary;
+    if (group.isAdvanceOffset) return "Advance applied to salary";
+    return entry.description;
+  };
+
   return (
     <DetailSection title="Ledger">
       <LedgerTable
@@ -86,6 +103,66 @@ export function StaffDetailLedger({
         }
         history={{ hiddenCount, showHistory, onToggle: onToggleHistory }}
         filteredMessage="No current entries in this period — show correction history to see voided rows."
+        mobile={
+          <MobileCardList>
+            {displayRows.map((group) => {
+              const entry = group.primary;
+              const asked = rowActions(entry.journal_entry_id);
+              const type = typeLabel(group);
+              return (
+                <MobileCardRow
+                  key={entry.id}
+                  title={descriptionLabel(group)}
+                  meta={
+                    <>
+                      <span>{type}</span>
+                      <span>·</span>
+                      <span>{formatTrDate(entry.movement_date)}</span>
+                      {salaryPeriodLabel(entry) && (
+                        <span>({salaryPeriodLabel(entry)})</span>
+                      )}
+                      {entry.was_corrected && <EditedBadge />}
+                    </>
+                  }
+                  amount={formatMinorAmount(group.netMinor)}
+                  amountClassName={moneyAmountClassName(group.netMinor)}
+                  leadingIcon={moneyLeadingIcon(group.netMinor)}
+                  trailing={
+                    <SubledgerActionsCell
+                      row={entry}
+                      actions={asked}
+                      opensEditKinds={opensEditKinds}
+                      ownerNoun="employees"
+                      voidConfirmDetail={ledgerVoidConfirmDetail({
+                        date: entry.movement_date,
+                        type: staffMovementTypeLabel(
+                          entry.movement_type,
+                          group.isAdvanceOffset,
+                        ),
+                        amount: formatMinorAmount(group.netMinor),
+                        description: entry.description,
+                      })}
+                      onEdit={(edit) => {
+                        const target = editTargetFor(
+                          edit.kind,
+                          edit.context,
+                          entry.journal_entry_id!,
+                        );
+                        if (target) onEditTarget(target);
+                      }}
+                      onVoid={(voidPath) =>
+                        onVoidTarget({
+                          path: entityPath(entityId, voidPath),
+                          description: entry.description,
+                        })
+                      }
+                    />
+                  }
+                />
+              );
+            })}
+          </MobileCardList>
+        }
       >
         {displayRows.map((group) => {
           const entry = group.primary;
@@ -99,10 +176,7 @@ export function StaffDetailLedger({
                 {formatTrDate(entry.movement_date)}
               </DataTableCell>
               <DataTableCell>
-                {group.isAdvanceOffset
-                  ? "Advance applied"
-                  : (staffMovementLabels[entry.movement_type] ??
-                    entry.movement_type)}
+                {typeLabel(group)}
                 {!group.isAdvanceOffset && salaryPeriodLabel(entry) && (
                   <span className="ml-1 text-muted-foreground">
                     ({salaryPeriodLabel(entry)})
@@ -115,9 +189,7 @@ export function StaffDetailLedger({
                 )}
               </DataTableCell>
               <DataTableCell>
-                {group.isAdvanceOffset
-                  ? "Advance applied to salary"
-                  : entry.description}
+                {descriptionLabel(group)}
                 {group.advanceAppliedMinor > 0 && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     {group.isAdvanceOffset

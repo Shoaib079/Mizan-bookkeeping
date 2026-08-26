@@ -355,7 +355,7 @@ describe("page archetypes", () => {
       );
     }
 
-    expect(sourceDeclaring("SupplierActivityPanel")).toMatch(
+    expect(sourceDeclaring("SupplierActivityTable")).toMatch(
       /<DataTableHeaderCell align="right">\s*Actions/,
     );
   });
@@ -454,6 +454,16 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
 });
 
 describe("mobile: detail pages", () => {
+  it("LedgerTable owns the mobile breakpoint, so ledgers never fork it", () => {
+    // Same contract as ListPage: the archetype owns `useIsMobileShell` and the
+    // `mobile` slot. A ledger that forks the breakpoint is how phone views
+    // drift apart again.
+    const source = sourceDeclaring("LedgerColumn");
+    expect(source).toContain("useIsMobileShell");
+    expect(source).toContain("mobile?: React.ReactNode");
+    expect(source).toContain("isMobile && mobile");
+  });
+
   it("LedgerTable counts its actions column when deciding to scroll", () => {
     // The partner ledger declares five columns and renders six — hasActions
     // adds one. Counting declared columns only is exactly how it slipped past

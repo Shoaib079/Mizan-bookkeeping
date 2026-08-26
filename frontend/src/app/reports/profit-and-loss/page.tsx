@@ -5,29 +5,23 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { isForbiddenError } from "@/components/reports/forbidden-message";
+import { ReportAccountRows } from "@/components/reports/report-account-rows";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
 import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry } from "@/lib/money";
 import type { ProfitAndLossRead, ReportSource } from "@/lib/report-types";
 import { reportDownloadQuery } from "@/lib/report-download-query";
 import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
 function ProfitAndLossContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange, queryString } = useReportRangeFromUrl();
   const [report, setReport] = useState<ProfitAndLossRead | null>(null);
   const [view, setView] = useState<ReportSource>("as_closed");
@@ -125,52 +119,34 @@ function ProfitAndLossContent() {
       >
         {report && (
           <div className="space-y-6">
-          {revenue.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-sm font-semibold">Revenue</h2>
-              <AccountTable rows={revenue} />
-            </section>
-          )}
+            {revenue.length > 0 && (
+              <section>
+                <h2 className="mb-2 text-sm font-semibold">Revenue</h2>
+                <ReportAccountRows
+                  rows={revenue}
+                  amountHeader="Amount"
+                  typeLabel="Revenue"
+                  isMobile={isMobile}
+                />
+              </section>
+            )}
 
-          {expenses.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-sm font-semibold">Expenses</h2>
-              <AccountTable rows={expenses} />
-            </section>
-          )}
+            {expenses.length > 0 && (
+              <section>
+                <h2 className="mb-2 text-sm font-semibold">Expenses</h2>
+                <ReportAccountRows
+                  rows={expenses}
+                  amountHeader="Amount"
+                  typeLabel="Expense"
+                  isMobile={isMobile}
+                  forceOut
+                />
+              </section>
+            )}
           </div>
         )}
       </ReportPage>
     </AppShell>
-  );
-}
-
-function AccountTable({
-  rows,
-}: {
-  rows: ProfitAndLossRead["accounts"];
-}) {
-  return (
-    <DataTable>
-      <DataTableHead>
-        <tr>
-          <DataTableHeaderCell>Code</DataTableHeaderCell>
-          <DataTableHeaderCell>Account</DataTableHeaderCell>
-          <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-        </tr>
-      </DataTableHead>
-      <DataTableBody>
-        {rows.map((row) => (
-          <DataTableRow key={row.account_id}>
-            <DataTableCell className="font-mono text-xs">{row.code}</DataTableCell>
-            <DataTableCell>{row.name_en}</DataTableCell>
-            <DataTableCell align="right" className="tabular-nums">
-              {formatTry(row.amount_kurus)}
-            </DataTableCell>
-          </DataTableRow>
-        ))}
-      </DataTableBody>
-    </DataTable>
   );
 }
 

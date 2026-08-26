@@ -11,6 +11,7 @@ import {
   DataTableCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { entityPath } from "@/lib/api";
 import type { GlEditTarget } from "@/components/ledger/gl-edit-dialogs";
 import { editTargetFor } from "@/lib/gl-edit-target";
@@ -19,6 +20,10 @@ import {
   ledgerVoidConfirmDetail,
   partnerMovementTypeLabel,
 } from "@/lib/ledger-void-confirm-detail";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { formatPartnerNetBalance } from "@/lib/partner-balance";
 import {
@@ -88,6 +93,66 @@ export function PartnerDetailLedger({
             onChange={onLedgerFilterChange}
             ariaLabel="Filter ledger by movement"
           />
+        }
+        mobile={
+          <MobileCardList>
+            {bands.flatMap((band) =>
+              band.rows.map((entry) => {
+                const asked = rowActions(entry.journal_entry_id);
+                const type = partnerMovementTypeLabel(
+                  entry.movement_type,
+                  band.title,
+                );
+                return (
+                  <MobileCardRow
+                    key={entry.id}
+                    title={entry.description}
+                    meta={
+                      <>
+                        <span>{type}</span>
+                        <span>·</span>
+                        <span>{formatTrDate(entry.movement_date)}</span>
+                        {band.title && <span>{band.title}</span>}
+                        {entry.was_corrected && <EditedBadge />}
+                      </>
+                    }
+                    amount={formatTry(entry.amount_kurus)}
+                    amountClassName={moneyAmountClassName(entry.amount_kurus)}
+                    leadingIcon={moneyLeadingIcon(entry.amount_kurus)}
+                    trailing={
+                      <SubledgerActionsCell
+                        row={entry}
+                        actions={asked}
+                        opensEditKinds={opensEditKinds}
+                        ownerNoun="partners"
+                        voidConfirmDetail={ledgerVoidConfirmDetail({
+                          date: entry.movement_date,
+                          type,
+                          amount: formatTry(entry.amount_kurus),
+                          description: entry.description,
+                        })}
+                        onEdit={(edit) =>
+                          onEditTarget(
+                            editTargetFor(
+                              edit.kind,
+                              edit.context,
+                              entry.journal_entry_id!,
+                            )!,
+                          )
+                        }
+                        onVoid={(voidPath) =>
+                          onVoidTarget({
+                            path: entityPath(entityId, voidPath),
+                            description: entry.description,
+                          })
+                        }
+                      />
+                    }
+                  />
+                );
+              }),
+            )}
+          </MobileCardList>
         }
       >
         {bands.map((band) => (

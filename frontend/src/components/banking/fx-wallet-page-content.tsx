@@ -6,14 +6,13 @@ import { Coins } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { FxWalletLedgerList } from "@/components/banking/fx-wallet-ledger-list";
 import {
   DetailSection,
   EntityDetailPage,
 } from "@/components/page/entity-detail-page";
 import { MetaFacts } from "@/components/page/page-header";
 import { HeadlineFigure, SummaryPanel } from "@/components/page/summary-panel";
-import { EditedBadge } from "@/components/ledger/corrected-badge";
-import { SubledgerRowActions } from "@/components/ledger/subledger-row-actions";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
 import { FxConversionForm } from "@/components/forms/fx-conversion-form";
@@ -29,14 +28,6 @@ import { FxExpenseSpendForm } from "@/components/forms/fx-expense-spend-form";
 import { FxPurchaseForm } from "@/components/forms/fx-purchase-form";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { apiFetch } from "@/lib/api";
 import type {
   FxBalanceRead,
@@ -45,16 +36,15 @@ import type {
 } from "@/lib/banking-types";
 import { formatFxNative } from "@/lib/fx-money";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
-import { subledgerRowClassName } from "@/lib/ledger-display";
-import { fxLedgerVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { useLedgerHistoryView } from "@/lib/use-ledger-history-view";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
 export function FxWalletPageContent() {
   const params = useParams<{ id: string }>();
   const accountId = params.id;
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange } = useReportRangeFromUrl();
   const [account, setAccount] = useState<MoneyAccountRead | null>(null);
   const [balance, setBalance] = useState<FxBalanceRead | null>(null);
@@ -197,115 +187,14 @@ export function FxWalletPageContent() {
                 No current entries — show correction history to see voided rows.
               </p>
             ) : (
-              <DataTable wide>
-                <DataTableHead>
-                  <tr>
-                    <DataTableHeaderCell>Date</DataTableHeaderCell>
-                    <DataTableHeaderCell>Type</DataTableHeaderCell>
-                    <DataTableHeaderCell>Description</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">
-                      {currency}
-                    </DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">TRY cost</DataTableHeaderCell>
-                    <DataTableHeaderCell>Actions</DataTableHeaderCell>
-                  </tr>
-                </DataTableHead>
-                <DataTableBody>
-                  {visibleRows.map((row) => (
-                    <DataTableRow
-                      key={row.id}
-                      className={subledgerRowClassName(row.display_kind)}
-                    >
-                      <DataTableCell>
-                        {formatTrDate(row.movement_date)}
-                      </DataTableCell>
-                      <DataTableCell>{row.movement_type}</DataTableCell>
-                      <DataTableCell>
-                        {row.description}
-                        {row.was_corrected && (
-                          <span className="ml-2">
-                            <EditedBadge />
-                          </span>
-                        )}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {formatFxNative(
-                          Math.abs(row.native_quantity),
-                          currency,
-                        )}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {formatTry(row.try_cost_kurus)}
-                      </DataTableCell>
-                      <DataTableCell align="right">
-                        {row.movement_type === "spend" &&
-                          row.journal_source &&
-                          row.journal_source !== "fx_purchase" && (
-                            <SubledgerRowActions
-                              row={row}
-                              voidConfirmDetail={fxLedgerVoidConfirmDetail({
-                                movement_date: row.movement_date,
-                                movement_type: row.movement_type,
-                                native_quantity: row.native_quantity,
-                                currency,
-                                description: row.description,
-                              })}
-                              onEdit={() =>
-                                setCorrectSpend({
-                                  journal_entry_id: row.journal_entry_id,
-                                  movement_date: row.movement_date,
-                                  movement_type: row.movement_type,
-                                  native_quantity: row.native_quantity,
-                                  try_cost_kurus: row.try_cost_kurus,
-                                  description: row.description,
-                                  journal_source: row.journal_source,
-                                  fx_money_account_id: row.fx_money_account_id,
-                                })
-                              }
-                              onVoid={() =>
-                                setVoidTarget({
-                                  journal_entry_id: row.journal_entry_id,
-                                  description: row.description,
-                                  kind: "ledger",
-                                })
-                              }
-                            />
-                          )}
-                        {row.movement_type === "purchase" && (
-                          <SubledgerRowActions
-                            row={row}
-                            voidConfirmDetail={fxLedgerVoidConfirmDetail({
-                              movement_date: row.movement_date,
-                              movement_type: row.movement_type,
-                              native_quantity: row.native_quantity,
-                              currency,
-                              description: row.description,
-                            })}
-                            onEdit={() =>
-                              setCorrectPurchase({
-                                journal_entry_id: row.journal_entry_id,
-                                movement_date: row.movement_date,
-                                native_quantity: row.native_quantity,
-                                try_cost_kurus: row.try_cost_kurus,
-                                description: row.description,
-                                try_cash_money_account_id:
-                                  row.try_cash_money_account_id,
-                              })
-                            }
-                            onVoid={() =>
-                              setVoidTarget({
-                                journal_entry_id: row.journal_entry_id,
-                                description: row.description,
-                                kind: "purchase",
-                              })
-                            }
-                          />
-                        )}
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
+              <FxWalletLedgerList
+                rows={visibleRows}
+                currency={currency}
+                isMobile={isMobile}
+                onCorrectPurchase={setCorrectPurchase}
+                onCorrectSpend={setCorrectSpend}
+                onVoid={setVoidTarget}
+              />
             )}
           </DetailSection>
         )

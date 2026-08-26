@@ -10,17 +10,10 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
+import { BankReconciliationLines } from "@/components/reports/bank-reconciliation-lines";
 import { isForbiddenError } from "@/components/reports/forbidden-message";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
@@ -34,6 +27,7 @@ import type {
   BankReconciliationAccount,
   BankReconciliationRead,
 } from "@/lib/report-types";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
 
@@ -41,10 +35,12 @@ function AccountCard({
   account,
   entityId,
   onSaved,
+  isMobile,
 }: {
   account: BankReconciliationAccount;
   entityId: string;
   onSaved: () => void;
+  isMobile: boolean;
 }) {
   const submitIdempotency = useSubmitIdempotency();
   const [balanceText, setBalanceText] = useState("");
@@ -193,47 +189,14 @@ function AccountCard({
           </div>
         )}
 
-      {account.lines.length > 0 && (
-        <div className="mt-4">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-medium">Lines still to review</h3>
-            <Link
-              href="/review/bank"
-              className="text-sm text-primary hover:underline"
-            >
-              Review them →
-            </Link>
-          </div>
-          <DataTable>
-            <DataTableHead>
-              <tr>
-                <DataTableHeaderCell>Date</DataTableHeaderCell>
-                <DataTableHeaderCell>Description</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-              </tr>
-            </DataTableHead>
-            <DataTableBody>
-              {account.lines.map((line) => (
-                <DataTableRow key={line.id}>
-                  <DataTableCell>
-                    {formatTrDate(line.transaction_date)}
-                  </DataTableCell>
-                  <DataTableCell>{line.description}</DataTableCell>
-                  <DataTableCell align="right" className="tabular-nums">
-                    {formatTry(line.amount_kurus)}
-                  </DataTableCell>
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        </div>
-      )}
+      <BankReconciliationLines lines={account.lines} isMobile={isMobile} />
     </section>
   );
 }
 
 function BankReconciliationContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const [report, setReport] = useState<BankReconciliationRead | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,6 +278,7 @@ function BankReconciliationContent() {
                   key={account.money_account_id}
                   account={account}
                   entityId={entityId ?? ""}
+                  isMobile={isMobile}
                   onSaved={() => void reload()}
                 />
               ))}

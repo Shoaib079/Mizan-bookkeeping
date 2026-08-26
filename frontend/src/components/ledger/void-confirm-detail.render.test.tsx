@@ -150,11 +150,24 @@ describe("void confirm detail on mobile sheet", () => {
 });
 
 describe("void confirm detail mutation guard", () => {
-  it("mutation: drop expenseVoidConfirmDetail on expenses panel fails", () => {
-    const src = sourceDeclaring("ExpensesReviewPanel");
-    expect(src).toContain("expenseVoidConfirmDetail");
-    expect(src).toContain("voidConfirmDetail={expenseVoidConfirmDetail(row)}");
-    const broken = src.replace("voidConfirmDetail={expenseVoidConfirmDetail(row)}", "");
-    expect(broken).not.toContain("voidConfirmDetail={expenseVoidConfirmDetail(row)}");
+  it("mutation: drop expenseVoidConfirmDetail on expenses list surfaces fails", () => {
+    // Table and mobile cards both own the void wiring after the panel split.
+    for (const name of [
+      "ExpensesReviewTable",
+      "ExpensesReviewMobileCards",
+    ] as const) {
+      const src = sourceDeclaring(name);
+      expect(src, name).toContain("expenseVoidConfirmDetail");
+      expect(src, name).toContain(
+        "voidConfirmDetail={expenseVoidConfirmDetail(row)}",
+      );
+      const broken = src.replace(
+        "voidConfirmDetail={expenseVoidConfirmDetail(row)}",
+        "",
+      );
+      expect(broken).not.toContain(
+        "voidConfirmDetail={expenseVoidConfirmDetail(row)}",
+      );
+    }
   });
 });

@@ -6,24 +6,20 @@
  * it. Banks are included: Bank reconciliation tells you *that* the books and the
  * statement disagree, this tells you *where*. */
 
-import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { isForbiddenError } from "@/components/reports/forbidden-message";
+import {
+  CashBookCountHistory,
+  CashBookMovements,
+  CashBookSourceTotals,
+} from "@/components/reports/cash-book-tables";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { AppShell } from "@/components/layout/app-shell";
 import { ReportPage } from "@/components/page/report-page";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { Combobox } from "@/components/ui/combobox";
 import { DownloadMenu } from "@/components/ui/download-menu";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Wallet } from "lucide-react";
 import { apiDownload, apiFetch, triggerBlobDownload } from "@/lib/api";
@@ -31,12 +27,13 @@ import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
 import type { CashBookRead } from "@/lib/report-types";
-import { ledgerEntryHref, sourceLabel } from "@/lib/transaction-registry";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 import { cn } from "@/lib/utils";
 
 function CashBookContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange, queryString } = useReportRangeFromUrl();
   const [accounts, setAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [accountId, setAccountId] = useState("");
@@ -216,100 +213,16 @@ function CashBookContent() {
             )}
           </section>
 
-          {report.source_totals.length > 0 && (
-            <section>
-              <h2 className="mb-2 text-sm font-semibold">Where it came from and went</h2>
-              <DataTable wide>
-                <DataTableHead>
-                  <tr>
-                    <DataTableHeaderCell>Recorded as</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Entries</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">In</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Out</DataTableHeaderCell>
-                  </tr>
-                </DataTableHead>
-                <DataTableBody>
-                  {report.source_totals.map((total) => (
-                    <DataTableRow key={total.source}>
-                      <DataTableCell>{sourceLabel(total.source)}</DataTableCell>
-                      <DataTableCell align="right">{total.entry_count}</DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {total.in_kurus ? formatTry(total.in_kurus) : "—"}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {total.out_kurus ? formatTry(total.out_kurus) : "—"}
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
-            </section>
-          )}
+          <CashBookSourceTotals
+            totals={report.source_totals}
+            isMobile={isMobile}
+          />
 
-          {report.counts.length > 0 && (
-            <section>
-              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
-                <h2 className="text-sm font-semibold">Count history</h2>
-                <p className="text-xs text-muted-foreground">
-                  {report.counts.length} count
-                  {report.counts.length === 1 ? "" : "s"} ·{" "}
-                  {report.counts.filter((c) => c.over_short_kurus === 0).length}{" "}
-                  matched exactly · net{" "}
-                  <span
-                    className={cn(
-                      "font-medium tabular-nums",
-                      netCounted > 0 && "text-warning",
-                      netCounted < 0 && "text-destructive",
-                    )}
-                  >
-                    {formatTry(netCounted)}
-                  </span>
-                </p>
-              </div>
-              <DataTable wide>
-                <DataTableHead>
-                  <tr>
-                    <DataTableHeaderCell>Date</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Should be</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Counted</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Difference</DataTableHeaderCell>
-                  </tr>
-                </DataTableHead>
-                <DataTableBody>
-                  {report.counts.map((count) => (
-                    <DataTableRow key={count.session_date}>
-                      <DataTableCell>
-                        {formatTrDate(count.session_date)}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {formatTry(count.expected_kurus)}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {formatTry(count.counted_kurus)}
-                      </DataTableCell>
-                      <DataTableCell
-                        align="right"
-                        className={cn(
-                          "tabular-nums",
-                          count.over_short_kurus === 0 && "text-muted-foreground",
-                          count.over_short_kurus > 0 && "text-warning",
-                          count.over_short_kurus < 0 && "text-destructive",
-                        )}
-                      >
-                        {count.over_short_kurus === 0
-                          ? "—"
-                          : `${count.over_short_kurus > 0 ? "+" : ""}${formatTry(count.over_short_kurus)}`}
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
-              <p className="mt-2 text-xs text-muted-foreground">
-                One short day is noise; the same drawer short repeatedly is a
-                pattern worth looking into.
-              </p>
-            </section>
-          )}
+          <CashBookCountHistory
+            counts={report.counts}
+            netCounted={netCounted}
+            isMobile={isMobile}
+          />
 
           <section>
             <h2 className="mb-2 text-sm font-semibold">Every movement</h2>
@@ -320,48 +233,10 @@ function CashBookContent() {
                 hint="Widen the date range, or pick another account."
               />
             ) : (
-              <DataTable wide>
-                <DataTableHead>
-                  <tr>
-                    <DataTableHeaderCell>Date</DataTableHeaderCell>
-                    <DataTableHeaderCell>What</DataTableHeaderCell>
-                    <DataTableHeaderCell>Recorded as</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">In</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Out</DataTableHeaderCell>
-                    <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
-                  </tr>
-                </DataTableHead>
-                <DataTableBody>
-                  {movementsNewestFirst.map((row, index) => (
-                    <DataTableRow key={`${row.journal_entry_id}-${index}`}>
-                      <DataTableCell>{formatTrDate(row.entry_date)}</DataTableCell>
-                      <DataTableCell>
-                        <Link
-                          href={ledgerEntryHref(row.journal_entry_id)}
-                          className="hover:underline"
-                        >
-                          {row.description}
-                        </Link>
-                      </DataTableCell>
-                      <DataTableCell className="text-muted-foreground">
-                        {sourceLabel(row.source)}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {row.in_kurus ? formatTry(row.in_kurus) : ""}
-                      </DataTableCell>
-                      <DataTableCell align="right" className="tabular-nums">
-                        {row.out_kurus ? formatTry(row.out_kurus) : ""}
-                      </DataTableCell>
-                      <DataTableCell
-                        align="right"
-                        className="tabular-nums text-muted-foreground"
-                      >
-                        {formatTry(row.balance_kurus)}
-                      </DataTableCell>
-                    </DataTableRow>
-                  ))}
-                </DataTableBody>
-              </DataTable>
+              <CashBookMovements
+                rows={movementsNewestFirst}
+                isMobile={isMobile}
+              />
             )}
           </section>
         </div>

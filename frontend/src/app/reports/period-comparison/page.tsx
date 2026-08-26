@@ -5,17 +5,10 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { isForbiddenError } from "@/components/reports/forbidden-message";
+import { PeriodComparisonMetricsTable } from "@/components/reports/period-comparison-tables";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
 import { apiFetch } from "@/lib/api";
 import {
@@ -25,18 +18,14 @@ import {
   type PriorPeriodMode,
 } from "@/lib/prior-period";
 import { useEntity } from "@/lib/entity-context";
-import { formatTrDate, formatTry } from "@/lib/money";
+import { formatTrDate } from "@/lib/money";
 import type { PeriodComparisonRead } from "@/lib/report-types";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
-
-function formatChangePercent(value: number | null): string {
-  if (value === null) return "—";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(2)}%`;
-}
 
 function PeriodComparisonContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange, queryString } = useReportRangeFromUrl();
   const [priorMode, setPriorMode] = useState<PriorPeriodMode>("auto");
 
@@ -136,47 +125,19 @@ function PeriodComparisonContent() {
           />
         }
       >
-
-      {report && (
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Current: {formatTrDate(report.current_from)} –{" "}
-            {formatTrDate(report.current_to)} · Prior:{" "}
-            {formatTrDate(report.prior_from)} – {formatTrDate(report.prior_to)}
-          </p>
-
-          <DataTable>
-            <DataTableHead>
-              <tr>
-                <DataTableHeaderCell>Metric</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Current</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Prior</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Change</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">%</DataTableHeaderCell>
-              </tr>
-            </DataTableHead>
-            <DataTableBody>
-              {report.metrics.map((row) => (
-                <DataTableRow key={row.key}>
-                  <DataTableCell>{row.label}</DataTableCell>
-                  <DataTableCell align="right" className="tabular-nums">
-                    {formatTry(row.current_kurus)}
-                  </DataTableCell>
-                  <DataTableCell align="right" className="tabular-nums">
-                    {formatTry(row.prior_kurus)}
-                  </DataTableCell>
-                  <DataTableCell align="right" className="tabular-nums">
-                    {formatTry(row.change_kurus)}
-                  </DataTableCell>
-                  <DataTableCell align="right" className="tabular-nums">
-                    {formatChangePercent(row.change_percent)}
-                  </DataTableCell>
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        </div>
-      )}
+        {report && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Current: {formatTrDate(report.current_from)} –{" "}
+              {formatTrDate(report.current_to)} · Prior:{" "}
+              {formatTrDate(report.prior_from)} – {formatTrDate(report.prior_to)}
+            </p>
+            <PeriodComparisonMetricsTable
+              metrics={report.metrics}
+              isMobile={isMobile}
+            />
+          </div>
+        )}
       </ReportPage>
     </AppShell>
   );

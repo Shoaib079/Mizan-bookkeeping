@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-27
+
+- **Mobile card tables (`v0.mobile-card-tables`).** On phone, money tables fork to shared `MobileCardList` / `MobileCardRow` (type · date, description, signed amount + tinted icon). Covers people ledgers (staff/partner/customer via `LedgerTable` `mobile`), supplier activity, expenses review, **all table-backed reports** (cash book, expense register, GL, P&L, balance sheet, cash flow, delivery sales, KDV input, period comparison, bank reconciliation lines), bank account statements/card payments, and FX wallet ledger. Helpers in `mobile-ledger-card.ts`. Month close stays checklist UI (no DataTable). Desktop tables unchanged. No guard/API changes.
+
 ## 2026-08-26
 
 - **Theme system + dark v2 (`v0.theme-system-dark`).** Appearance is Light / Dark / System (default System, stored as `mizan:theme`). Shared preference store + OS `prefers-color-scheme` listener when System is selected. Bootstrap script in root layout avoids a light flash. Fixed dark mode under live v2 by adding `.dark[data-theme="v2"]` surface overrides plus darker tints / brighter icon and accent-bar tokens.

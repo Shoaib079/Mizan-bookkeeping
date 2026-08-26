@@ -12,7 +12,10 @@
  * Deliberately not a data grid. Each ledger keeps its own columns because they
  * genuinely differ — pax and forex on customers, extra days on staff, native
  * quantity on FX. What it owns is the frame: header, empty states, correction
- * history, band rows and the actions column. */
+ * history, band rows and the actions column.
+ *
+ * Owns the mobile breakpoint (same idea as ListPage): pass `mobile` cards so
+ * each ledger does not fork `isMobile ? … : …` on its own. */
 
 import {
   DataTable,
@@ -21,6 +24,7 @@ import {
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
 import { LedgerHistoryToggle } from "@/components/ledger/ledger-history-toggle";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 export type LedgerColumn = {
   key: string;
@@ -32,6 +36,8 @@ type Props = {
   columns: LedgerColumn[];
   /** Rendered inside `<tbody>` — rows, and band headers where a ledger groups. */
   children: React.ReactNode;
+  /** Card list for phones; falls back to the table when omitted. */
+  mobile?: React.ReactNode;
 
   /** True when the ledger has no movements at all. */
   isEmpty?: boolean;
@@ -50,18 +56,14 @@ type Props = {
   controls?: React.ReactNode;
   /** Whether any row can be edited or voided — adds the trailing column. */
   hasActions?: boolean;
-  /** Something the reader has to know before trusting the rows.
-   *
-   * Sits above the table rather than in `controls`, which is for things that
-   * narrow the rows. The one case so far is an actions lookup that failed:
-   * the ledger is correct but every Edit and Void is missing, and without a
-   * word the page just looks broken. */
+  /** Something the reader has to know before trusting the rows. */
   notice?: React.ReactNode;
 };
 
 export function LedgerTable({
   columns,
   children,
+  mobile,
   isEmpty = false,
   isFiltered = false,
   emptyMessage = "No movements yet.",
@@ -71,6 +73,9 @@ export function LedgerTable({
   hasActions = false,
   notice,
 }: Props) {
+  const isMobile = useIsMobileShell();
+  const showMobile = Boolean(isMobile && mobile);
+
   return (
     <>
       {notice}
@@ -91,11 +96,9 @@ export function LedgerTable({
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : isFiltered ? (
         <p className="text-sm text-muted-foreground">{filteredMessage}</p>
+      ) : showMobile ? (
+        mobile
       ) : (
-        // The frame knows its own column count, so it decides rather than
-        // asking every ledger to remember. `hasActions` counts: the partner
-        // ledger declares five columns and renders six, which is exactly how
-        // it slipped past a sweep that counted declared columns only.
         <DataTable wide={columns.length + (hasActions ? 1 : 0) > 5}>
           <DataTableHead>
             <tr>

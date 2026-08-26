@@ -5,27 +5,21 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { isForbiddenError } from "@/components/reports/forbidden-message";
+import { DeliverySalesPlatformTable } from "@/components/reports/delivery-sales-tables";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { ReportPage } from "@/components/page/report-page";
 import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry } from "@/lib/money";
 import type { DeliverySalesReportRead } from "@/lib/report-types";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportRangeFromUrl } from "@/lib/use-report-url";
 
 function DeliverySalesContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange, queryString } = useReportRangeFromUrl();
   const [report, setReport] = useState<DeliverySalesReportRead | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,49 +83,19 @@ function DeliverySalesContent() {
           />
         }
       >
-
-      {report && (
-        <div className="space-y-6">
-          <StatCard
-            label="Total gross"
-            amountKurus={report.total_gross_kurus}
-            className="sm:max-w-xs"
-          />
-
-          {report.platforms.length > 0 ? (
-            <DataTable>
-              <DataTableHead>
-                <tr>
-                  <DataTableHeaderCell>Platform</DataTableHeaderCell>
-                  <DataTableHeaderCell>Status</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
-                  <DataTableHeaderCell align="right">Reports</DataTableHeaderCell>
-                </tr>
-              </DataTableHead>
-              <DataTableBody>
-                {report.platforms.map((row) => (
-                  <DataTableRow key={row.delivery_platform_id}>
-                    <DataTableCell>{row.platform_name}</DataTableCell>
-                    <DataTableCell>
-                      {row.is_active ? "Active" : "Inactive"}
-                    </DataTableCell>
-                    <DataTableCell align="right" className="tabular-nums">
-                      {formatTry(row.gross_kurus)}
-                    </DataTableCell>
-                    <DataTableCell align="right" className="tabular-nums">
-                      {row.report_count}
-                    </DataTableCell>
-                  </DataTableRow>
-                ))}
-              </DataTableBody>
-            </DataTable>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No posted delivery reports in this period.
-            </p>
-          )}
-        </div>
-      )}
+        {report && (
+          <div className="space-y-6">
+            <StatCard
+              label="Total gross"
+              amountKurus={report.total_gross_kurus}
+              className="sm:max-w-xs"
+            />
+            <DeliverySalesPlatformTable
+              platforms={report.platforms}
+              isMobile={isMobile}
+            />
+          </div>
+        )}
       </ReportPage>
     </AppShell>
   );

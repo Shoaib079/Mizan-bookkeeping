@@ -8,21 +8,23 @@ import type { ReactNode } from "react";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { isForbiddenError } from "@/components/reports/forbidden-message";
+import { ReportAccountRows } from "@/components/reports/report-account-rows";
 import { ReportAsOfDate } from "@/components/reports/report-as-of-date";
 import { ReportDownloadMenu } from "@/components/reports/report-download-menu";
 import { AppShell } from "@/components/layout/app-shell";
 import {
-  DataTable,
-  DataTableBody,
   DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardRow } from "@/components/ui/mobile-card-list";
 import { ReportPage } from "@/components/page/report-page";
 import { StatCard } from "@/components/page/stat-card";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTry } from "@/lib/money";
 
 /** Chart code for retained earnings — mirrors the backend default chart. */
@@ -30,10 +32,12 @@ import { RETAINED_EARNINGS_CODE } from "@/lib/account-codes";
 import type { BalanceSheetRead, ReportSource } from "@/lib/report-types";
 import { reportDownloadQuery } from "@/lib/report-download-query";
 import { SealedPeriodBanner } from "@/components/reports/sealed-period-banner";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useReportAsOfFromUrl } from "@/lib/use-report-url";
 
 function BalanceSheetContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { asOf, setAsOf, queryString } = useReportAsOfFromUrl();
   const [report, setReport] = useState<BalanceSheetRead | null>(null);
   const [view, setView] = useState<ReportSource>("as_closed");
@@ -157,41 +161,45 @@ function BalanceSheetContent() {
       >
         {report && (
           <div className="space-y-6">
-          {!report.accounting_equation_balanced && (
-            <p className="text-sm text-destructive">
-              Accounting equation check failed — contact support.
+            {!report.accounting_equation_balanced && (
+              <p className="text-sm text-destructive">
+                Accounting equation check failed — contact support.
+              </p>
+            )}
+
+            <SectionTable
+              title="Assets"
+              typeLabel="Asset"
+              subtotal={report.assets.subtotal_kurus}
+              rows={report.assets.accounts}
+              isMobile={isMobile}
+            />
+            <SectionTable
+              title="Liabilities"
+              typeLabel="Liability"
+              subtotal={report.liabilities.subtotal_kurus}
+              rows={report.liabilities.accounts}
+              isMobile={isMobile}
+            />
+            <SectionTable
+              title="Equity"
+              typeLabel="Equity"
+              subtotal={
+                report.equity.subtotal_kurus +
+                report.equity.unclosed_net_income_kurus
+              }
+              rows={report.equity.accounts}
+              isMobile={isMobile}
+              unclosed={report.equity.unclosed_net_income_kurus}
+              note={retainedEarningsNote}
+            />
+
+            <p className="text-sm text-muted-foreground">
+              Liabilities + equity:{" "}
+              <span className="font-medium tabular-nums text-foreground">
+                {formatTry(report.total_liabilities_and_equity_kurus)}
+              </span>
             </p>
-          )}
-
-          <SectionTable title="Assets" subtotal={report.assets.subtotal_kurus} rows={report.assets.accounts} />
-          <SectionTable title="Liabilities" subtotal={report.liabilities.subtotal_kurus} rows={report.liabilities.accounts} />
-          <SectionTable
-            title="Equity"
-            subtotal={
-              report.equity.subtotal_kurus +
-              report.equity.unclosed_net_income_kurus
-            }
-            rows={report.equity.accounts}
-            extra={
-              report.equity.unclosed_net_income_kurus !== 0 ? (
-                <DataTableRow>
-                  <DataTableCell className="font-mono text-xs">—</DataTableCell>
-                  <DataTableCell>Unclosed net income</DataTableCell>
-                  <DataTableCell align="right" className="tabular-nums">
-                    {formatTry(report.equity.unclosed_net_income_kurus)}
-                  </DataTableCell>
-                </DataTableRow>
-              ) : null
-            }
-            note={retainedEarningsNote}
-          />
-
-          <p className="text-sm text-muted-foreground">
-            Liabilities + equity:{" "}
-            <span className="font-medium tabular-nums text-foreground">
-              {formatTry(report.total_liabilities_and_equity_kurus)}
-            </span>
-          </p>
           </div>
         )}
       </ReportPage>
@@ -201,43 +209,69 @@ function BalanceSheetContent() {
 
 function SectionTable({
   title,
+  typeLabel,
   subtotal,
   rows,
-  extra,
+  isMobile,
+  unclosed = 0,
   note,
 }: {
   title: string;
+  typeLabel: string;
   subtotal: number;
   rows: BalanceSheetRead["assets"]["accounts"];
-  extra?: ReactNode;
-  /** Explains a figure that reads oddly but is correct. */
+  isMobile: boolean;
+  unclosed?: number;
   note?: ReactNode;
 }) {
-  if (rows.length === 0 && !extra) return null;
+  if (rows.length === 0 && unclosed === 0) return null;
+
+  const mapped = rows.map((row) => ({
+    account_id: row.account_id,
+    code: row.code,
+    name_en: row.name_en,
+    amount_kurus: row.balance_kurus,
+  }));
+
+  const extraMobile =
+    unclosed !== 0 ? (
+      <MobileCardRow
+        title="Unclosed net income"
+        meta={
+          <>
+            <span>{typeLabel}</span>
+            <span>·</span>
+            <span className="font-mono text-xs">—</span>
+          </>
+        }
+        amount={formatTry(unclosed)}
+        amountClassName={moneyAmountClassName(unclosed)}
+        leadingIcon={moneyLeadingIcon(unclosed)}
+      />
+    ) : null;
+
+  const extraDesktop =
+    unclosed !== 0 ? (
+      <DataTableRow>
+        <DataTableCell className="font-mono text-xs">—</DataTableCell>
+        <DataTableCell>Unclosed net income</DataTableCell>
+        <DataTableCell align="right" className="tabular-nums">
+          {formatTry(unclosed)}
+        </DataTableCell>
+      </DataTableRow>
+    ) : null;
+
   return (
     <section>
       <h2 className="mb-2 text-sm font-semibold">{title}</h2>
-      <DataTable>
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>Code</DataTableHeaderCell>
-            <DataTableHeaderCell>Account</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Balance</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
-          {rows.map((row) => (
-            <DataTableRow key={row.account_id}>
-              <DataTableCell className="font-mono text-xs">{row.code}</DataTableCell>
-              <DataTableCell>{row.name_en}</DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {formatTry(row.balance_kurus)}
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-          {extra}
-        </DataTableBody>
-      </DataTable>
+      <ReportAccountRows
+        rows={mapped}
+        amountHeader="Balance"
+        typeLabel={typeLabel}
+        isMobile={isMobile}
+        extraMobile={extraMobile}
+        extraDesktop={extraDesktop}
+      />
       <p className="mt-2 text-sm text-muted-foreground">
         Subtotal:{" "}
         <span className="font-medium tabular-nums text-foreground">

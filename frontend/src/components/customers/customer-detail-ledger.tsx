@@ -18,7 +18,12 @@ import {
   DataTableCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { subledgerRowClassName } from "@/lib/ledger-display";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { customerMovementLabels } from "@/lib/subledger-labels";
 
@@ -31,6 +36,10 @@ export type CustomerDetailLedgerProps = {
   onEdit: (target: CustomerLedgerEditTarget) => void;
   onVoid: (target: CustomerLedgerVoidTarget) => void;
 };
+
+function typeLabel(entry: CustomerLedgerEntry): string {
+  return customerMovementLabels[entry.movement_type] ?? entry.movement_type;
+}
 
 export function CustomerDetailLedger({
   entries,
@@ -60,6 +69,37 @@ export function CustomerDetailLedger({
           showHistory,
           onToggle: onToggleHistory,
         }}
+        mobile={
+          <MobileCardList>
+            {visibleRows.map((entry) => (
+              <MobileCardRow
+                key={entry.id}
+                title={entry.description}
+                meta={
+                  <>
+                    <span>{typeLabel(entry)}</span>
+                    <span>·</span>
+                    <span>{formatTrDate(entry.movement_date)}</span>
+                    {formatLedgerGroupMeta(entry) && (
+                      <span>{formatLedgerGroupMeta(entry)}</span>
+                    )}
+                    {entry.was_corrected && <EditedBadge />}
+                  </>
+                }
+                amount={formatTry(entry.amount_kurus)}
+                amountClassName={moneyAmountClassName(entry.amount_kurus)}
+                leadingIcon={moneyLeadingIcon(entry.amount_kurus)}
+                trailing={
+                  <CustomerLedgerRowActions
+                    row={entry}
+                    onEdit={onEdit}
+                    onVoid={onVoid}
+                  />
+                }
+              />
+            ))}
+          </MobileCardList>
+        }
       >
         {visibleRows.map((entry) => (
           <DataTableRow
@@ -69,10 +109,7 @@ export function CustomerDetailLedger({
             <DataTableCell>
               {formatTrDate(entry.movement_date)}
             </DataTableCell>
-            <DataTableCell>
-              {customerMovementLabels[entry.movement_type] ??
-                entry.movement_type}
-            </DataTableCell>
+            <DataTableCell>{typeLabel(entry)}</DataTableCell>
             <DataTableCell>
               {entry.description}
               {entry.was_corrected && (

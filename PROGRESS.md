@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Theme system + dark v2 (`v0.theme-system-dark`):** Light / Dark / System preference (`mizan:theme`); OS listener in System mode; `.dark[data-theme=v2]` restores dark surfaces + tint/icon tokens.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Theme system + dark v2 |
-| **Last tag** | `v0.theme-system-dark` |
+| **Last completed slice** | Mobile card tables (`v0.mobile-card-tables`) |
+| **Last tag** | `v0.mobile-card-tables` |
 | **Unpushed** | no (after push) |
-| **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
-| **Exact next action** | Await next owner slice |
+| **Next up** | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
+| **Exact next action** | Owner picks next slice |
+| **Gate** | Idle |
