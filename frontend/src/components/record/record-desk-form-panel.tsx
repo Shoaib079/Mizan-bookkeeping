@@ -42,7 +42,7 @@ export function RecordDeskFormPanel({
   mobileQuick = false,
 }: Props) {
   const modeId: RecordDeskTileId | null = tile?.id ?? null;
-  const title = tile?.label ?? "Record";
+  const title = tile?.formTitle ?? "Record";
   const hint = tile?.hint ?? "";
   const ActiveIcon = tile?.icon;
 

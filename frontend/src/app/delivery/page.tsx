@@ -101,7 +101,7 @@ export default function DeliveryPage() {
       )}
 
       {recon && recon.platforms.length > 0 && (
-        <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
           {recon.platforms.map((p) => (
             <section
               key={p.delivery_platform_id}

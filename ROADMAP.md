@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Recent transactions Amount/Status right edge** (`v0.recent-tx-align`) |
-| **Last commit/tag**      | `v0.recent-tx-align` |
+| **Last completed slice** | **UX polish 5** (`v0.ux-polish-5`) |
+| **Last commit/tag**      | `v0.ux-polish-5` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| UX polish 5 (record titles, Z CTA, delivery grid, sidebar active, larger tabs)   | `v0.ux-polish-5`                                  | done           | Revert form headers to tile labels; restore "Upload via Record"; single-column delivery cards; weak sidebar active; shrink SectionTabs |
 | Hardening Phase 1 (statement-line release, date filter, assumed-VAT block)       | `b421f30` / `c916458` / `c618a8a` (9 Aug)         | done           | Re-add per-void-site statement reset; re-hide needs-review behind date defaults; strip `assumed_vat` on confirm            |
 | Hardening Phase 3 (production smoke, entity-switch remount, file-size ratchet)   | `6985414` / `79715a3` / `8e79249` (9–10 Aug)      | done           | Re-add per-page `useEntitySwitchReset`; drop `smoke_production.py`; loosen `FILE_SIZE_BASELINE.json`                       |
 | File-size ratchet — export splits (expenses/reports APIs, expenses-review, GL, supplier activity) | `ff493f8` / `ab64050` (21 Aug) | done | Re-inflate those panels/APIs; raise `FILE_SIZE_BASELINE.json` for these paths |
@@ -1932,6 +1933,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | UX polish 5                                     | `v0.ux-polish-5`                                       | Record formTitle; Upload Z report; delivery 2-col; stronger sidebar active; larger SectionTabs |
 | 2026-08-26 | Recent transactions Amount/Status right edge    | `v0.recent-tx-align`                                   | Description absorbs width; Amount/Status text-right at trailing edge |
 | 2026-08-26 | Transfer form cash+bank only                    | `v0.transfer-cash-bank-only`                           | From/To use loadBankAndCashAccounts; no FX/credit_card; filter + TransferForm source guards |
 | 2026-08-26 | Record FX + segments + recent table             | `v0.record-fx-segments`                               | Drop Convert mode; segment active blue/white + inactive gray; recent table fixed cols Date/Type/Description/Amount/Status |

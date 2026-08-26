@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Recent transactions Amount/Status right edge (`v0.recent-tx-align`):** Description absorbs width; Amount/Status right-aligned at trailing edge.
+- **UX polish 5 (`v0.ux-polish-5`):** Record formTitle; Upload Z report; delivery 2-col desktop; stronger sidebar active; larger SectionTabs.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Recent transactions Amount/Status right edge |
-| **Last tag** | `v0.recent-tx-align` |
+| **Last completed slice** | UX polish 5 |
+| **Last tag** | `v0.ux-polish-5` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

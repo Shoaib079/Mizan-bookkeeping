@@ -182,7 +182,7 @@ export function SalesReviewPanel({
           {showCreate && (
             <Link href="/record">
               <Button type="button" variant="secondary">
-                Upload via Record
+                Upload Z report
               </Button>
             </Link>
           )}

@@ -52,6 +52,19 @@ describe("Record desk v3 tiles", () => {
     expect(panel).toContain("min-w-0 flex-1");
     expect(panel).not.toContain("lg:max-w-2xl");
   });
+
+  it("uses formTitle distinct from the tile label for form headers", () => {
+    const tiles = sourceDeclaring("RECORD_DESK_TILES");
+    const panel = sourceDeclaring("RecordDeskFormPanel");
+    expect(tiles).toContain('formTitle: "Record Sale"');
+    expect(tiles).toContain('formTitle: "Record Expense"');
+    expect(tiles).toContain('formTitle: "Record Payment"');
+    expect(tiles).toContain('formTitle: "Record Transfer"');
+    expect(tiles).toContain('formTitle: "Record Split"');
+    expect(tiles).toContain('formTitle: "Record FX"');
+    expect(panel).toContain("tile?.formTitle");
+    expect(panel).not.toContain("tile?.label");
+  });
 });
 
 describe("Record payment panel", () => {

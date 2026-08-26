@@ -30,6 +30,8 @@ export type RecordDeskTileId =
 export type RecordDeskTile = {
   id: RecordDeskTileId;
   label: string;
+  /** Form panel H2 — distinct from the tile label to avoid duplicate chrome. */
+  formTitle: string;
   hint: string;
   icon: LucideIcon;
   tint: IconTint;
@@ -43,6 +45,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "sales",
     label: "Sale",
+    formTitle: "Record Sale",
     hint: "POS totals when you do not have a Z photo.",
     icon: Banknote,
     tint: "mint",
@@ -52,6 +55,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "expense",
     label: "Expense",
+    formTitle: "Record Expense",
     hint: "Cash or partner paid — bank and card on the statement.",
     icon: ShoppingCart,
     tint: "blush",
@@ -61,6 +65,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "payment",
     label: "Payment",
+    formTitle: "Record Payment",
     hint: "Staff, supplier, or customer — cash at the till; bank on the statement.",
     icon: CreditCard,
     tint: "mint",
@@ -70,6 +75,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "transfer",
     label: "Transfer",
+    formTitle: "Record Transfer",
     hint: "Move money between bank and cash accounts.",
     icon: ArrowLeftRight,
     tint: "sky",
@@ -79,6 +85,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "split",
     label: "Split",
+    formTitle: "Record Split",
     hint: "Peel a personal share onto a partner from a posted expense.",
     icon: Split,
     tint: "sand",
@@ -88,6 +95,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "fx",
     label: "FX",
+    formTitle: "Record FX",
     hint: "",
     icon: Globe,
     tint: "gray",
@@ -97,6 +105,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "addDocument",
     label: "Upload",
+    formTitle: "Upload document",
     hint: "Receipts, statements, invoices, Z reports — auto-routed.",
     icon: Upload,
     tint: "sky",
@@ -106,6 +115,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "countCash",
     label: "Count cash",
+    formTitle: "Count cash",
     hint: "Count notes and compare to the books — does not post.",
     icon: Calculator,
     tint: "sand",
@@ -115,10 +125,11 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "closeDay",
     label: "Close day",
+    formTitle: "Close day",
     hint: "Post over/short, lock the day, optionally send cash elsewhere.",
     icon: CalendarCheck,
     tint: "mint",
     stroke: "green",
     actionKey: "closeDay",
   },
-] as const;
+];
