@@ -97,4 +97,16 @@ describe("AppShell mobile shell (C4)", () => {
     expect(aside).toContain("w-[12.5rem]");
     expect(aside).not.toContain("w-60");
   });
+
+  it("keeps desktop main from scrolling horizontally", () => {
+    const text = source();
+    const desktop = text.slice(text.lastIndexOf("  return ("));
+    expect(desktop).toMatch(
+      /<main[\s\S]*?min-w-0[\s\S]*?overflow-x-hidden/,
+    );
+    const start = text.indexOf("if (isMobile) {");
+    const end = text.indexOf("\n  return (", start + 1);
+    const mobileBranch = text.slice(start, end);
+    expect(mobileBranch).not.toContain("overflow-x-hidden");
+  });
 });

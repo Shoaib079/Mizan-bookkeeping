@@ -243,7 +243,7 @@ function AppShellInner({
         </header>
         <main
           ref={mainRef}
-          className="flex-1 overflow-y-auto overscroll-contain p-6"
+          className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-6"
           key={entityId}
         >
           {mainChrome}

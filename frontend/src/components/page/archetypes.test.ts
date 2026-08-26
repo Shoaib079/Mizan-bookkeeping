@@ -385,6 +385,20 @@ describe("mobile: the tab bar must not cover what pages pin to the bottom", () =
     expect(source).not.toContain("sticky bottom-0");
   });
 
+  it("FormPage default is max-w-4xl; wide and full fill the main column", () => {
+    const source = sourceDeclaring("FormPage");
+    const widths = source.slice(
+      source.indexOf("const WIDTHS"),
+      source.indexOf("} as const;", source.indexOf("const WIDTHS")) +
+        "} as const;".length,
+    );
+    expect(widths).toContain('default: "w-full max-w-4xl"');
+    expect(widths).toContain('wide: "w-full"');
+    expect(widths).toContain('full: "w-full"');
+    expect(widths).not.toContain("max-w-2xl");
+    expect(widths).not.toContain("max-w-5xl");
+  });
+
   it("everything pinned to the bottom clears the tabs by the same amount", () => {
     // Two hand-written copies of a number that has to agree is how they stop
     // agreeing. All three now come from one file.

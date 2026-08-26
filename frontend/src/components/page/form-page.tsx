@@ -7,9 +7,8 @@
  * every other card in the app uses) and their own idea of where Save lives —
  * some at the bottom of a long scroll, some per-section.
  *
- * The width is capped: a form field stretched across a wide monitor is harder
- * to read, not easier, and every one of these pages had already capped itself
- * at a different value. */
+ * Default width is capped at max-w-4xl so fields stay readable on wide
+ * monitors; `wide` / `full` fill the main column for two-column setup. */
 
 import { PageHeader } from "@/components/page/page-header";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
@@ -30,7 +29,7 @@ type Props = {
   /** Save/cancel, pinned to the bottom of the viewport while editing. */
   saveBar?: React.ReactNode;
 
-  /** Forms read better narrow; `wide` is for two-column setup screens. */
+  /** Default stays readable under max-w-4xl; `wide`/`full` fill the main column. */
   width?: "default" | "wide" | "full";
   loading?: boolean;
   error?: string | null;
@@ -38,9 +37,9 @@ type Props = {
 };
 
 const WIDTHS = {
-  default: "max-w-2xl",
-  wide: "max-w-5xl",
-  full: "",
+  default: "w-full max-w-4xl",
+  wide: "w-full",
+  full: "w-full",
 } as const;
 
 export function FormPage({

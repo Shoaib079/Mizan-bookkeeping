@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Sidebar width** (`v0.sidebar-narrow`) |
-| **Last commit/tag**      | `v0.sidebar-narrow` |
+| **Last completed slice** | **App responsive** (`v0.app-responsive`) |
+| **Last commit/tag**      | `v0.app-responsive` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | App responsive                                  | `v0.app-responsive`                                    | FormPage max-w-2xl→max-w-4xl; wide/full fill main; desktop main min-w-0 + overflow-x-hidden; DataTable wide scroll unchanged |
 | 2026-08-26 | Sidebar width                                   | `v0.sidebar-narrow`                                    | Desktop aside w-60→w-[12.5rem] (200px); icons/labels/items unchanged |
 | 2026-08-26 | Record form width                               | `v0.record-form-width`                                | Icon rail lg:w-64→lg:w-48; drop form max-w-2xl so embedded forms fill remaining width |
 | 2026-08-26 | FX form Convert + polish                        | `v0.fx-form-convert`                                   | Unified FX: Buy/Sell/Convert/Spend; drop subtitle; Amount (currency) + rate + You will receive; dynamic wallets kept |

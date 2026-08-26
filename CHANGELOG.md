@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **App responsive (`v0.app-responsive`).** FormPage default width raised to `max-w-4xl`; `wide`/`full` fill the main column. Desktop AppShell `<main>` gets `min-w-0 overflow-x-hidden` so wide tables scroll inside the card, not the page. Mobile shell and DataTable `wide` min-width unchanged. Vitest + eslint + tsc + next build + ratchet + pytest green.
+
 - **Sidebar width (`v0.sidebar-narrow`).** Desktop shell sidebar narrowed from `w-60` (~240px) to `w-[12.5rem]` (200px). Icons, labels, logo, and nav items unchanged — main content gains the freed width. Vitest + eslint + tsc + next build + ratchet + pytest green.
 
 - **Record form width (`v0.record-form-width`).** Narrowed Record icon rail from `lg:w-64` (~256px) to `lg:w-48` (~192px) and removed `lg:max-w-2xl` on the form panel so Split/Sale/Expense/Payment/Transfer/FX fill remaining width without cutting amount fields. Vitest + eslint + tsc + next build + ratchet + pytest green.
