@@ -11,7 +11,7 @@ const SAMPLE_PAGES: { label: string; source: () => string; titleHint: string }[]
   [
     {
       label: "dashboard v1",
-      source: () => sourceDeclaring("HomePage"),
+      source: () => sourceDeclaring("DashboardHomeContent"),
       titleHint: "Dashboard",
     },
     {

@@ -35,25 +35,24 @@ vi.mock("@/lib/use-entity-access", () => ({
   }),
 }));
 
-vi.mock("@/components/quick-actions", () => ({
-  useQuickActions: () => ({ deliveryEnabled: false }),
-}));
-
 vi.mock("@/components/onboarding-checklist", () => ({
   OnboardingChecklist: () => null,
 }));
 
 vi.mock("@/components/balances/balances-overview", () => ({
-  BalancesOverview: () => <div data-testid="fake-right-now">Right now</div>,
+  BalancesOverview: () => <div data-testid="fake-balances">Balances</div>,
 }));
 
-vi.mock("@/components/dashboard/weekly-chart", () => ({
-  WeeklyChart: () => (
-    <div>
-      <p data-testid="weekly-chart-period-caption">This month</p>
-    </div>
+vi.mock("@/components/dashboard/dashboard-monthly-sales", () => ({
+  DashboardMonthlySales: () => (
+    <div data-testid="dashboard-monthly-sales">Monthly sales</div>
   ),
-  chartStatusForRefresh: "loading" as const,
+}));
+
+vi.mock("@/components/dashboard/dashboard-top-expenses", () => ({
+  DashboardTopExpenses: () => (
+    <div data-testid="dashboard-top-expenses">Top expenses</div>
+  ),
 }));
 
 vi.mock("@/components/layout/app-shell", () => ({
@@ -81,7 +80,14 @@ function dashPayload() {
     cash_in_hand_kurus: 100_000,
     bank_balance_kurus: 50_000,
     cash_accounts: [],
-    sales: { total_sales_kurus: 0 },
+    sales: {
+      cash_sales_kurus: 0,
+      pos_card_sales_kurus: 0,
+      delivery_sales_kurus: 0,
+      group_sales_kurus: 0,
+      other_sales_kurus: 0,
+      total_sales_kurus: 0,
+    },
     delivery_balance_left: [],
     confirmed_invoice_drafts: 0,
   };
@@ -97,7 +103,9 @@ beforeEach(() => {
   applyVisualTheme();
   apiFetch.mockImplementation(async (path: string) => {
     if (String(path).includes("/dashboard?")) return dashPayload();
-    if (String(path).includes("/time-series")) return { daily: [] };
+    if (String(path).includes("/expense-register")) {
+      return { account_totals: [], rows: [], total_kurus: 0, entry_count: 0 };
+    }
     if (String(path).includes("/banking/accounts/tree")) {
       return {
         banks: { accounts: [], balance_kurus: 0 },
@@ -111,7 +119,7 @@ beforeEach(() => {
 });
 
 describe("v2-only dashboard", () => {
-  it("greeting without date; no This period; Cash & bank + chart caption", async () => {
+  it("greeting without date; no This period; Cash & bank + monthly sales", async () => {
     expect(document.documentElement.getAttribute("data-theme")).toBe(
       THEME_V2_ATTR,
     );
@@ -127,27 +135,18 @@ describe("v2-only dashboard", () => {
     expect(screen.queryByTestId("report-date-range")).toBeNull();
     expect(screen.queryByRole("heading", { name: "Dashboard" })).toBeNull();
     expect(screen.getByTestId("cash-bank-snapshot-card")).toBeTruthy();
-    expect(screen.getByTestId("fake-right-now")).toBeTruthy();
-    expect(screen.getByTestId("weekly-chart-period-caption").textContent).toBe(
-      "This month",
-    );
+    expect(screen.getByTestId("fake-balances")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-monthly-sales")).toBeTruthy();
+    expect(screen.queryByTestId("weekly-chart-period-caption")).toBeNull();
   });
 
   it("mutation: dashboard old v1 PageHeader path → red; restore → green", () => {
-    const page = sourceDeclaring("HomePage");
+    const page = sourceDeclaring("DashboardHomeContent");
     expect(page).toContain("DashboardV2Header");
     expect(page).toMatch(
       /replaceHeader=\{\s*<DashboardV2Header[\s\S]*?\/>\s*\}/,
     );
-    expect(page).not.toContain("useNewLookTheme");
-    expect(page).not.toContain("ThemeV2Only");
-    expect(page).not.toContain("v2Dashboard");
-    // Simulated regression: conditional back to v1 PageHeader
-    const regressed = page.replace(
-      /replaceHeader=\{\s*<DashboardV2Header[\s\S]*?\/>\s*\}/,
-      "replaceHeader={undefined}",
-    );
-    expect(regressed).toContain("replaceHeader={undefined}");
-    expect(page).not.toContain("replaceHeader={undefined}");
+    expect(page).toContain('title="Dashboard"');
+    expect(page).toContain("replaceHeader");
   });
 });

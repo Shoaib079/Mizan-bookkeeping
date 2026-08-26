@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-08-26
+
+- **Dashboard v3 layout (`v0.dashboard-v3`).** Desktop home: (1) Cash & bank static (`interactive={false}` on CashBankSnapshotCard); (2) compact Balances via StatCard + drill-in links; (3) this-month Cash / Card / Total StatCards with MoM trends from a second dashboard fetch (same dates last month); (4) top 5 expense accounts from expense-register. Removed WeeklyChart, delivery balance, and invoice callouts from the dashboard. Split into `dashboard-home-content` + monthly-sales + top-expenses helpers. No sidebar changes; no API path changes. Vitest 1472 + eslint 0 + tsc + next build + ratchet + pytest green.
+
 ## 2026-08-25
 
 - **ESLint unused-var cleanup.** Dropped unused `formatFxNative` / `formatTry` imports in `use-customer-payment-form`; removed dead partner net/capital/unpaid state in `use-people-record-dialog` (never returned). Lint 0 warnings; vitest green. No behavior change.

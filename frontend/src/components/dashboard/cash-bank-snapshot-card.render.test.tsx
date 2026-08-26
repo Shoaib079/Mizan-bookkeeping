@@ -195,8 +195,25 @@ describe("CashBankSnapshotCard", () => {
   });
 
   it("HomePage mounts CashBankSnapshotCard", () => {
-    const page = sourceDeclaring("HomePage");
+    const page = sourceDeclaring("DashboardHomeContent");
     expect(page).toContain("CashBankSnapshotCard");
     expect(page).toContain('data-layout="as-of-cash"');
+    expect(page).toContain("interactive={false}");
+  });
+
+  it("interactive=false renders plain text subtotals (no links)", () => {
+    render(
+      <CashBankSnapshotCard
+        cashKurus={140_000}
+        bankKurus={25_000}
+        cashAccounts={[
+          { id: "c1", name: "Main Drawer", balance_kurus: 100_000 },
+        ]}
+        interactive={false}
+      />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("Main Drawer")).toBeTruthy();
+    expect(screen.getByText("Book balances as of today.")).toBeTruthy();
   });
 });

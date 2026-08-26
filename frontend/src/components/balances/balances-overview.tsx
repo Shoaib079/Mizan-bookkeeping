@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { StatCard } from "@/components/page/stat-card";
 import {
   IconSquare,
   type IconStroke,
@@ -133,9 +134,11 @@ function staffHint(
 type Props = {
   /** When embedded on the dashboard, omit the page intro (section heading lives above). */
   embedded?: boolean;
+  /** Compact StatCards with drill-in links (dashboard v3). */
+  compact?: boolean;
 };
 
-export function BalancesOverview({ embedded = false }: Props) {
+export function BalancesOverview({ embedded = false, compact = false }: Props) {
   const { entityId } = useEntity();
   const payables = useSupplierBalances(entityId ?? "");
   const receivables = useCustomerBalances(entityId ?? "");
@@ -211,68 +214,148 @@ export function BalancesOverview({ embedded = false }: Props) {
           are on the dashboard Cash & bank card. Open any card for detail.
         </p>
       )}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <BalanceCard
-          href="/suppliers"
-          title="Payables"
-          hint={payablesDisplay.hint}
-          icon={Receipt}
-          amount={formatTry(payablesDisplay.amountKurus)}
-          figureTone={payablesDisplay.tone}
-          loading={payables.loading}
-          accent="green"
-          tint="mint"
-          stroke="green"
-        />
-        <BalanceCard
-          href="/customers"
-          title="Receivables"
-          hint={receivablesDisplay.hint}
-          icon={HandCoins}
-          amount={formatTry(receivablesDisplay.amountKurus)}
-          figureTone={receivablesDisplay.tone}
-          loading={receivables.loading}
-          accent="red"
-          tint="blush"
-          stroke="red"
-        />
-        <BalanceCard
-          href="/banking/fx"
-          title="Foreign currency"
-          hint="Held as FX (not converted to ₺ here) — open Banking → FX"
-          icon={Coins}
-          amount={fxNativeSummary}
-          figureTone="ink"
-          loading={fxLoading}
-          accent="blue"
-          tint="sky"
-          stroke="blue"
-        />
-        <BalanceCard
-          href="/staff"
-          title="Staff balances"
-          hint={staffCaption}
-          icon={Users}
-          amount={staff.amountLabel}
-          figureTone={staffTone}
-          loading={staff.loading}
-          accent={staffAccent}
-          tint={staffTint}
-          stroke={staffStroke}
-        />
-        <BalanceCard
-          href="/partners"
-          title="Partner balances"
-          hint={partnersDisplay.hint}
-          icon={Banknote}
-          amount={formatTry(partnersDisplay.amountKurus)}
-          figureTone={partnersDisplay.tone}
-          loading={partners.loading}
-          accent={partners.totalKurus > 0 ? "green" : "gray"}
-          tint={partners.totalKurus > 0 ? "mint" : "gray"}
-          stroke={partners.totalKurus > 0 ? "green" : "gray"}
-        />
-      </div>
+      {compact ? (
+        <div
+          data-testid="balances-overview-compact"
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        >
+          <StatCard
+            href="/suppliers"
+            label="Payables"
+            icon={Receipt}
+            amountKurus={payablesDisplay.amountKurus}
+            caption={payablesDisplay.hint}
+            tone={payablesDisplay.tone === "you_owe" ? "good" : payablesDisplay.tone === "they_owe" ? "bad" : "default"}
+            figureClassName={OVERVIEW_FIGURE_CLASS[payablesDisplay.tone]}
+            iconTint="mint"
+            iconStroke="green"
+          />
+          <StatCard
+            href="/customers"
+            label="Receivables"
+            icon={HandCoins}
+            amountKurus={receivablesDisplay.amountKurus}
+            caption={receivablesDisplay.hint}
+            tone={
+              receivablesDisplay.tone === "they_owe"
+                ? "bad"
+                : receivablesDisplay.tone === "you_owe"
+                  ? "good"
+                  : "default"
+            }
+            figureClassName={OVERVIEW_FIGURE_CLASS[receivablesDisplay.tone]}
+            iconTint="blush"
+            iconStroke="red"
+          />
+          <StatCard
+            href="/banking/fx"
+            label="FX"
+            icon={Coins}
+            value={fxLoading ? "…" : fxNativeSummary}
+            caption="Held as FX — open Banking → FX"
+            figureClassName={OVERVIEW_FIGURE_CLASS.ink}
+            iconTint="sky"
+            iconStroke="blue"
+          />
+          <StatCard
+            href="/staff"
+            label="Staff"
+            icon={Users}
+            value={staff.loading ? "…" : staff.amountLabel}
+            caption={staffCaption}
+            tone={
+              staffTone === "you_owe"
+                ? "good"
+                : staffTone === "they_owe"
+                  ? "bad"
+                  : "default"
+            }
+            figureClassName={OVERVIEW_FIGURE_CLASS[staffTone]}
+            iconTint={staffTint}
+            iconStroke={staffStroke}
+          />
+          <StatCard
+            href="/partners"
+            label="Partners"
+            icon={Banknote}
+            amountKurus={partnersDisplay.amountKurus}
+            caption={partnersDisplay.hint}
+            tone={
+              partnersDisplay.tone === "you_owe"
+                ? "good"
+                : partnersDisplay.tone === "they_owe"
+                  ? "bad"
+                  : "default"
+            }
+            figureClassName={OVERVIEW_FIGURE_CLASS[partnersDisplay.tone]}
+            iconTint={partners.totalKurus > 0 ? "mint" : "gray"}
+            iconStroke={partners.totalKurus > 0 ? "green" : "gray"}
+          />
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <BalanceCard
+            href="/suppliers"
+            title="Payables"
+            hint={payablesDisplay.hint}
+            icon={Receipt}
+            amount={formatTry(payablesDisplay.amountKurus)}
+            figureTone={payablesDisplay.tone}
+            loading={payables.loading}
+            accent="green"
+            tint="mint"
+            stroke="green"
+          />
+          <BalanceCard
+            href="/customers"
+            title="Receivables"
+            hint={receivablesDisplay.hint}
+            icon={HandCoins}
+            amount={formatTry(receivablesDisplay.amountKurus)}
+            figureTone={receivablesDisplay.tone}
+            loading={receivables.loading}
+            accent="red"
+            tint="blush"
+            stroke="red"
+          />
+          <BalanceCard
+            href="/banking/fx"
+            title="Foreign currency"
+            hint="Held as FX (not converted to ₺ here) — open Banking → FX"
+            icon={Coins}
+            amount={fxNativeSummary}
+            figureTone="ink"
+            loading={fxLoading}
+            accent="blue"
+            tint="sky"
+            stroke="blue"
+          />
+          <BalanceCard
+            href="/staff"
+            title="Staff balances"
+            hint={staffCaption}
+            icon={Users}
+            amount={staff.amountLabel}
+            figureTone={staffTone}
+            loading={staff.loading}
+            accent={staffAccent}
+            tint={staffTint}
+            stroke={staffStroke}
+          />
+          <BalanceCard
+            href="/partners"
+            title="Partner balances"
+            hint={partnersDisplay.hint}
+            icon={Banknote}
+            amount={formatTry(partnersDisplay.amountKurus)}
+            figureTone={partnersDisplay.tone}
+            loading={partners.loading}
+            accent={partners.totalKurus > 0 ? "green" : "gray"}
+            tint={partners.totalKurus > 0 ? "mint" : "gray"}
+            stroke={partners.totalKurus > 0 ? "green" : "gray"}
+          />
+        </div>
+      )}
     </>
   );
 }

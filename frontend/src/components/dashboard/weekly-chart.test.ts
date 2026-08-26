@@ -122,34 +122,11 @@ describe("buildWeeklyChartData", () => {
 });
 
 describe("dashboard weekly chart wiring", () => {
-  it("imports WeeklyChart (not DailyTrendChart)", () => {
-    const source = sourceDeclaring("HomePage");
-    expect(source).toContain("WeeklyChart");
-    expect(source).not.toContain("DailyTrendChart");
-  });
-
-  it("tracks time-series fetch status separately", () => {
-    const source = sourceDeclaring("HomePage");
-    expect(source).toContain("timeSeriesStatus");
-    expect(source).toContain('setTimeSeriesStatus("loaded")');
-    expect(source).toContain('setTimeSeriesStatus("error")');
-  });
-
-  it("warns on time-series failure instead of swallowing", () => {
-    const source = sourceDeclaring("HomePage");
-    expect(source).toContain('console.warn("Failed to load trend data:"');
-    expect(source).not.toContain(".catch(() => null)");
-  });
-
-  it("always renders WeeklyChart when canReadFinancialReports (not gated on data length)", () => {
-    const source = sourceDeclaring("HomePage");
-    expect(source).toContain("canReadFinancialReports && (");
-    expect(source).toContain("status={timeSeriesStatus}");
-    expect(source).not.toContain("timeSeries.daily.length > 0");
-  });
-
-  it("gates weekly chart behind canReadFinancialReports", () => {
-    const source = sourceDeclaring("HomePage");
-    expect(source).toContain("canReadFinancialReports");
+  it("WeeklyChart stays available but is not on the home dashboard", () => {
+    expect(typeof WeeklyChart).toBe("function");
+    const home = sourceDeclaring("DashboardHomeContent");
+    expect(home).not.toContain("WeeklyChart");
+    expect(home).not.toContain("timeSeriesStatus");
+    expect(home).toContain("DashboardMonthlySales");
   });
 });

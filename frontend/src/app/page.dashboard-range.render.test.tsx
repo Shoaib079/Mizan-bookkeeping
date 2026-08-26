@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 /**
- * Dashboard is as-of-only: no Apply/range UI; Cash & bank + chart MTD caption.
+ * Dashboard is as-of-only: no Apply/range UI; Cash & bank + monthly sales + top expenses.
  */
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -35,27 +35,26 @@ vi.mock("@/lib/use-entity-access", () => ({
   }),
 }));
 
-vi.mock("@/components/quick-actions", () => ({
-  useQuickActions: () => ({ deliveryEnabled: false }),
-}));
-
 vi.mock("@/components/onboarding-checklist", () => ({
   OnboardingChecklist: () => null,
 }));
 
 vi.mock("@/components/balances/balances-overview", () => ({
   BalancesOverview: () => (
-    <div data-testid="fake-right-now">Right now</div>
+    <div data-testid="fake-balances">Balances</div>
   ),
 }));
 
-vi.mock("@/components/dashboard/weekly-chart", () => ({
-  WeeklyChart: () => (
-    <div>
-      <p data-testid="weekly-chart-period-caption">This month</p>
-    </div>
+vi.mock("@/components/dashboard/dashboard-monthly-sales", () => ({
+  DashboardMonthlySales: () => (
+    <div data-testid="dashboard-monthly-sales">Monthly sales</div>
   ),
-  chartStatusForRefresh: "loading" as const,
+}));
+
+vi.mock("@/components/dashboard/dashboard-top-expenses", () => ({
+  DashboardTopExpenses: () => (
+    <div data-testid="dashboard-top-expenses">Top expenses</div>
+  ),
 }));
 
 vi.mock("@/components/layout/app-shell", () => ({
@@ -81,7 +80,14 @@ function dashPayload() {
     cash_in_hand_kurus: 100_000,
     bank_balance_kurus: 50_000,
     cash_accounts: [],
-    sales: { total_sales_kurus: 2_000_000 },
+    sales: {
+      cash_sales_kurus: 800_000,
+      pos_card_sales_kurus: 1_000_000,
+      delivery_sales_kurus: 0,
+      group_sales_kurus: 0,
+      other_sales_kurus: 0,
+      total_sales_kurus: 2_000_000,
+    },
     delivery_balance_left: [],
     confirmed_invoice_drafts: 0,
   };
@@ -104,8 +110,8 @@ beforeEach(() => {
     if (String(path).includes("/dashboard?")) {
       return dashPayload();
     }
-    if (String(path).includes("/time-series")) {
-      return { daily: [] };
+    if (String(path).includes("/expense-register")) {
+      return { account_totals: [], rows: [], total_kurus: 0, entry_count: 0 };
     }
     if (String(path).includes("/banking/accounts/tree")) {
       return emptyTree;
@@ -115,7 +121,7 @@ beforeEach(() => {
 });
 
 describe("dashboard as-of home", () => {
-  it("v1: Cash & bank present; This period and range controls ABSENT; chart caption", async () => {
+  it("Cash & bank present; This period and range controls ABSENT; monthly sales + top expenses", async () => {
     render(<HomePage />);
 
     await waitFor(() => {
@@ -128,10 +134,10 @@ describe("dashboard as-of home", () => {
     expect(screen.getByTestId("dashboard-kpi-row").getAttribute("data-layout")).toBe(
       "as-of-cash",
     );
-    expect(screen.getByTestId("fake-right-now")).toBeTruthy();
-    expect(screen.getByTestId("weekly-chart-period-caption").textContent).toBe(
-      "This month",
-    );
+    expect(screen.getByTestId("fake-balances")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-monthly-sales")).toBeTruthy();
+    expect(screen.getByTestId("dashboard-top-expenses")).toBeTruthy();
+    expect(screen.queryByTestId("weekly-chart-period-caption")).toBeNull();
 
     await waitFor(() => {
       expect(apiFetch.mock.calls.some((c) => String(c[0]).includes("/dashboard?"))).toBe(

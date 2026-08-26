@@ -28,6 +28,8 @@ type Props = {
   cashKurus: number;
   bankKurus: number;
   cashAccounts?: CashAccountBalance[];
+  /** When false, names and subtotals are display-only (no links). */
+  interactive?: boolean;
 };
 
 /** Shared column header + account-row rhythm (cash and bank match). */
@@ -43,11 +45,32 @@ function SubtotalRow({
   label,
   amountKurus,
   href,
+  interactive,
 }: {
   label: string;
   amountKurus: number;
   href: string;
+  interactive: boolean;
 }) {
+  const amount = (
+    <span className="text-sm font-semibold tabular-nums">
+      {formatTry(amountKurus)}
+    </span>
+  );
+  if (!interactive) {
+    return (
+      <div className="flex items-baseline justify-between gap-3">
+        <span
+          data-testid="cash-bank-subtotal-label"
+          data-label={label}
+          className="text-[13px] font-bold text-ink-soft"
+        >
+          {label}
+        </span>
+        {amount}
+      </div>
+    );
+  }
   return (
     <div className="flex items-baseline justify-between gap-3">
       <Link
@@ -72,6 +95,7 @@ export function CashBankSnapshotCard({
   cashKurus,
   bankKurus,
   cashAccounts = [],
+  interactive = true,
 }: Props) {
   const { entityId } = useEntity();
   const [bankAccounts, setBankAccounts] = useState<
@@ -167,12 +191,18 @@ export function CashBankSnapshotCard({
                   data-drawer-name={account.name}
                   className={ACCOUNT_ROW}
                 >
-                  <Link
-                    href={`/banking/accounts/${account.id}`}
-                    className="truncate text-sm font-medium text-primary hover:underline"
-                  >
-                    {account.name}
-                  </Link>
+                  {interactive ? (
+                    <Link
+                      href={`/banking/accounts/${account.id}`}
+                      className="truncate text-sm font-medium text-primary hover:underline"
+                    >
+                      {account.name}
+                    </Link>
+                  ) : (
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {account.name}
+                    </span>
+                  )}
                   <span className="shrink-0 tabular-nums text-sm font-semibold">
                     {formatTry(account.balance_kurus)}
                   </span>
@@ -185,6 +215,7 @@ export function CashBankSnapshotCard({
               label="Cash"
               amountKurus={cashKurus}
               href="/banking/cash"
+              interactive={interactive}
             />
           </div>
         </div>
@@ -215,6 +246,7 @@ export function CashBankSnapshotCard({
           <BankAccountBalanceRows
             accounts={bankAccounts}
             variant="compact"
+            interactive={interactive}
             className={cn("flex-1 border-t border-border/80")}
           />
           <div className="mt-auto border-t border-border/80 pt-1">
@@ -222,13 +254,16 @@ export function CashBankSnapshotCard({
               label="Banks"
               amountKurus={bankKurus}
               href="/banking/banks"
+              interactive={interactive}
             />
           </div>
         </div>
       </div>
 
       <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-        Book balances — open an account for statements and reconciliation.
+        {interactive
+          ? "Book balances — open an account for statements and reconciliation."
+          : "Book balances as of today."}
       </p>
     </div>
   );

@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceDeclaringAll } from "@/test-support/source";
 
-const source = () => sourceDeclaring("HomePage");
+const source = () =>
+  sourceDeclaringAll("HomePage", "DashboardHomeContent");
 
 describe("dashboard is status-only (recording lives on Add)", () => {
   it("does not show recent entries or daily recording shortcuts", () => {
@@ -20,6 +21,8 @@ describe("dashboard is status-only (recording lives on Add)", () => {
     expect(src).toContain("CashBankSnapshotCard");
     expect(src).toContain('data-layout="as-of-cash"');
     expect(src).toContain("<BalancesOverview");
-    expect(src).toContain("<WeeklyChart");
+    expect(src).toContain("DashboardMonthlySales");
+    expect(src).toContain("DashboardTopExpenses");
+    expect(src).not.toContain("<WeeklyChart");
   });
 });

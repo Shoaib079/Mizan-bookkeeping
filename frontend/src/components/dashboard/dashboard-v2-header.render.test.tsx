@@ -67,7 +67,7 @@ describe("dashboard header via OverviewPage", () => {
 
 describe("dashboard header wiring (source)", () => {
   it("HomePage always wires DashboardV2Header (no ThemeV2Only / v2Dashboard)", () => {
-    const page = sourceDeclaring("HomePage");
+    const page = sourceDeclaring("DashboardHomeContent");
     const overview = sourceDeclaring("OverviewPage");
     expect(page).toContain('title="Dashboard"');
     expect(page).toContain("replaceHeader=");
@@ -82,7 +82,7 @@ describe("dashboard header wiring (source)", () => {
   });
 
   it("mutation: old v1 header branch / ThemeV2Only gate returns → red", () => {
-    const page = sourceDeclaring("HomePage");
+    const page = sourceDeclaring("DashboardHomeContent");
     expect(page).toMatch(
       /replaceHeader=\{\s*<DashboardV2Header[\s\S]*?\/>\s*\}/,
     );

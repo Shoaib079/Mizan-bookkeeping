@@ -64,10 +64,10 @@ describe("ReportDateRange mobile vs desktop", () => {
 
 describe("dashboard no longer owns Apply/range", () => {
   it("HomePage pins MTD internally; no range UI or This period", () => {
-    const page = sourceDeclaring("HomePage");
+    const page = sourceDeclaring("DashboardHomeContent");
     expect(page).toContain("currentMonthRange()");
     expect(page).toContain("dashboard?from=${from}&to=${to}");
-    expect(page).toContain("[entityId]");
+    expect(page).toContain("[entityId, canReadFinancialReports]");
     expect(page).not.toContain('label="This period"');
     expect(page).not.toContain("net_result_kurus");
     expect(page).not.toContain("periodProps");

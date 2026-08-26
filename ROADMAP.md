@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Design guards — headings, colors, components** (`v0.design-guards`) |
-| **Last commit/tag**      | `v0.design-guards` |
+| **Last completed slice** | **Dashboard v3 layout** (`v0.dashboard-v3`) |
+| **Last commit/tag**      | `v0.dashboard-v3` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.

@@ -125,7 +125,7 @@ describe("page archetypes", () => {
   it("the dashboard uses OverviewPage, not the tile grid", () => {
     // Slice 4. §4b exists because the dashboard is KPI cards + charts + recent
     // entries; forcing it into HubPage would be the drift the archetypes stop.
-    const dashboard = sourceDeclaring("HomePage");
+    const dashboard = sourceDeclaring("DashboardHomeContent");
     expect(dashboard).toContain("<OverviewPage");
     expect(dashboard).not.toContain("<HubPage");
     expect(dashboard.includes("<h1"), "dashboard draws its own title").toBe(
