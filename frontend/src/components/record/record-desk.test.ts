@@ -39,6 +39,15 @@ describe("Record desk v3 tiles", () => {
   it("uses a three-column icon grid", () => {
     expect(sourceDeclaring("RecordDeskIconGrid")).toContain("grid-cols-3");
   });
+
+  it("keeps the icon rail narrow so the form fills remaining width", () => {
+    const grid = sourceDeclaring("RecordDeskIconGrid");
+    const panel = sourceDeclaring("RecordDeskFormPanel");
+    expect(grid).toContain("lg:w-48");
+    expect(grid).not.toContain("lg:w-64");
+    expect(panel).toContain("min-w-0 flex-1");
+    expect(panel).not.toContain("lg:max-w-2xl");
+  });
 });
 
 describe("Record payment panel", () => {

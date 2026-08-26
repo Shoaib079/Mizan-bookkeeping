@@ -47,7 +47,7 @@ export function RecordDeskFormPanel({
   const ActiveIcon = tile?.icon;
 
   return (
-    <section className={cn("min-w-0 flex-1", !mobileQuick && "lg:max-w-2xl")}>
+    <section className="min-w-0 flex-1">
       <div
         className={cn(
           "rounded-lg border border-border bg-card shadow-sm",
