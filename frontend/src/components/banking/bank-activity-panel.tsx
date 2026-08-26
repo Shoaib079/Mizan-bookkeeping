@@ -13,11 +13,17 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { apiFetch } from "@/lib/api";
 import type { BankActivityRead, BankActivityRow } from "@/lib/banking-types";
 import { currentMonthRange } from "@/lib/date-range";
 import { useEntity } from "@/lib/entity-context";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -27,6 +33,7 @@ type Props = {
 
 export function BankActivityPanel({ accountId, accountName }: Props) {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const [range, setRange] = useState(currentMonthRange);
   const [data, setData] = useState<BankActivityRead | null>(null);
   const [loading, setLoading] = useState(false);
@@ -118,30 +125,69 @@ export function BankActivityPanel({ accountId, accountName }: Props) {
             </div>
           </dl>
 
-          <DataTable wide>
-            <DataTableHead>
-              <tr>
-                <DataTableHeaderCell>Date</DataTableHeaderCell>
-                <DataTableHeaderCell>Type</DataTableHeaderCell>
-                <DataTableHeaderCell>Detail</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Book balance</DataTableHeaderCell>
-              </tr>
-            </DataTableHead>
-            <DataTableBody>
+          {isMobile ? (
+            <MobileCardList>
               {data.rows.map((row, idx) => (
-                <ActivityRow key={`${row.movement_kind}-${row.movement_date}-${idx}`} row={row} />
+                <ActivityCard
+                  key={`${row.movement_kind}-${row.movement_date}-${idx}`}
+                  row={row}
+                />
               ))}
-            </DataTableBody>
-          </DataTable>
+            </MobileCardList>
+          ) : (
+            <DataTable wide>
+              <DataTableHead>
+                <tr>
+                  <DataTableHeaderCell>Date</DataTableHeaderCell>
+                  <DataTableHeaderCell>Type</DataTableHeaderCell>
+                  <DataTableHeaderCell>Detail</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+                  <DataTableHeaderCell align="right">
+                    Book balance
+                  </DataTableHeaderCell>
+                </tr>
+              </DataTableHead>
+              <DataTableBody>
+                {data.rows.map((row, idx) => (
+                  <ActivityRow
+                    key={`${row.movement_kind}-${row.movement_date}-${idx}`}
+                    row={row}
+                  />
+                ))}
+              </DataTableBody>
+            </DataTable>
+          )}
         </>
       )}
     </section>
   );
 }
 
+function ActivityCard({ row }: { row: BankActivityRow }) {
+  const signed = row.amount_kurus;
+  return (
+    <MobileCardRow
+      title={row.detail}
+      meta={
+        <>
+          <span>{row.movement_label}</span>
+          <span>·</span>
+          <span>{formatTrDate(row.movement_date)}</span>
+        </>
+      }
+      amount={signed === null ? "—" : formatTry(signed)}
+      amountNote={formatTry(row.balance_kurus)}
+      amountClassName={
+        signed !== null ? moneyAmountClassName(signed) : undefined
+      }
+      leadingIcon={signed !== null ? moneyLeadingIcon(signed) : undefined}
+    />
+  );
+}
+
 function ActivityRow({ row }: { row: BankActivityRow }) {
-  const isSummary = row.movement_kind === "opening" || row.movement_kind === "closing";
+  const isSummary =
+    row.movement_kind === "opening" || row.movement_kind === "closing";
   const amount =
     row.amount_kurus === null ? "—" : formatTry(row.amount_kurus);
 
@@ -149,7 +195,9 @@ function ActivityRow({ row }: { row: BankActivityRow }) {
     <DataTableRow
       className={cn(
         isSummary && "bg-muted/30 font-medium",
-        !row.affects_balance && row.movement_kind === "statement_line" && "opacity-70",
+        !row.affects_balance &&
+          row.movement_kind === "statement_line" &&
+          "opacity-70",
       )}
     >
       <DataTableCell>{formatTrDate(row.movement_date)}</DataTableCell>

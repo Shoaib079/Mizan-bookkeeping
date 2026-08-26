@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-27
 
+- **Mobile UX gaps (`v0.mobile-ux-gaps`).** More menu: Review (always, with badge) + Split; Filter list + “Search the app…” opens command palette; top-bar Search on tab roots. Phone cards for bank activity (incl. book balance), statement lines ledger, delivery reports/settlements/commissions, split lists, cash sessions, FX hub ledger, expense items, team members, sealed-month / year-end tables. Review SectionTabs horizontal scroll tray. Desktop unchanged.
+
 - **Card clearing mobile cards (`v0.cards-mobile-cards`).** `/cards` card sales batches and POS settlements fork to `MobileCardList` on phone (CreditCard / Landmark icons, type · date · status, void trailing). Desktop DataTables unchanged.
 
 - **Mobile UX fixes (`v0.mobile-ux-fixes`).** Bottom tabs are Home · Sales · Record · Banking · More (Review removed from the bar; Sales active on `/sales` and `/sales/*`). More menu is one flat list (Delivery, Customers, Suppliers, Staff, Partners, Cards, Reports, Settings) with a Search filter — Money In/Out/Held/Understand section headers removed.

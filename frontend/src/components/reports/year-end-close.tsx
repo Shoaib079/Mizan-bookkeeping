@@ -22,11 +22,17 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { useToast } from "@/lib/toast";
 import { apiFetch } from "@/lib/api";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
 import type { YearEndPreviewRead } from "@/lib/report-types";
 import { closableYears, yearEndSummary } from "@/lib/month-close";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +43,7 @@ type Props = {
 
 export function YearEndClose({ entityId, isOwner }: Props) {
   const { toast } = useToast();
+  const isMobile = useIsMobileShell();
   const submitIdempotency = useSubmitIdempotency();
   const years = useMemo(() => closableYears(new Date()), []);
   const [year, setYear] = useState(years[0] ?? new Date().getFullYear() - 1);
@@ -165,28 +172,47 @@ export function YearEndClose({ entityId, isOwner }: Props) {
                   {preview.lines.length === 1 ? "" : "s"} will be zeroed
                 </summary>
                 <div className="mt-2">
-                  <DataTable>
-                    <DataTableHead>
-                      <tr>
-                        <DataTableHeaderCell>Account</DataTableHeaderCell>
-                        <DataTableHeaderCell align="right">
-                          Balance
-                        </DataTableHeaderCell>
-                      </tr>
-                    </DataTableHead>
-                    <DataTableBody>
+                  {isMobile ? (
+                    <MobileCardList>
                       {preview.lines.map((line) => (
-                        <DataTableRow key={line.account_id}>
-                          <DataTableCell>
-                            {line.code} — {line.name}
-                          </DataTableCell>
-                          <DataTableCell align="right" className="tabular-nums">
-                            {formatTry(line.balance_kurus)}
-                          </DataTableCell>
-                        </DataTableRow>
+                        <MobileCardRow
+                          key={line.account_id}
+                          title={`${line.code} — ${line.name}`}
+                          amount={formatTry(line.balance_kurus)}
+                          amountClassName={moneyAmountClassName(
+                            line.balance_kurus,
+                          )}
+                          leadingIcon={moneyLeadingIcon(line.balance_kurus)}
+                        />
                       ))}
-                    </DataTableBody>
-                  </DataTable>
+                    </MobileCardList>
+                  ) : (
+                    <DataTable>
+                      <DataTableHead>
+                        <tr>
+                          <DataTableHeaderCell>Account</DataTableHeaderCell>
+                          <DataTableHeaderCell align="right">
+                            Balance
+                          </DataTableHeaderCell>
+                        </tr>
+                      </DataTableHead>
+                      <DataTableBody>
+                        {preview.lines.map((line) => (
+                          <DataTableRow key={line.account_id}>
+                            <DataTableCell>
+                              {line.code} — {line.name}
+                            </DataTableCell>
+                            <DataTableCell
+                              align="right"
+                              className="tabular-nums"
+                            >
+                              {formatTry(line.balance_kurus)}
+                            </DataTableCell>
+                          </DataTableRow>
+                        ))}
+                      </DataTableBody>
+                    </DataTable>
+                  )}
                 </div>
               </details>
             </>

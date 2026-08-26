@@ -15,8 +15,14 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 export type CashDrawerSessionsPanelProps = {
   sessions: CashDrawerSessionRead[];
@@ -37,36 +43,77 @@ export function CashDrawerSessionsPanel({
   onOpenReopen,
   onCloseDrawer,
 }: CashDrawerSessionsPanelProps) {
+  const isMobile = useIsMobileShell();
+
   if (sessions.length === 0) return null;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <section>
         <h2 className="mb-3 text-sm font-semibold">Drawer sessions</h2>
-        <div className="space-y-2">
-          {sessions.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`flex w-full items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-muted/50 ${
-                selectedId === s.id ? "bg-muted/50" : ""
-              }`}
-              onClick={() => onSelect(s.id)}
-            >
-              <div>
-                <p className="text-sm font-medium">
-                  {formatTrDate(s.session_date)}
-                </p>
-                {s.over_short_kurus !== null && (
-                  <p className="text-xs text-muted-foreground">
-                    Over/short: {formatTry(s.over_short_kurus)}
+        {isMobile ? (
+          <MobileCardList>
+            {sessions.map((s) => {
+              const overShort = s.over_short_kurus;
+              return (
+                <MobileCardRow
+                  key={s.id}
+                  title={formatTrDate(s.session_date)}
+                  onClick={() => onSelect(s.id)}
+                  meta={
+                    <>
+                      <StatusBadge status={s.status} />
+                      {selectedId === s.id && (
+                        <span className="text-primary">Selected</span>
+                      )}
+                      {overShort !== null && (
+                        <span>Over/short {formatTry(overShort)}</span>
+                      )}
+                    </>
+                  }
+                  amount={
+                    overShort !== null ? formatTry(overShort) : undefined
+                  }
+                  amountClassName={
+                    overShort !== null
+                      ? moneyAmountClassName(overShort)
+                      : undefined
+                  }
+                  leadingIcon={
+                    overShort !== null
+                      ? moneyLeadingIcon(overShort)
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </MobileCardList>
+        ) : (
+          <div className="space-y-2">
+            {sessions.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={`flex w-full items-center justify-between rounded-lg border border-border p-3 text-left hover:bg-muted/50 ${
+                  selectedId === s.id ? "bg-muted/50" : ""
+                }`}
+                onClick={() => onSelect(s.id)}
+              >
+                <div>
+                  <p className="text-sm font-medium">
+                    {formatTrDate(s.session_date)}
                   </p>
-                )}
-              </div>
-              <StatusBadge status={s.status} />
-            </button>
-          ))}
-        </div>
+                  {s.over_short_kurus !== null && (
+                    <p className="text-xs text-muted-foreground">
+                      Over/short: {formatTry(s.over_short_kurus)}
+                    </p>
+                  )}
+                </div>
+                <StatusBadge status={s.status} />
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       {detail && (
@@ -125,6 +172,31 @@ export function CashDrawerSessionsPanel({
             <p className="text-sm text-muted-foreground">
               No movements linked to this session.
             </p>
+          ) : isMobile ? (
+            <MobileCardList>
+              {detail.movements.map((m) => {
+                const signed =
+                  m.direction === "out"
+                    ? -Math.abs(m.amount_kurus)
+                    : Math.abs(m.amount_kurus);
+                return (
+                  <MobileCardRow
+                    key={m.id}
+                    title={m.description}
+                    meta={
+                      <>
+                        <span>{m.direction}</span>
+                        <span>·</span>
+                        <span>{formatTrDate(m.movement_date)}</span>
+                      </>
+                    }
+                    amount={formatTry(m.amount_kurus)}
+                    amountClassName={moneyAmountClassName(signed)}
+                    leadingIcon={moneyLeadingIcon(signed)}
+                  />
+                );
+              })}
+            </MobileCardList>
           ) : (
             <DataTable>
               <DataTableHead>

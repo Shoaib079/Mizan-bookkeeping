@@ -12,8 +12,13 @@ import {
   DataTableHeaderCell,
 } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { StatusBadge } from "@/components/ui/status-badge";
 import type { BankStatementLine } from "@/lib/banking-types";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { classificationLabel } from "@/lib/statement-classification-options";
 import { canBulkSelectLine } from "@/lib/statement-bulk-selection";
@@ -26,6 +31,7 @@ import {
   summarizeStatementLines,
 } from "@/lib/statement-line-filters";
 import { FilterChips } from "@/components/page/filter-chips";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -51,6 +57,7 @@ export function StatementLinesLedger({
   onSelectAllVisible,
   onClearSelection,
 }: Props) {
+  const isMobile = useIsMobileShell();
   const [filter, setFilter] = useState<StatementLineFilter>(defaultFilter);
   const [search, setSearch] = useState("");
 
@@ -71,7 +78,9 @@ export function StatementLinesLedger({
     selectableVisibleIds.every((id) => selectedLineIds?.has(id));
 
   const filterCounts = useMemo(() => {
-    const counts: Partial<Record<StatementLineFilter, number>> = { all: lines.length };
+    const counts: Partial<Record<StatementLineFilter, number>> = {
+      all: lines.length,
+    };
     for (const tab of STATEMENT_LINE_FILTERS) {
       if (tab.id === "all") continue;
       counts[tab.id] = filterStatementLines(lines, tab.id, "").length;
@@ -125,8 +134,9 @@ export function StatementLinesLedger({
 
       {filter === "skipped" && summary.skipped > 0 && (
         <p className="rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
-          Skipped lines were marked &ldquo;Decide later&rdquo; — they never hit P&L or
-          balance sheet. Tick them and bulk-correct, or select one row for the bar above.
+          Skipped lines were marked &ldquo;Decide later&rdquo; — they never hit
+          P&L or balance sheet. Tick them and bulk-correct, or select one row
+          for the bar above.
         </p>
       )}
 
@@ -137,73 +147,65 @@ export function StatementLinesLedger({
         </p>
       )}
 
-      {/* `flex-1 min-h-0`: the table is the only thing on this page
-          that scrolls, and it takes exactly the room left over. It was
-          `max-h-[min(65vh,800px)]`, which left the page scrolling as well
-          — two scroll areas stacked, and the classify bar pinned over the
-          seam between them. */}
-      <DataTable className="min-h-0 flex-1">
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-border"
-                  checked={allVisibleSelected}
-                  disabled={selectableVisibleIds.length === 0}
-                  aria-label="Select all visible lines"
-                  onChange={(e) =>
-                    onSelectAllVisible?.(selectableVisibleIds, e.target.checked)
-                  }
-                />
-                <span>Date</span>
-              </div>
-            </DataTableHeaderCell>
-            <DataTableHeaderCell>Description</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-            <DataTableHeaderCell>Status</DataTableHeaderCell>
-            <DataTableHeaderCell>Classification</DataTableHeaderCell>
-            <DataTableHeaderCell>Journal</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
+      {isMobile ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+          <label className="flex items-center gap-2 px-1 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-border"
+              checked={allVisibleSelected}
+              disabled={selectableVisibleIds.length === 0}
+              aria-label="Select all visible lines"
+              onChange={(e) =>
+                onSelectAllVisible?.(selectableVisibleIds, e.target.checked)
+              }
+            />
+            Select all visible
+          </label>
           {filtered.length === 0 ? (
-            <tr>
-              <td
-                colSpan={6}
-                className="px-3 py-8 text-center text-sm text-muted-foreground"
-              >
-                No lines match this filter.
-              </td>
-            </tr>
+            <p className="px-1 py-8 text-center text-sm text-muted-foreground">
+              No lines match this filter.
+            </p>
           ) : (
-            filtered.map((line) => {
-              const selected = line.id === selectedLineId;
-              const checked = selectedLineIds?.has(line.id) ?? false;
-              const bulkSelectable = canBulkSelectLine(line);
-              const amountClass =
-                line.amount_kurus > 0
-                  ? "text-success"
-                  : line.amount_kurus < 0
-                    ? "text-destructive"
-                    : "";
-              return (
-                <tr
-                  key={line.id}
-                  className={cn(
-                    "cursor-pointer hover:bg-muted/30",
-                    selected && selectedCount === 0 && "bg-primary/5 ring-1 ring-inset ring-primary/30",
-                    checked && "bg-primary/5 ring-1 ring-inset ring-primary/30",
-                    isSkippedLine(line) && "bg-warning/5",
-                  )}
-                  onClick={() => {
-                    if (selectedCount > 0) return;
-                    onSelectLine(line.id);
-                  }}
-                >
-                  <DataTableCell className="whitespace-nowrap py-1.5 text-xs">
-                    <div className="flex items-center gap-2">
+            <MobileCardList>
+              {filtered.map((line) => {
+                const selected = line.id === selectedLineId;
+                const checked = selectedLineIds?.has(line.id) ?? false;
+                const bulkSelectable = canBulkSelectLine(line);
+                return (
+                  <MobileCardRow
+                    key={line.id}
+                    title={line.description}
+                    onClick={() => {
+                      if (selectedCount > 0) return;
+                      onSelectLine(line.id);
+                    }}
+                    meta={
+                      <>
+                        <span>{formatTrDate(line.transaction_date)}</span>
+                        <span>·</span>
+                        <StatusBadge status={line.status} />
+                        <span>{classificationLabel(line.classification)}</span>
+                        {hasLedgerEntry(line) ? (
+                          <span>Posted</span>
+                        ) : (
+                          <span>—</span>
+                        )}
+                        {line.reference && (
+                          <span className="truncate">{line.reference}</span>
+                        )}
+                        {(selected && selectedCount === 0) || checked ? (
+                          <span className="text-primary">Selected</span>
+                        ) : null}
+                        {isSkippedLine(line) ? (
+                          <span className="text-warning">Skipped</span>
+                        ) : null}
+                      </>
+                    }
+                    amount={formatTry(line.amount_kurus)}
+                    amountClassName={moneyAmountClassName(line.amount_kurus)}
+                    leadingIcon={moneyLeadingIcon(line.amount_kurus)}
+                    trailing={
                       <input
                         type="checkbox"
                         className="h-4 w-4 shrink-0 rounded border-border"
@@ -216,51 +218,143 @@ export function StatementLinesLedger({
                         }}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <span>{formatTrDate(line.transaction_date)}</span>
-                    </div>
-                  </DataTableCell>
-                  <DataTableCell className="max-w-[28rem] py-1.5 text-xs">
-                    <span
-                      className="block whitespace-pre-wrap break-words leading-snug"
-                      title={line.description}
-                    >
-                      {line.description}
-                    </span>
-                    {line.reference && (
-                      <span className="block truncate text-[11px] text-muted-foreground">
-                        {line.reference}
-                      </span>
-                    )}
-                  </DataTableCell>
-                  <DataTableCell
-                    align="right"
-                    className={cn("py-1.5 text-xs font-medium tabular-nums", amountClass)}
-                  >
-                    {formatTry(line.amount_kurus)}
-                  </DataTableCell>
-                  <DataTableCell className="py-1.5">
-                    <StatusBadge status={line.status} />
-                  </DataTableCell>
-                  <DataTableCell className="py-1.5 text-xs">
-                    {classificationLabel(line.classification)}
-                  </DataTableCell>
-                  <DataTableCell className="py-1.5 text-xs">
-                    {hasLedgerEntry(line) ? (
-                      <span className="text-muted-foreground">Posted</span>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </DataTableCell>
-                </tr>
-              );
-            })
+                    }
+                  />
+                );
+              })}
+            </MobileCardList>
           )}
-        </DataTableBody>
-      </DataTable>
+        </div>
+      ) : (
+        <DataTable className="min-h-0 flex-1">
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border"
+                    checked={allVisibleSelected}
+                    disabled={selectableVisibleIds.length === 0}
+                    aria-label="Select all visible lines"
+                    onChange={(e) =>
+                      onSelectAllVisible?.(
+                        selectableVisibleIds,
+                        e.target.checked,
+                      )
+                    }
+                  />
+                  <span>Date</span>
+                </div>
+              </DataTableHeaderCell>
+              <DataTableHeaderCell>Description</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+              <DataTableHeaderCell>Status</DataTableHeaderCell>
+              <DataTableHeaderCell>Classification</DataTableHeaderCell>
+              <DataTableHeaderCell>Journal</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-3 py-8 text-center text-sm text-muted-foreground"
+                >
+                  No lines match this filter.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((line) => {
+                const selected = line.id === selectedLineId;
+                const checked = selectedLineIds?.has(line.id) ?? false;
+                const bulkSelectable = canBulkSelectLine(line);
+                const amountClass =
+                  line.amount_kurus > 0
+                    ? "text-success"
+                    : line.amount_kurus < 0
+                      ? "text-destructive"
+                      : "";
+                return (
+                  <tr
+                    key={line.id}
+                    className={cn(
+                      "cursor-pointer hover:bg-muted/30",
+                      selected &&
+                        selectedCount === 0 &&
+                        "bg-primary/5 ring-1 ring-inset ring-primary/30",
+                      checked &&
+                        "bg-primary/5 ring-1 ring-inset ring-primary/30",
+                      isSkippedLine(line) && "bg-warning/5",
+                    )}
+                    onClick={() => {
+                      if (selectedCount > 0) return;
+                      onSelectLine(line.id);
+                    }}
+                  >
+                    <DataTableCell className="whitespace-nowrap py-1.5 text-xs">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 shrink-0 rounded border-border"
+                          checked={checked}
+                          disabled={!bulkSelectable}
+                          aria-label={`Select ${line.description}`}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            onToggleLineChecked?.(line.id, e.target.checked);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span>{formatTrDate(line.transaction_date)}</span>
+                      </div>
+                    </DataTableCell>
+                    <DataTableCell className="max-w-[28rem] py-1.5 text-xs">
+                      <span
+                        className="block whitespace-pre-wrap break-words leading-snug"
+                        title={line.description}
+                      >
+                        {line.description}
+                      </span>
+                      {line.reference && (
+                        <span className="block truncate text-[11px] text-muted-foreground">
+                          {line.reference}
+                        </span>
+                      )}
+                    </DataTableCell>
+                    <DataTableCell
+                      align="right"
+                      className={cn(
+                        "py-1.5 text-xs font-medium tabular-nums",
+                        amountClass,
+                      )}
+                    >
+                      {formatTry(line.amount_kurus)}
+                    </DataTableCell>
+                    <DataTableCell className="py-1.5">
+                      <StatusBadge status={line.status} />
+                    </DataTableCell>
+                    <DataTableCell className="py-1.5 text-xs">
+                      {classificationLabel(line.classification)}
+                    </DataTableCell>
+                    <DataTableCell className="py-1.5 text-xs">
+                      {hasLedgerEntry(line) ? (
+                        <span className="text-muted-foreground">Posted</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </DataTableCell>
+                  </tr>
+                );
+              })
+            )}
+          </DataTableBody>
+        </DataTable>
+      )}
 
       <p className="text-[11px] text-muted-foreground">
-        Tick the box next to the date to select lines for bulk post or correct. Click a
-        row (without ticks selected) to work one line in the bar above.
+        Tick the box next to the date to select lines for bulk post or correct.
+        Click a row (without ticks selected) to work one line in the bar above.
       </p>
     </section>
   );

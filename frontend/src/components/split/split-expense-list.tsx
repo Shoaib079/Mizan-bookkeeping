@@ -9,7 +9,13 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 import type { ExpenseCandidate } from "@/components/split/split-hub-types";
 
@@ -19,12 +25,53 @@ type Props = {
 };
 
 export function SplitExpenseList({ expenses, onSelect }: Props) {
+  const isMobile = useIsMobileShell();
+
   if (expenses.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         No bank expenses left to split. Classify outflows as Expense from bank
         first.
       </p>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="mb-8">
+        <MobileCardList>
+          {expenses.map((row) => (
+            <MobileCardRow
+              key={row.expense_id}
+              title={row.description}
+              meta={
+                <>
+                  <span>{formatTrDate(row.expense_date)}</span>
+                  <span>·</span>
+                  <span>Total {formatTry(row.amount_kurus)}</span>
+                </>
+              }
+              amount={formatTry(row.remaining_splittable_kurus)}
+              amountNote="Left to split"
+              amountClassName={moneyAmountClassName(
+                -Math.abs(row.remaining_splittable_kurus),
+              )}
+              leadingIcon={moneyLeadingIcon(
+                -Math.abs(row.remaining_splittable_kurus),
+              )}
+              trailing={
+                <Button
+                  type="button"
+                  className="h-8"
+                  onClick={() => onSelect(row.expense_id)}
+                >
+                  Select
+                </Button>
+              }
+            />
+          ))}
+        </MobileCardList>
+      </div>
     );
   }
 

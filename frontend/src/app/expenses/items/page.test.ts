@@ -16,18 +16,22 @@ describe("expense items legacy route", () => {
 
 describe("expense items review panel", () => {
   it("lists items via GET expense-items with debounced search", () => {
-    const source = readExpenseItemsReviewPanel();
-    expect(source).toContain("expenseItemsListUrl");
-    expect(source).toContain("DataTable");
-    expect(source).toContain("exp-item-search");
-    expect(source).toContain("debouncedQuery");
+    const panel = readExpenseItemsReviewPanel();
+    const list = sourceDeclaring("ExpenseItemsReviewList");
+    expect(panel).toContain("expenseItemsListUrl");
+    expect(panel).toContain("ExpenseItemsReviewList");
+    expect(panel).toContain("exp-item-search");
+    expect(panel).toContain("debouncedQuery");
+    expect(list).toContain("DataTable");
+    expect(list).toContain("MobileCardList");
   });
 
   it("loads posted totals from time-series", () => {
-    const source = readExpenseItemsReviewPanel();
-    expect(source).toContain("reports/time-series");
-    expect(source).toContain("expenses_by_item");
-    expect(source).toContain("Posted in period");
+    const panel = readExpenseItemsReviewPanel();
+    const list = sourceDeclaring("ExpenseItemsReviewList");
+    expect(panel).toContain("reports/time-series");
+    expect(panel).toContain("expenses_by_item");
+    expect(list).toContain("Posted in period");
   });
 
   it("calls merge endpoint with source, target, and actor ids", () => {

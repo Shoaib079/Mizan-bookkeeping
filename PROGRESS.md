@@ -22,8 +22,8 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Card clearing mobile cards (`v0.cards-mobile-cards`) |
-| **Last tag** | `v0.cards-mobile-cards` |
+| **Last completed slice** | Mobile UX gaps (`v0.mobile-ux-gaps`) |
+| **Last tag** | `v0.mobile-ux-gaps` |
 | **Unpushed** | no (after push) |
 | **Next up** | Pick next from live baseline / ratchet or FE audit cleanup |
 | **Exact next action** | Owner picks next slice |

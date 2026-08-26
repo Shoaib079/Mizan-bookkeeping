@@ -9,7 +9,13 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 import type { PaymentCandidate } from "@/components/split/split-hub-types";
 
@@ -19,12 +25,54 @@ type Props = {
 };
 
 export function SplitPaymentList({ payments, onSelect }: Props) {
+  const isMobile = useIsMobileShell();
+
   if (payments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground">
         No supplier payments left to split. Pay a supplier from the bank
         statement (or cash) first.
       </p>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div className="mb-8">
+        <MobileCardList>
+          {payments.map((row) => (
+            <MobileCardRow
+              key={row.supplier_ledger_entry_id}
+              title={row.supplier_name}
+              meta={
+                <>
+                  <span>{formatTrDate(row.payment_date)}</span>
+                  <span>·</span>
+                  <span>{row.description}</span>
+                  <span>Total {formatTry(row.amount_kurus)}</span>
+                </>
+              }
+              amount={formatTry(row.remaining_splittable_kurus)}
+              amountNote="Left to split"
+              amountClassName={moneyAmountClassName(
+                -Math.abs(row.remaining_splittable_kurus),
+              )}
+              leadingIcon={moneyLeadingIcon(
+                -Math.abs(row.remaining_splittable_kurus),
+              )}
+              trailing={
+                <Button
+                  type="button"
+                  className="h-8"
+                  onClick={() => onSelect(row.supplier_ledger_entry_id)}
+                >
+                  Select
+                </Button>
+              }
+            />
+          ))}
+        </MobileCardList>
+      </div>
     );
   }
 

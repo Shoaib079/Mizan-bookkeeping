@@ -4,37 +4,28 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { DeliveryDownloadMenu } from "@/components/delivery/delivery-download-menu";
 import { DeliveryPlatformFilter } from "@/components/delivery/delivery-platform-filter";
+import { DeliveryReportsList } from "@/components/delivery/delivery-reports-list";
 import { DeliveryReportReview } from "@/components/delivery-report-review";
 import { DeliveryReportForm } from "@/components/forms/delivery-report-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/page/page-header";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { HeadlineFigure } from "@/components/page/summary-panel";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { Truck } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { formatDeliveryPeriod } from "@/lib/delivery-period";
-import { deliveryReportVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import { useDeliveryHubUrl } from "@/lib/use-delivery-hub-url";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry } from "@/lib/money";
 import type { DeliveryPlatform, DeliveryReport } from "@/lib/pos-delivery-types";
 import { useEntityList } from "@/lib/use-entity-list";
-import { cn } from "@/lib/utils";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 export function DeliveryReportsPanel() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const {
     from,
     to,
@@ -203,65 +194,14 @@ export function DeliveryReportsPanel() {
       )}
 
       {!loading && items.length > 0 && (
-        <DataTable>
-          <DataTableHead>
-            <tr>
-              {!platform && (
-                <DataTableHeaderCell>Platform</DataTableHeaderCell>
-              )}
-              <DataTableHeaderCell>Period</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => {
-              const selected = row.id === reportId;
-              return (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "cursor-pointer border-b border-border transition-colors hover:bg-muted/40",
-                    selected && "bg-primary/5",
-                  )}
-                  onClick={() => setDetailId("report", row.id)}
-                >
-                  {!platform && (
-                    <DataTableCell className="py-2 text-sm">
-                      {row.platform_name}
-                    </DataTableCell>
-                  )}
-                  <DataTableCell className="py-2 text-sm">
-                    {formatDeliveryPeriod(row)}
-                  </DataTableCell>
-                  <DataTableCell align="right" className="py-2 tabular-nums">
-                    {formatTry(row.gross_kurus)}
-                  </DataTableCell>
-                  <DataTableCell className="py-2">
-                    <StatusBadge status={row.status} />
-                  </DataTableCell>
-                  <DataTableCell
-                    align="right"
-                    className="py-2"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {row.status === "posted" && (
-                      <VoidTriggerButton
-                        confirmDetail={deliveryReportVoidConfirmDetail({
-                          period_label: formatDeliveryPeriod(row),
-                          platform_name: row.platform_name,
-                          gross_kurus: row.gross_kurus,
-                        })}
-                        onContinue={() => setVoidReport(row)}
-                      />
-                    )}
-                  </DataTableCell>
-                </tr>
-              );
-            })}
-          </DataTableBody>
-        </DataTable>
+        <DeliveryReportsList
+          items={items}
+          platformFilter={platform}
+          reportId={reportId}
+          isMobile={isMobile}
+          onSelect={(id) => setDetailId("report", id)}
+          onVoid={setVoidReport}
+        />
       )}
 
       {reportId && (

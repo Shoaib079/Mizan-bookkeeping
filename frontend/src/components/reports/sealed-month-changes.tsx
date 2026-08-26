@@ -17,11 +17,17 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import { apiFetch } from "@/lib/api";
+import {
+  moneyAmountClassName,
+  moneyLeadingIcon,
+} from "@/lib/mobile-ledger-card";
 import { formatTrDate, formatTry } from "@/lib/money";
 import { changeKindLabel, changesSummary } from "@/lib/month-close";
 import type { SealedMonthChangesRead } from "@/lib/report-types";
 import { ledgerEntryHref, sourceLabel } from "@/lib/transaction-registry";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -30,6 +36,7 @@ type Props = {
 };
 
 export function SealedMonthChanges({ entityId, lockId }: Props) {
+  const isMobile = useIsMobileShell();
   const [changes, setChanges] = useState<SealedMonthChangesRead | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,57 +70,84 @@ export function SealedMonthChanges({ entityId, lockId }: Props) {
         </p>
       </div>
 
-      <DataTable>
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>Changed</DataTableHeaderCell>
-            <DataTableHeaderCell>What</DataTableHeaderCell>
-            <DataTableHeaderCell>Dated</DataTableHeaderCell>
-            <DataTableHeaderCell>Recorded as</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
+      {isMobile ? (
+        <MobileCardList>
           {changes.entries.map((entry) => (
-            <DataTableRow key={`${entry.journal_entry_id}-${entry.change_kind}`}>
-              <DataTableCell>
-                <span
-                  className={cn(
-                    "rounded-md px-1.5 py-0.5 text-xs font-medium",
-                    entry.change_kind === "voided" &&
-                      "bg-destructive/10 text-destructive",
-                    entry.change_kind === "posted" && "bg-warning/10 text-warning",
-                    entry.change_kind === "reversal" &&
-                      "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {changeKindLabel(entry.change_kind)}
-                </span>
-                <span className="ml-2 text-xs text-muted-foreground">
-                  {formatTrDate(entry.changed_at.slice(0, 10))}
-                </span>
-              </DataTableCell>
-              <DataTableCell>
-                <Link
-                  href={ledgerEntryHref(entry.journal_entry_id)}
-                  className="hover:underline"
-                >
-                  {entry.description}
-                </Link>
-              </DataTableCell>
-              <DataTableCell className="text-muted-foreground">
-                {formatTrDate(entry.entry_date)}
-              </DataTableCell>
-              <DataTableCell className="text-muted-foreground">
-                {sourceLabel(entry.source)}
-              </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {formatTry(entry.amount_kurus)}
-              </DataTableCell>
-            </DataTableRow>
+            <MobileCardRow
+              key={`${entry.journal_entry_id}-${entry.change_kind}`}
+              href={ledgerEntryHref(entry.journal_entry_id)}
+              title={entry.description}
+              meta={
+                <>
+                  <span>{changeKindLabel(entry.change_kind)}</span>
+                  <span>·</span>
+                  <span>{formatTrDate(entry.changed_at.slice(0, 10))}</span>
+                  <span>Dated {formatTrDate(entry.entry_date)}</span>
+                  <span>{sourceLabel(entry.source)}</span>
+                </>
+              }
+              amount={formatTry(entry.amount_kurus)}
+              amountClassName={moneyAmountClassName(entry.amount_kurus)}
+              leadingIcon={moneyLeadingIcon(entry.amount_kurus)}
+            />
           ))}
-        </DataTableBody>
-      </DataTable>
+        </MobileCardList>
+      ) : (
+        <DataTable>
+          <DataTableHead>
+            <tr>
+              <DataTableHeaderCell>Changed</DataTableHeaderCell>
+              <DataTableHeaderCell>What</DataTableHeaderCell>
+              <DataTableHeaderCell>Dated</DataTableHeaderCell>
+              <DataTableHeaderCell>Recorded as</DataTableHeaderCell>
+              <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
+            </tr>
+          </DataTableHead>
+          <DataTableBody>
+            {changes.entries.map((entry) => (
+              <DataTableRow
+                key={`${entry.journal_entry_id}-${entry.change_kind}`}
+              >
+                <DataTableCell>
+                  <span
+                    className={cn(
+                      "rounded-md px-1.5 py-0.5 text-xs font-medium",
+                      entry.change_kind === "voided" &&
+                        "bg-destructive/10 text-destructive",
+                      entry.change_kind === "posted" &&
+                        "bg-warning/10 text-warning",
+                      entry.change_kind === "reversal" &&
+                        "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {changeKindLabel(entry.change_kind)}
+                  </span>
+                  <span className="ml-2 text-xs text-muted-foreground">
+                    {formatTrDate(entry.changed_at.slice(0, 10))}
+                  </span>
+                </DataTableCell>
+                <DataTableCell>
+                  <Link
+                    href={ledgerEntryHref(entry.journal_entry_id)}
+                    className="hover:underline"
+                  >
+                    {entry.description}
+                  </Link>
+                </DataTableCell>
+                <DataTableCell className="text-muted-foreground">
+                  {formatTrDate(entry.entry_date)}
+                </DataTableCell>
+                <DataTableCell className="text-muted-foreground">
+                  {sourceLabel(entry.source)}
+                </DataTableCell>
+                <DataTableCell align="right" className="tabular-nums">
+                  {formatTry(entry.amount_kurus)}
+                </DataTableCell>
+              </DataTableRow>
+            ))}
+          </DataTableBody>
+        </DataTable>
+      )}
 
       {changes.reasons.length > 0 && (
         <div className="mt-3 rounded-md border border-dashed border-border p-3">

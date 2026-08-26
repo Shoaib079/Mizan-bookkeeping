@@ -5,34 +5,27 @@ import { useMemo, useState } from "react";
 import { MemberForm } from "@/components/forms/member-form";
 import { ForbiddenMessage } from "@/components/reports/forbidden-message";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSkeleton } from "@/components/ui/skeleton";
-import { Select } from "@/components/ui/input";
 import { Users } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useEntity } from "@/lib/entity-context";
 import { useToast } from "@/lib/toast";
 import {
-  ENTITY_ROLES,
   type EntityRole,
   type MembershipRow,
 } from "@/lib/settings-types";
 import { useEntityList } from "@/lib/use-entity-list";
 import { MemberAccessEditor } from "@/components/settings/member-access-editor";
+import { TeamMembersList } from "@/components/settings/team-members-list";
 import type { Grant } from "@/lib/member-grants";
 import { isOwnerRole } from "@/lib/member-grants";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 export function TeamPanel() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const { items, loading, error, forbidden, reload } =
@@ -171,79 +164,18 @@ export function TeamPanel() {
       {loading && <TableSkeleton columns={6} />}
 
       {!loading && teamMembers.length > 0 && (
-        <DataTable key={entityId} tableClassName="min-w-[40rem]">
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Name</DataTableHeaderCell>
-              <DataTableHeaderCell>Email</DataTableHeaderCell>
-              <DataTableHeaderCell>Role</DataTableHeaderCell>
-              <DataTableHeaderCell>Status</DataTableHeaderCell>
-              <DataTableHeaderCell>Access</DataTableHeaderCell>
-              <DataTableHeaderCell align="right"> </DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {teamMembers.map((row) => (
-              <DataTableRow key={row.id}>
-                <DataTableCell className="max-w-[10rem] truncate">
-                  {row.user.display_name}
-                </DataTableCell>
-                <DataTableCell className="max-w-[14rem] truncate">
-                  <span title={row.user.email ?? undefined}>{row.user.email}</span>
-                </DataTableCell>
-                <DataTableCell>
-                  {isOwnerRole(row.role) ? (
-                    <span className="text-sm font-medium">Owner</span>
-                  ) : (
-                    <Select
-                      value={row.role}
-                      disabled={updatingId === row.id}
-                      onChange={(e) =>
-                        void onRoleChange(row, e.target.value as EntityRole)
-                      }
-                      className="w-full min-w-[10rem] max-w-[12rem]"
-                    >
-                      {ENTITY_ROLES.filter((r) => r.value !== "owner").map((r) => (
-                        <option key={r.value} value={r.value}>
-                          {r.label}
-                        </option>
-                      ))}
-                    </Select>
-                  )}
-                </DataTableCell>
-                <DataTableCell className="whitespace-nowrap">
-                  {row.user.is_active ? "Active" : "Inactive"}
-                </DataTableCell>
-                <DataTableCell className="whitespace-nowrap">
-                  {isOwnerRole(row.role) ? (
-                    <span className="text-sm text-muted-foreground">Full access</span>
-                  ) : (
-                    <Button
-                      type="button"
-                      disabled={updatingId === row.id}
-                      onClick={() => {
-                        setAccessError(null);
-                        setAccessMember(row);
-                      }}
-                    >
-                      Edit access
-                    </Button>
-                  )}
-                </DataTableCell>
-                <DataTableCell align="right" className="whitespace-nowrap">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={updatingId === row.id}
-                    onClick={() => void onRemove(row)}
-                  >
-                    Remove
-                  </Button>
-                </DataTableCell>
-              </DataTableRow>
-            ))}
-          </DataTableBody>
-        </DataTable>
+        <TeamMembersList
+          members={teamMembers}
+          entityId={entityId}
+          updatingId={updatingId}
+          isMobile={isMobile}
+          onRoleChange={(row, role) => void onRoleChange(row, role)}
+          onEditAccess={(row) => {
+            setAccessError(null);
+            setAccessMember(row);
+          }}
+          onRemove={(row) => void onRemove(row)}
+        />
       )}
 
       {!loading && teamMembers.length === 0 && !error && (

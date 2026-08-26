@@ -7,23 +7,23 @@ import {
 import { sourceDeclaring } from "@/test-support/source";
 
 describe("mobile more menu", () => {
-  it("lists a flat Navigation set without Sales or section headers", () => {
+  it("lists Review and Split and keeps a flat searchable set", () => {
     expect(MORE_NAV_ITEMS.map((item) => item.label)).toEqual([
+      "Review",
       "Delivery",
       "Customers",
       "Suppliers",
       "Staff",
       "Partners",
+      "Split",
       "Cards",
       "Reports",
     ]);
     const source = sourceDeclaring("MobileMoreMenu");
     expect(source).not.toContain("Money in");
-    expect(source).not.toContain("Money out");
-    expect(source).not.toContain("Money held");
-    expect(source).not.toContain("Understand");
-    expect(source).toContain('placeholder="Search..."');
-    expect(source).toContain("matchesMoreNavSearch");
+    expect(source).toContain("mizan:command-palette");
+    expect(source).toContain("NavCountBadge");
+    expect(source).toContain("Filter list");
   });
 
   it("filters by label case-insensitively", () => {
@@ -40,5 +40,11 @@ describe("mobile more menu", () => {
     expect(source).not.toContain('label="Review"');
     expect(source).not.toContain("reviewTotal");
     expect(source).not.toContain("ScanSearch");
+  });
+
+  it("top bar exposes app search on tab roots", () => {
+    const source = sourceDeclaring("MobileTopBar");
+    expect(source).toContain("mizan:command-palette");
+    expect(source).toContain('aria-label="Search"');
   });
 });

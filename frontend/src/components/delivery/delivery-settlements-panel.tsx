@@ -4,17 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { DeliveryDownloadMenu } from "@/components/delivery/delivery-download-menu";
 import { DeliveryPlatformFilter } from "@/components/delivery/delivery-platform-filter";
+import { DeliverySettlementsList } from "@/components/delivery/delivery-settlements-list";
 import { DeliverySettlementForm } from "@/components/forms/delivery-settlement-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-} from "@/components/ui/data-table";
 import { PageHeader } from "@/components/page/page-header";
 import { ReportDateRange } from "@/components/reports/report-date-range";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -24,13 +17,13 @@ import { apiFetch } from "@/lib/api";
 import { useDeliveryHubUrl } from "@/lib/use-delivery-hub-url";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate, formatTry } from "@/lib/money";
-import { deliverySettlementVoidConfirmDetail } from "@/lib/ledger-void-confirm-detail";
 import type { DeliveryPlatform, DeliverySettlement } from "@/lib/pos-delivery-types";
 import { useEntityList } from "@/lib/use-entity-list";
-import { cn } from "@/lib/utils";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 
 export function DeliverySettlementsPanel() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const {
     from,
     to,
@@ -167,67 +160,14 @@ export function DeliverySettlementsPanel() {
       )}
 
       {!loading && items.length > 0 && (
-        <DataTable wide>
-          <DataTableHead>
-            <tr>
-              <DataTableHeaderCell>Date</DataTableHeaderCell>
-              {!platform && (
-                <DataTableHeaderCell>Platform</DataTableHeaderCell>
-              )}
-              <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-              <DataTableHeaderCell>Description</DataTableHeaderCell>
-              <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-            </tr>
-          </DataTableHead>
-          <DataTableBody>
-            {items.map((row) => {
-              const selected = row.id === settlementId;
-              return (
-                <tr
-                  key={row.id}
-                  className={cn(
-                    "cursor-pointer border-b border-border transition-colors hover:bg-muted/40",
-                    selected && "bg-primary/5",
-                    row.status === "voided" &&
-                      "text-muted-foreground line-through opacity-70",
-                  )}
-                  onClick={() => setDetailId("settlement", row.id)}
-                >
-                  <DataTableCell className="py-2 text-sm">
-                    {formatTrDate(row.settlement_date)}
-                  </DataTableCell>
-                  {!platform && (
-                    <DataTableCell className="py-2 text-sm">
-                      {row.platform_name}
-                    </DataTableCell>
-                  )}
-                  <DataTableCell align="right" className="py-2 tabular-nums">
-                    {formatTry(row.amount_kurus)}
-                  </DataTableCell>
-                  <DataTableCell className="py-2 text-sm">
-                    {row.description}
-                  </DataTableCell>
-                  <DataTableCell
-                    align="right"
-                    className="py-2"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {row.status !== "voided" && (
-                      <VoidTriggerButton
-                        confirmDetail={deliverySettlementVoidConfirmDetail({
-                          settlement_date: row.settlement_date,
-                          platform_name: row.platform_name,
-                          amount_kurus: row.amount_kurus,
-                        })}
-                        onContinue={() => setVoidSettlement(row)}
-                      />
-                    )}
-                  </DataTableCell>
-                </tr>
-              );
-            })}
-          </DataTableBody>
-        </DataTable>
+        <DeliverySettlementsList
+          items={items}
+          platformFilter={platform}
+          settlementId={settlementId}
+          isMobile={isMobile}
+          onSelect={(id) => setDetailId("settlement", id)}
+          onVoid={setVoidSettlement}
+        />
       )}
 
       {selectedSettlement && (

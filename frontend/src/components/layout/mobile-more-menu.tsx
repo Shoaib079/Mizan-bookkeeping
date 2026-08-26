@@ -1,13 +1,20 @@
 "use client";
 
-/** Mobile More hub — one flat nav list with label search. */
+/** Mobile More hub — flat nav, list filter, app-wide palette search. */
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Search, Settings } from "lucide-react";
+import {
+  ChevronRight,
+  ScanSearch,
+  Search,
+  Settings,
+  Split,
+} from "lucide-react";
 
 import { MobileEntitySwitcher } from "@/components/layout/mobile-entity-switcher";
 import { Input } from "@/components/ui/input";
+import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import {
   appRoutes,
   filterNavItemsByEntitySettings,
@@ -15,16 +22,19 @@ import {
 } from "@/lib/app-routes";
 import { hasGrant } from "@/lib/entity-access";
 import { useQuickActions } from "@/components/quick-actions";
+import { useReviewCountsContext } from "@/lib/review-counts-context";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 /** Flat More destinations (Sales lives on the bottom tab bar). */
 export const MORE_NAV_ITEMS: { href: string; label: string }[] = [
+  { href: "/review", label: "Review" },
   { href: "/delivery", label: "Delivery" },
   { href: "/customers", label: "Customers" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/staff", label: "Staff" },
   { href: "/partners", label: "Partners" },
+  { href: "/split", label: "Split" },
   { href: "/cards", label: "Cards" },
   { href: "/reports", label: "Reports" },
 ];
@@ -39,16 +49,22 @@ function routeForHref(href: string): AppRoute | undefined {
   return appRoutes.find((r) => r.href === href);
 }
 
+function openAppSearch() {
+  window.dispatchEvent(new Event("mizan:command-palette"));
+}
+
 function MoreRow({
   href,
   label,
   icon: Icon,
   mutedIcon,
+  badge,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   mutedIcon?: boolean;
+  badge?: number;
 }) {
   return (
     <Link
@@ -62,13 +78,11 @@ function MoreRow({
         )}
       >
         <Icon
-          className={cn(
-            "size-4",
-            mutedIcon && "text-muted-foreground",
-          )}
+          className={cn("size-4", mutedIcon && "text-muted-foreground")}
         />
       </span>
       <span className="min-w-0 flex-1 text-base">{label}</span>
+      {badge !== undefined && badge > 0 && <NavCountBadge count={badge} />}
       <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
     </Link>
   );
@@ -85,23 +99,59 @@ function hasLimitedMoreMenu(grants: readonly string[]): boolean {
 export function MobileMoreMenu() {
   const { deliveryEnabled } = useQuickActions();
   const { grants } = useEntityAccess();
+  const { counts } = useReviewCountsContext();
   const [query, setQuery] = useState("");
+
   const navRows = useMemo(() => {
     const settings = { deliveryEnabled };
     return MORE_NAV_ITEMS.flatMap((entry) => {
+      if (entry.href === "/split") {
+        if (!hasGrant(grants, "nav:record")) return [];
+        if (!matchesMoreNavSearch(entry.label, query)) return [];
+        return [
+          {
+            href: entry.href,
+            label: entry.label,
+            icon: Split,
+            badge: undefined as number | undefined,
+          },
+        ];
+      }
+      if (entry.href === "/review") {
+        if (!hasGrant(grants, "nav:review")) return [];
+        if (!matchesMoreNavSearch(entry.label, query)) return [];
+        const route = routeForHref("/review");
+        return [
+          {
+            href: entry.href,
+            label: entry.label,
+            icon: route?.icon ?? ScanSearch,
+            badge: counts.total,
+          },
+        ];
+      }
       const route = routeForHref(entry.href);
       if (!route) return [];
       if (filterNavItemsByEntitySettings([route], settings).length === 0) {
         return [];
       }
       if (!matchesMoreNavSearch(entry.label, query)) return [];
-      return [{ href: entry.href, label: entry.label, icon: route.icon }];
+      return [
+        {
+          href: entry.href,
+          label: entry.label,
+          icon: route.icon,
+          badge: undefined as number | undefined,
+        },
+      ];
     });
-  }, [query, deliveryEnabled]);
+  }, [query, deliveryEnabled, grants, counts.total]);
 
   const showSettings =
     hasGrant(grants, "nav:settings") &&
     matchesMoreNavSearch("Settings", query);
+
+  const showAppSearch = matchesMoreNavSearch("Search", query) || query.trim() === "";
 
   if (hasLimitedMoreMenu(grants)) {
     return (
@@ -119,9 +169,9 @@ export function MobileMoreMenu() {
     <div className="pb-2">
       <MobileEntitySwitcher />
 
-      <div className="mb-4 px-3">
+      <div className="mb-3 px-3">
         <label className="relative block">
-          <span className="sr-only">Search</span>
+          <span className="sr-only">Filter this list</span>
           <Search
             className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
             aria-hidden
@@ -130,12 +180,25 @@ export function MobileMoreMenu() {
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search..."
+            placeholder="Filter list…"
             className="h-11 pl-9"
             autoComplete="off"
           />
         </label>
       </div>
+
+      {showAppSearch && (
+        <div className="mb-4 px-3">
+          <button
+            type="button"
+            onClick={openAppSearch}
+            className="flex h-11 w-full items-center gap-2 rounded-xl border border-border bg-card px-3 text-left text-sm text-muted-foreground shadow-sm active:bg-muted/60"
+          >
+            <Search className="size-4 shrink-0" aria-hidden />
+            <span className="flex-1">Search the app…</span>
+          </button>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl bg-card shadow-sm">
         {navRows.map((row) => (
@@ -144,6 +207,7 @@ export function MobileMoreMenu() {
             href={row.href}
             label={row.label}
             icon={row.icon}
+            badge={row.badge}
           />
         ))}
         {showSettings && (

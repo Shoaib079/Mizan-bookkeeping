@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Logo } from "@/components/ui/logo";
@@ -114,6 +114,19 @@ export function MobileTopBar({
           </p>
         )}
       </div>
+
+      {onTabRoot && (
+        <button
+          type="button"
+          aria-label="Search"
+          onClick={() =>
+            window.dispatchEvent(new Event("mizan:command-palette"))
+          }
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground active:bg-muted"
+        >
+          <Search className="size-5" />
+        </button>
+      )}
 
       {reviewTotal > 0 && !onReviewPage && onTabRoot && (
         <Link

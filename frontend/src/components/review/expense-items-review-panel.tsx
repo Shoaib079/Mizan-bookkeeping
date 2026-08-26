@@ -3,18 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Label, Select } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import {
+  ExpenseItemsReviewList,
+  type ExpenseItemListRow,
+} from "@/components/review/expense-items-review-list";
 import { Tags } from "lucide-react";
 import { ApiError, apiFetch } from "@/lib/api";
 import {
@@ -28,12 +24,11 @@ import {
   type ExpenseItemRow,
 } from "@/lib/expense-item-merge";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry } from "@/lib/money";
 import type { TimeSeriesRead } from "@/lib/report-types";
 import { useEntityAccess } from "@/lib/use-entity-access";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
-import { cn } from "@/lib/utils";
 
 type Props = {
   from: string;
@@ -42,10 +37,6 @@ type Props = {
   onDrillDown: (itemId: string, itemName: string) => void;
   onTotalsChange: (totalKurus: number) => void;
   onLoadingChange?: (loading: boolean) => void;
-};
-
-type ItemRow = ExpenseItemRow & {
-  postedTotalKurus: number;
 };
 
 export function ExpenseItemsReviewPanel({
@@ -58,6 +49,7 @@ export function ExpenseItemsReviewPanel({
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { role } = useEntityAccess();
+  const isMobile = useIsMobileShell();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
   const owner = canManageExpenseItems(role);
@@ -148,7 +140,7 @@ export function ExpenseItemsReviewPanel({
       ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [highlightItemId, items, loading]);
 
-  const rows = useMemo<ItemRow[]>(() => {
+  const rows = useMemo<ExpenseItemListRow[]>(() => {
     const mapped = items.map((item) => ({
       ...item,
       postedTotalKurus: postedByItem.get(item.id) ?? 0,
@@ -252,40 +244,12 @@ export function ExpenseItemsReviewPanel({
           <p className="mb-3 text-sm text-muted-foreground">
             {total} item{total === 1 ? "" : "s"}
           </p>
-          <DataTable>
-            <DataTableHead>
-              <tr>
-                <DataTableHeaderCell>Name</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">
-                  Posted in period
-                </DataTableHeaderCell>
-                <DataTableHeaderCell>Status</DataTableHeaderCell>
-              </tr>
-            </DataTableHead>
-            <DataTableBody>
-              {rows.map((item) => (
-                <DataTableRow
-                  key={item.id}
-                  id={`item-${item.id}`}
-                  className={cn(
-                    "cursor-pointer hover:bg-muted/50",
-                    highlightItemId === item.id && "bg-muted/60",
-                  )}
-                  onClick={() => onDrillDown(item.id, item.canonical_name)}
-                >
-                  <DataTableCell>{item.canonical_name}</DataTableCell>
-                  <DataTableCell align="right">
-                    {item.postedTotalKurus > 0
-                      ? formatTry(item.postedTotalKurus)
-                      : "—"}
-                  </DataTableCell>
-                  <DataTableCell>
-                    {item.is_active ? "Active" : "Inactive"}
-                  </DataTableCell>
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
+          <ExpenseItemsReviewList
+            rows={rows}
+            highlightItemId={highlightItemId}
+            isMobile={isMobile}
+            onDrillDown={onDrillDown}
+          />
         </>
       )}
 

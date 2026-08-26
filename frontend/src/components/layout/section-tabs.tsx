@@ -31,7 +31,7 @@ export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
 
   return (
     <div
-      className="mb-4 flex flex-wrap gap-1 border-b border-border"
+      className="mb-4 flex flex-nowrap gap-1 overflow-x-auto whitespace-nowrap border-b border-border"
       role="tablist"
       aria-label={ariaLabel}
     >
@@ -48,7 +48,7 @@ export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
             role="tab"
             aria-selected={active}
             className={cn(
-              "-mb-px inline-flex items-center gap-1.5 rounded-t-md border border-transparent px-4 py-2.5 text-base font-medium text-muted-foreground hover:text-foreground",
+              "-mb-px inline-flex shrink-0 items-center gap-1.5 rounded-t-md border border-transparent px-4 py-2.5 text-base font-medium text-muted-foreground hover:text-foreground",
               active &&
                 "border-border border-b-background bg-background text-primary",
             )}
