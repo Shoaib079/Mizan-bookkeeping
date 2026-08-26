@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Mobile UX fixes** (`v0.mobile-ux-fixes`) |
-| **Last commit/tag**      | `v0.mobile-ux-fixes` |
+| **Last completed slice** | **Card clearing mobile cards** (`v0.cards-mobile-cards`) |
+| **Last commit/tag**      | `v0.cards-mobile-cards` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Card clearing mobile cards (batches + POS settlements)                           | `v0.cards-mobile-cards`                           | done           | Re-table-only /cards on phone; duplicate card list components |
 | Mobile UX fixes (Sales tab, flat More + search)                                  | `v0.mobile-ux-fixes`                              | done           | Put Review back on bottom tabs; restore Money In/Out section headers; drop More search |
 | Theme system + dark v2 (Light/Dark/System; dark tints under v2)                   | `v0.theme-system-dark`                            | done           | Drop System mode; let [data-theme=v2] override .dark surfaces; remove OS listener |
 | Settings breadcrumb + mobile hub (no Understand/; hub = 6 tabs)                  | `v0.settings-breadcrumb-hub`                      | done           | Re-add Understand/Settings crumb; restore inline MobileSettingsModules hub; drop Menu & Documents from hub |
@@ -1938,6 +1939,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-27 | Card clearing mobile cards                      | `v0.cards-mobile-cards`                                | /cards batches + settlements → MobileCardList on phone |
 | 2026-08-27 | Mobile UX fixes (tabs + More)                   | `v0.mobile-ux-fixes`                                   | Sales replaces Review on bottom tabs; flat More list + search |
 | 2026-08-27 | Mobile card tables                              | `v0.mobile-card-tables`                                | Phone: MobileCardList on people ledgers, supplier activity, expenses review, all table-backed reports, bank account + FX ledger |
 | 2026-08-26 | Theme system + dark v2                          | `v0.theme-system-dark`                                 | Light/Dark/System; OS listener; dark tint/icon tokens under v2 |

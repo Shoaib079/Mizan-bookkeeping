@@ -9,27 +9,19 @@ import { CardSalesForm } from "@/components/forms/card-sales-form";
 import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
-import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
 import { ReportDateRange } from "@/components/reports/report-date-range";
+import {
+  CardSalesBatchesTable,
+  PosSettlementsTable,
+} from "@/components/sales/cards-page-tables";
 import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { useCardsUrl } from "@/lib/use-cards-url";
 import { formatTrDate, formatTry } from "@/lib/money";
-import {
-  cardSalesBatchVoidConfirmDetail,
-  posSettlementVoidConfirmDetail,
-} from "@/lib/ledger-void-confirm-detail";
+import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import type {
   CardSalesBatch,
   ClearingReconciliation,
@@ -38,6 +30,7 @@ import type {
 
 export function CardsPageContent() {
   const { entityId } = useEntity();
+  const isMobile = useIsMobileShell();
   const { from, to, setRange, listQuery } = useCardsUrl();
   const [batches, setBatches] = useState<CardSalesBatch[]>([]);
   const [settlements, setSettlements] = useState<PosSettlement[]>([]);
@@ -257,94 +250,20 @@ export function CardsPageContent() {
 
       <section className="mb-6">
         <h2 className="mb-2 text-sm font-semibold">Card sales batches</h2>
-        {batches.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No card batches in this period.
-          </p>
-        ) : (
-          <DataTable wide>
-            <DataTableHead>
-              <tr>
-                <DataTableHeaderCell>Date</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
-                <DataTableHeaderCell>Description</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-              </tr>
-            </DataTableHead>
-            <DataTableBody>
-              {batches.map((row) => (
-                <DataTableRow
-                  key={row.id}
-                  className={row.status === "voided" ? "text-muted-foreground line-through opacity-70" : undefined}
-                >
-                  <DataTableCell>{formatTrDate(row.sales_date)}</DataTableCell>
-                  <DataTableCell align="right">
-                    {formatTry(row.gross_amount_kurus)}
-                  </DataTableCell>
-                  <DataTableCell>{row.description}</DataTableCell>
-                  <DataTableCell align="right">
-                    {row.status !== "voided" && (
-                      <VoidTriggerButton
-                        confirmDetail={cardSalesBatchVoidConfirmDetail(row)}
-                        onContinue={() => setVoidBatch(row)}
-                      />
-                    )}
-                  </DataTableCell>
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        )}
+        <CardSalesBatchesTable
+          batches={batches}
+          isMobile={isMobile}
+          onVoid={setVoidBatch}
+        />
       </section>
 
       <section>
         <h2 className="mb-2 text-sm font-semibold">POS settlements</h2>
-        {settlements.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No settlements in this period.
-          </p>
-        ) : (
-          <DataTable wide>
-            <DataTableHead>
-              <tr>
-                <DataTableHeaderCell>Date</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Amount</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Bank commission</DataTableHeaderCell>
-                <DataTableHeaderCell>Description</DataTableHeaderCell>
-                <DataTableHeaderCell align="right">Actions</DataTableHeaderCell>
-              </tr>
-            </DataTableHead>
-            <DataTableBody>
-              {settlements.map((row) => (
-                <DataTableRow
-                  key={row.id}
-                  className={row.status === "voided" ? "text-muted-foreground line-through opacity-70" : undefined}
-                >
-                  <DataTableCell>
-                    {formatTrDate(row.settlement_date)}
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    {formatTry(row.amount_kurus)}
-                  </DataTableCell>
-                  <DataTableCell align="right">
-                    {row.commission_kurus !== null
-                      ? formatTry(row.commission_kurus)
-                      : "—"}
-                  </DataTableCell>
-                  <DataTableCell>{row.description}</DataTableCell>
-                  <DataTableCell align="right">
-                    {row.status !== "voided" && (
-                      <VoidTriggerButton
-                        confirmDetail={posSettlementVoidConfirmDetail(row)}
-                        onContinue={() => setVoidSettlement(row)}
-                      />
-                    )}
-                  </DataTableCell>
-                </DataTableRow>
-              ))}
-            </DataTableBody>
-          </DataTable>
-        )}
+        <PosSettlementsTable
+          settlements={settlements}
+          isMobile={isMobile}
+          onVoid={setVoidSettlement}
+        />
       </section>
 
       <CardSalesForm
