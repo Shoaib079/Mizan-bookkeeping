@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Transfer form cash+bank only** (`v0.transfer-cash-bank-only`) |
-| **Last commit/tag**      | `v0.transfer-cash-bank-only` |
+| **Last completed slice** | **Recent transactions Amount/Status right edge** (`v0.recent-tx-align`) |
+| **Last commit/tag**      | `v0.recent-tx-align` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | Recent transactions Amount/Status right edge    | `v0.recent-tx-align`                                   | Description absorbs width; Amount/Status text-right at trailing edge |
 | 2026-08-26 | Transfer form cash+bank only                    | `v0.transfer-cash-bank-only`                           | From/To use loadBankAndCashAccounts; no FX/credit_card; filter + TransferForm source guards |
 | 2026-08-26 | Record FX + segments + recent table             | `v0.record-fx-segments`                               | Drop Convert mode; segment active blue/white + inactive gray; recent table fixed cols Date/Type/Description/Amount/Status |
 | 2026-08-26 | Record icon tiles                               | `v0.record-tile-size`                                 | Icon rail lg:w-48→lg:w-56; tiles p-4 gap-4 min-h ~84px; IconSquare xl (size-12 / size-6) |

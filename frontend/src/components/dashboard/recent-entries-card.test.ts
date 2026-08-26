@@ -37,7 +37,28 @@ describe("RecentEntriesCard", () => {
     const src = source();
     expect(src).toContain("table-fixed");
     expect(src).toContain("<colgroup>");
+    expect(src).toContain('className="w-auto"');
     expect(src).toMatch(/Date[\s\S]*Type[\s\S]*Description[\s\S]*Amount[\s\S]*Status/);
     expect(src).toContain('data-testid="recent-entry-status"');
+    expect(src).toContain('data-testid="recent-entry-amount"');
+  });
+
+  it("keeps Amount and Status right-aligned at the trailing edge", () => {
+    const src = source();
+    expect(src).toMatch(
+      /className="px-2 py-2 text-right"\s*>\s*Amount/,
+    );
+    expect(src).toMatch(
+      /className="px-2 py-2 text-right"\s*>\s*Status/,
+    );
+    expect(src).toContain("text-right text-sm tabular-nums");
+    expect(src).toContain(
+      "whitespace-nowrap px-2 py-2.5 text-right text-xs text-muted-foreground",
+    );
+    expect(src).toContain("justify-end");
+    const broken = src.replaceAll("text-right", "text-left");
+    expect(broken).not.toContain(
+      "whitespace-nowrap px-2 py-2.5 text-right text-xs text-muted-foreground",
+    );
   });
 });

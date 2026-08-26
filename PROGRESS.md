@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Transfer cash+bank only (`v0.transfer-cash-bank-only`):** Transfer From/To exclude FX and credit cards.
+- **Recent transactions Amount/Status right edge (`v0.recent-tx-align`):** Description absorbs width; Amount/Status right-aligned at trailing edge.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Transfer form cash+bank only |
-| **Last tag** | `v0.transfer-cash-bank-only` |
+| **Last completed slice** | Recent transactions Amount/Status right edge |
+| **Last tag** | `v0.recent-tx-align` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

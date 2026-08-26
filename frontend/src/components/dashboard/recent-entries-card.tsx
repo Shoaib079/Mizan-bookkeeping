@@ -74,11 +74,11 @@ function EntryTableRow({
           {journalSourceLabel(entry.source)}
         </span>
       </td>
-      <td className="px-2 py-2.5 text-sm">
+      <td className="min-w-0 px-2 py-2.5 text-sm">
         <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span
             className={cn(
-              "truncate font-medium",
+              "min-w-0 truncate font-medium",
               voided && "line-through",
             )}
           >
@@ -92,11 +92,12 @@ function EntryTableRow({
           "whitespace-nowrap px-2 py-2.5 text-right text-sm tabular-nums font-medium",
           voided && "line-through",
         )}
+        data-testid="recent-entry-amount"
       >
         {formatTry(journalEntryTotalKurus(entry.lines))}
       </td>
-      <td className="whitespace-nowrap px-2 py-2.5 text-xs text-muted-foreground">
-        <span className="inline-flex flex-wrap items-center gap-1.5">
+      <td className="whitespace-nowrap px-2 py-2.5 text-right text-xs text-muted-foreground">
+        <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
           {voided ? <StatusBadge status="voided" /> : null}
           <span data-testid="recent-entry-status">{statusLabel(entry)}</span>
         </span>
@@ -166,13 +167,14 @@ export function RecentEntriesCard({
       )}
 
       {!loading && items.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto">
           <table className="w-full min-w-[36rem] table-fixed border-collapse text-left">
             <colgroup>
               <col className="w-[6.5rem]" />
               <col className="w-[7rem]" />
-              <col />
-              <col className="w-[7.5rem]" />
+              {/* Description absorbs leftover width so Amount/Status stay at the right edge. */}
+              <col className="w-auto" />
+              <col className="w-[8rem]" />
               <col className="w-[5.5rem]" />
             </colgroup>
             <thead>
@@ -189,7 +191,7 @@ export function RecentEntriesCard({
                 <th scope="col" className="px-2 py-2 text-right">
                   Amount
                 </th>
-                <th scope="col" className="px-2 py-2 text-left">
+                <th scope="col" className="px-2 py-2 text-right">
                   Status
                 </th>
               </tr>

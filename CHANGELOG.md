@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Recent transactions Amount/Status right edge (`v0.recent-tx-align`).** Record Recent transactions: Description col takes leftover width (`w-auto`); Amount and Status headers/cells are `text-right` / `justify-end` so they sit on the trailing edge. Vitest + eslint + tsc + next build + ratchet + pytest green.
+
 - **Transfer form cash+bank only (`v0.transfer-cash-bank-only`).** Transfer From/To use shared `loadBankAndCashAccounts` (cash + bank only) — FX wallets and credit cards no longer appear. Guard tests cover kind filter + TransferForm source. Vitest + eslint + tsc + next build + ratchet + pytest green.
 
 - **Record FX + segments + recent table (`v0.record-fx-segments`).** FX unified modes are Buy / Sell / Spend (Convert removed; legacy `fxConvert` opens Sell). SegmentedControl active = primary blue + white text; inactive = medium gray (`--segment-inactive-fg`). Recent transactions table uses `table-fixed` + colgroup so Date / Type / Description / Amount / Status headers line up; status badge lives under Status. Vitest + eslint + tsc + next build + ratchet + pytest green.
