@@ -164,7 +164,19 @@ export async function loadBankAndCashAccounts(
   ]);
   return [...bankRes.items, ...cashRes.items]
     .filter((row) => row.is_active !== false)
-    .map(toOption);
+    .map(toOption)
+    .filter((row) => isTransferMoneyAccountKind(row.account_kind));
+}
+
+/** Transfer From/To — cash drawers and bank accounts only (no FX / cards). */
+export function isTransferMoneyAccountKind(kind: string): boolean {
+  return kind === "cash" || kind === "bank";
+}
+
+export function filterTransferMoneyAccounts<
+  T extends { account_kind: string },
+>(accounts: T[]): T[] {
+  return accounts.filter((a) => isTransferMoneyAccountKind(a.account_kind));
 }
 
 /** Bank, cash, and FX wallets for customer payment receipts. */

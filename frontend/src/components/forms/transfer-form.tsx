@@ -14,7 +14,12 @@ import { ValidationHint } from "@/components/ui/validation-hint";
 import { apiFetch } from "@/lib/api";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
-import type { MoneyAccountLeaf } from "@/lib/banking-types";
+import {
+  filterTransferMoneyAccounts,
+  formatMoneyAccountOptionLabel,
+  loadBankAndCashAccounts,
+  type MoneyAccountOption,
+} from "@/lib/load-money-accounts";
 import { useEntity } from "@/lib/entity-context";
 import { parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
@@ -44,7 +49,7 @@ export function TransferForm({
   useEffect(() => {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
-  const [accounts, setAccounts] = useState<MoneyAccountLeaf[]>([]);
+  const [accounts, setAccounts] = useState<MoneyAccountOption[]>([]);
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
   const [dateText, setDateText] = useState("");
@@ -55,14 +60,15 @@ export function TransferForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const res = await apiFetch<{ items: MoneyAccountLeaf[] }>(
-      `/entities/${entityId}/banking/accounts?limit=100`,
+    // Cash + bank only — FX wallets and credit cards are not transfer endpoints.
+    const items = filterTransferMoneyAccounts(
+      await loadBankAndCashAccounts(entityId),
     );
-    setAccounts(res.items.filter((a) => a.is_active));
+    setAccounts(items);
     if (defaultFromId) setFromId(defaultFromId);
-    else if (res.items[0]) setFromId(res.items[0].id);
+    else if (items[0]) setFromId(items[0].id);
     if (defaultToId) setToId(defaultToId);
-    else if (res.items[1]) setToId(res.items[1].id);
+    else if (items[1]) setToId(items[1].id);
   }, [entityId, defaultFromId, defaultToId]);
 
   useEffect(() => {
@@ -137,7 +143,10 @@ export function TransferForm({
 
   const accountOptions = accounts.map((a) => ({
     value: a.id,
-    label: `${a.name} (${a.account_kind})`,
+    label: formatMoneyAccountOptionLabel(a, {
+      cashAccountCount: accounts.filter((row) => row.account_kind === "cash")
+        .length,
+    }),
   }));
 
   if (!open && !embedded) return null;

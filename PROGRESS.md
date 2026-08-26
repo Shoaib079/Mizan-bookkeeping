@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Record FX + segments + recent table (`v0.record-fx-segments`):** FX Buy/Sell/Spend only; segmented blue/white active; recent table colgroup alignment.
+- **Transfer cash+bank only (`v0.transfer-cash-bank-only`):** Transfer From/To exclude FX and credit cards.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Record FX + segments + recent table |
-| **Last tag** | `v0.record-fx-segments` |
-| **Unpushed** | no (after push) |
+| **Last completed slice** | Transfer form cash+bank only |
+| **Last tag** | `v0.transfer-cash-bank-only` |
+| **Unpushed** | yes (local commit only — do not push until owner asks) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |
