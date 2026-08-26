@@ -18,13 +18,13 @@
 
 ## Current
 
-- **UX polish 5 (`v0.ux-polish-5`):** Record formTitle; Upload Z report; delivery 2-col desktop; stronger sidebar active; larger SectionTabs.
+- **Settings tabbed layout (`v0.settings-tabs`):** Restaurant settings is tabbed (Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups, Your Profile); delete stays below; mobile hash deep-links kept.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | UX polish 5 |
-| **Last tag** | `v0.ux-polish-5` |
+| **Last completed slice** | Settings tabbed layout |
+| **Last tag** | `v0.settings-tabs` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

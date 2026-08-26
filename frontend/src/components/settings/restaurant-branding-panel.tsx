@@ -40,7 +40,12 @@ type EntityBranding = {
 const LOGO_ACCEPT = "image/png,image/jpeg";
 const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
-export function RestaurantBrandingPanel() {
+type Props = {
+  /** When true, skip the section H2 — the parent tab already names this panel. */
+  embedded?: boolean;
+};
+
+export function RestaurantBrandingPanel({ embedded = false }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -204,8 +209,10 @@ export function RestaurantBrandingPanel() {
 
   return (
     <FormSection id="branding">
-      <h2 className="text-sm font-semibold">Menu and document details</h2>
-      <p className="mt-1 text-sm text-muted-foreground">
+      {!embedded && (
+        <h2 className="text-sm font-semibold">Menu & Documents</h2>
+      )}
+      <p className={embedded ? "text-sm text-muted-foreground" : "mt-1 text-sm text-muted-foreground"}>
         What this restaurant prints on the menus you send to agencies. Each
         restaurant keeps its own — they are separate companies.
       </p>

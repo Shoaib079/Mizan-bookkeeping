@@ -25,7 +25,12 @@ type TaskStatus = {
 const POLL_MS = 2000;
 const MAX_POLL_MS = 15 * 60 * 1000;
 
-export function BackupsInfoPanel() {
+type Props = {
+  /** When true, skip the section H2 — the parent tab already names this panel. */
+  embedded?: boolean;
+};
+
+export function BackupsInfoPanel({ embedded = false }: Props) {
   const { entityId } = useEntity();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
@@ -111,8 +116,8 @@ export function BackupsInfoPanel() {
   if (forbidden) {
     return (
       <section id="backups" className="rounded-lg border border-border bg-card p-5">
-        <h2 className="text-sm font-semibold">Backups</h2>
-        <div className="mt-3">
+        {!embedded && <h2 className="text-sm font-semibold">Backups</h2>}
+        <div className={embedded ? undefined : "mt-3"}>
           <ForbiddenMessage detail="Only restaurant owners and admins can run a manual backup." />
         </div>
       </section>
@@ -121,8 +126,14 @@ export function BackupsInfoPanel() {
 
   return (
     <section id="backups" className="rounded-lg border border-border bg-card p-5">
-      <h2 className="text-sm font-semibold">Backups</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
+      {!embedded && <h2 className="text-sm font-semibold">Backups</h2>}
+      <p
+        className={
+          embedded
+            ? "text-sm text-muted-foreground"
+            : "mt-2 text-sm text-muted-foreground"
+        }
+      >
         Nightly backups upload automatically to Cloudflare R2. Use{" "}
         <strong>Backup now</strong> to upload immediately — if you already
         backed up today (UTC), that night&apos;s automatic run is skipped.

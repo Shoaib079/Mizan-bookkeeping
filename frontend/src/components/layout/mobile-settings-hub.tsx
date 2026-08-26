@@ -77,7 +77,7 @@ export function MobileSettingsHub() {
         />
         <SettingsRow
           href="/settings/restaurant?full=1#team"
-          label="Team"
+          label="Teams"
           sublabel="Members and roles"
           icon={Users}
         />

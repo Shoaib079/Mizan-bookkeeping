@@ -41,9 +41,9 @@ describe("MobileSettingsHub navigation", () => {
     );
   });
 
-  it("Team drill-in lands on the team section", () => {
+  it("Teams drill-in lands on the team section", () => {
     render(<MobileSettingsHub />);
-    expect(screen.getByRole("link", { name: /Team/i }).getAttribute("href")).toBe(
+    expect(screen.getByRole("link", { name: /Teams/i }).getAttribute("href")).toBe(
       "/settings/restaurant?full=1#team",
     );
   });
@@ -116,8 +116,9 @@ describe("settings section hash targets exist", () => {
   });
 
   it("restaurant settings content exposes company-profile and team ids", () => {
-    const source = sourceDeclaring("RestaurantSettingsContent");
-    expect(source).toContain('id="company-profile"');
-    expect(source).toContain('id="team"');
+    const content = sourceDeclaring("RestaurantSettingsContent");
+    const company = sourceDeclaring("CompanyProfilePanel");
+    expect(company).toContain('id="company-profile"');
+    expect(content).toContain('id="team"');
   });
 });

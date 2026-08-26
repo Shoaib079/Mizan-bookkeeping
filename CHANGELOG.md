@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Settings tabbed layout (`v0.settings-tabs`).** Restaurant settings is one page with seven tabs (Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups, Your Profile → `/settings/profile`). All existing panels reused; Team renamed to Teams; Delete restaurant stays below tabs; mobile `#hash` deep-links still select the right tab. Vitest 1504 + eslint + tsc + next build + symbol guards + ratchet + pytest green.
+
 - **UX polish 5 (`v0.ux-polish-5`).** (1) Record desk form headers use `formTitle` (`Record Sale`, etc.) so they no longer duplicate the tile label. (2) Sales review CTA renamed to **Upload Z report**. (3) Delivery platform cards use `md:grid-cols-2`. (4) Sidebar active row: stronger primary tint, semibold, inset left border. (5) SectionTabs larger (`px-4 py-2.5 text-base`). Credit-card balance display unchanged. Vitest 1498 + eslint + tsc + next build + ratchet + pytest green.
 
 - **Recent transactions Amount/Status right edge (`v0.recent-tx-align`).** Record Recent transactions: Description col takes leftover width (`w-auto`); Amount and Status headers/cells are `text-right` / `justify-end` so they sit on the trailing edge. Vitest + eslint + tsc + next build + ratchet + pytest green.
