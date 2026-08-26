@@ -10,10 +10,10 @@ import {
 } from "@/lib/mobile-shell";
 
 describe("mobile-shell", () => {
-  it("defines five tab roots", () => {
+  it("defines five tab roots with Sales instead of Review", () => {
     expect(MOBILE_TAB_ROOTS).toEqual([
       "/",
-      "/review",
+      "/sales",
       "/record",
       "/banking",
       "/more",
@@ -26,22 +26,27 @@ describe("mobile-shell", () => {
 
   it("normalizes trailing slashes", () => {
     expect(normalizePathname("/more/")).toBe("/more");
-    expect(normalizePathname("/review?x=1")).toBe("/review");
+    expect(normalizePathname("/sales?x=1")).toBe("/sales");
   });
 
   it("detects tab roots vs drill-in pages", () => {
     expect(isMobileTabRoot("/")).toBe(true);
     expect(isMobileTabRoot("/record")).toBe(true);
+    expect(isMobileTabRoot("/sales")).toBe(true);
+    expect(isMobileTabRoot("/sales/abc")).toBe(true);
     expect(isMobileTabRoot("/banking")).toBe(true);
     expect(isMobileTabRoot("/banking/transfers")).toBe(true);
     expect(isMobileTabRoot("/banking/accounts/abc")).toBe(false);
     expect(isMobileTabRoot("/suppliers")).toBe(false);
     expect(isMobileTabRoot("/reports")).toBe(false);
+    expect(isMobileTabRoot("/review")).toBe(false);
   });
 
   it("returns active tab for drill-in pages under their section", () => {
-    expect(activeMobileTab("/review")).toBe("/review");
-    expect(activeMobileTab("/review/bank")).toBe("/review");
+    expect(activeMobileTab("/sales")).toBe("/sales");
+    expect(activeMobileTab("/sales/abc")).toBe("/sales");
+    expect(activeMobileTab("/review")).toBe(null);
+    expect(activeMobileTab("/review/bank")).toBe(null);
     expect(activeMobileTab("/banking/cash")).toBe("/banking");
     expect(activeMobileTab("/banking/accounts/x")).toBe("/banking");
     expect(activeMobileTab("/suppliers")).toBe("/more");

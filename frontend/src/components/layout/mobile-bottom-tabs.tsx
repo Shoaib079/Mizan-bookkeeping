@@ -6,11 +6,9 @@ import {
   LayoutDashboard,
   Menu,
   Plus,
-  ScanSearch,
   ShoppingBag,
 } from "lucide-react";
 
-import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { activeMobileTab } from "@/lib/mobile-shell";
 import { hasGrant, hasMobileMoreTab } from "@/lib/entity-access";
 import { useUnsavedWork } from "@/lib/unsaved-work";
@@ -18,7 +16,6 @@ import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
 type MobileBottomTabsProps = {
-  reviewTotal: number;
   showRecord: boolean;
 };
 
@@ -27,14 +24,12 @@ function TabLink({
   label,
   icon: Icon,
   active,
-  badge,
   onNavigate,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   active: boolean;
-  badge?: number;
   onNavigate: (href: string) => void;
 }) {
   return (
@@ -43,7 +38,9 @@ function TabLink({
       onClick={() => onNavigate(href)}
       className={cn(
         "relative flex min-h-11 flex-1 flex-col items-center justify-end gap-0.5 pb-2 pt-2 text-[10px] font-medium transition-colors",
-        active ? "text-[var(--tab-active-fg,var(--primary))]" : "text-muted-foreground",
+        active
+          ? "text-[var(--tab-active-fg,var(--primary))]"
+          : "text-muted-foreground",
       )}
     >
       <span
@@ -53,12 +50,6 @@ function TabLink({
         )}
       >
         <Icon className={cn("size-[18px]", active && "scale-105")} />
-        {badge !== undefined && badge > 0 && (
-          <NavCountBadge
-            count={badge}
-            className="absolute -right-2 -top-1 min-w-4 px-1 text-[9px]"
-          />
-        )}
       </span>
       <span>{label}</span>
       {active && (
@@ -106,19 +97,15 @@ function RecordFab({
   );
 }
 
-export function MobileBottomTabs({
-  reviewTotal,
-  showRecord,
-}: MobileBottomTabsProps) {
+export function MobileBottomTabs({ showRecord }: MobileBottomTabsProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { requestLeave } = useUnsavedWork();
   const { grants } = useEntityAccess();
   const tab = activeMobileTab(pathname);
-  const showReview = hasGrant(grants, "nav:review");
+  const showSales = hasGrant(grants, "nav:sales");
   const showBanking = hasGrant(grants, "nav:banking");
   const showMore = hasMobileMoreTab(grants);
-  const showSalesTab = hasGrant(grants, "nav:sales") && !showBanking && !showMore;
 
   function navigate(href: string) {
     if (href === pathname) return;
@@ -138,13 +125,12 @@ export function MobileBottomTabs({
           active={tab === "/"}
           onNavigate={navigate}
         />
-        {showReview && (
+        {showSales && (
           <TabLink
-            href="/review"
-            label="Review"
-            icon={ScanSearch}
-            active={tab === "/review"}
-            badge={reviewTotal}
+            href="/sales"
+            label="Sales"
+            icon={ShoppingBag}
+            active={tab === "/sales"}
             onNavigate={navigate}
           />
         )}
@@ -160,38 +146,20 @@ export function MobileBottomTabs({
           />
         )}
         {showBanking && (
-          <>
-            <TabLink
-              href="/banking"
-              label="Banking"
-              icon={Building2}
-              active={tab === "/banking"}
-              onNavigate={navigate}
-            />
-            <TabLink
-              href="/more"
-              label="More"
-              icon={Menu}
-              active={tab === "/more"}
-              onNavigate={navigate}
-            />
-          </>
+          <TabLink
+            href="/banking"
+            label="Banking"
+            icon={Building2}
+            active={tab === "/banking"}
+            onNavigate={navigate}
+          />
         )}
-        {!showBanking && showMore && (
+        {showMore && (
           <TabLink
             href="/more"
             label="More"
             icon={Menu}
             active={tab === "/more"}
-            onNavigate={navigate}
-          />
-        )}
-        {showSalesTab && (
-          <TabLink
-            href="/sales"
-            label="Sales"
-            icon={ShoppingBag}
-            active={pathname.startsWith("/sales")}
             onNavigate={navigate}
           />
         )}

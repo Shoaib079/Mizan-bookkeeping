@@ -1,60 +1,74 @@
 "use client";
 
+/** Mobile More hub — one flat nav list with label search. */
+
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Settings } from "lucide-react";
+import { ChevronRight, Search, Settings } from "lucide-react";
 
 import { MobileEntitySwitcher } from "@/components/layout/mobile-entity-switcher";
-import { appRoutes, filterNavItemsByEntitySettings, type AppRoute } from "@/lib/app-routes";
+import { Input } from "@/components/ui/input";
+import {
+  appRoutes,
+  filterNavItemsByEntitySettings,
+  type AppRoute,
+} from "@/lib/app-routes";
 import { hasGrant } from "@/lib/entity-access";
 import { useQuickActions } from "@/components/quick-actions";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
-const MORE_SECTION_HREFS: { label: string; hrefs: string[] }[] = [
-  {
-    label: "Money in",
-    hrefs: ["/sales", "/delivery", "/customers"],
-  },
-  {
-    label: "Money out",
-    hrefs: ["/suppliers", "/staff", "/partners"],
-  },
-  {
-    label: "Money held",
-    hrefs: ["/cards", "/banking/cash"],
-  },
-  {
-    label: "Understand",
-    hrefs: ["/reports"],
-  },
+/** Flat More destinations (Sales lives on the bottom tab bar). */
+export const MORE_NAV_ITEMS: { href: string; label: string }[] = [
+  { href: "/delivery", label: "Delivery" },
+  { href: "/customers", label: "Customers" },
+  { href: "/suppliers", label: "Suppliers" },
+  { href: "/staff", label: "Staff" },
+  { href: "/partners", label: "Partners" },
+  { href: "/cards", label: "Cards" },
+  { href: "/reports", label: "Reports" },
 ];
+
+export function matchesMoreNavSearch(label: string, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return label.toLowerCase().includes(q);
+}
 
 function routeForHref(href: string): AppRoute | undefined {
   return appRoutes.find((r) => r.href === href);
 }
 
-function MoreSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-5">
-      <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground/80">
-        {title}
-      </h2>
-      <div className="overflow-hidden rounded-xl bg-card shadow-sm">{children}</div>
-    </section>
-  );
-}
-
-function MoreRow({ item }: { item: AppRoute }) {
-  const Icon = item.icon;
+function MoreRow({
+  href,
+  label,
+  icon: Icon,
+  mutedIcon,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  mutedIcon?: boolean;
+}) {
   return (
     <Link
-      href={item.href}
+      href={href}
       className="flex min-h-[52px] items-center gap-3 border-b border-border px-4 last:border-b-0 active:bg-muted/60"
     >
-      <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-primary/10 text-primary">
-        <Icon className="size-4" />
+      <span
+        className={cn(
+          "flex size-[34px] shrink-0 items-center justify-center rounded-[10px]",
+          mutedIcon ? "bg-muted" : "bg-primary/10 text-primary",
+        )}
+      >
+        <Icon
+          className={cn(
+            "size-4",
+            mutedIcon && "text-muted-foreground",
+          )}
+        />
       </span>
-      <span className="min-w-0 flex-1 text-base">{item.label}</span>
+      <span className="min-w-0 flex-1 text-base">{label}</span>
       <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
     </Link>
   );
@@ -71,7 +85,23 @@ function hasLimitedMoreMenu(grants: readonly string[]): boolean {
 export function MobileMoreMenu() {
   const { deliveryEnabled } = useQuickActions();
   const { grants } = useEntityAccess();
-  const settings = { deliveryEnabled };
+  const [query, setQuery] = useState("");
+  const navRows = useMemo(() => {
+    const settings = { deliveryEnabled };
+    return MORE_NAV_ITEMS.flatMap((entry) => {
+      const route = routeForHref(entry.href);
+      if (!route) return [];
+      if (filterNavItemsByEntitySettings([route], settings).length === 0) {
+        return [];
+      }
+      if (!matchesMoreNavSearch(entry.label, query)) return [];
+      return [{ href: entry.href, label: entry.label, icon: route.icon }];
+    });
+  }, [query, deliveryEnabled]);
+
+  const showSettings =
+    hasGrant(grants, "nav:settings") &&
+    matchesMoreNavSearch("Settings", query);
 
   if (hasLimitedMoreMenu(grants)) {
     return (
@@ -89,42 +119,47 @@ export function MobileMoreMenu() {
     <div className="pb-2">
       <MobileEntitySwitcher />
 
-      {MORE_SECTION_HREFS.map(({ label, hrefs }) => {
-        const items = hrefs
-          .map((href) => routeForHref(href))
-          .filter((item): item is AppRoute => item !== undefined)
-          .filter((item) =>
-            filterNavItemsByEntitySettings([item], settings).length > 0,
-          );
-        if (items.length === 0) return null;
+      <div className="mb-4 px-3">
+        <label className="relative block">
+          <span className="sr-only">Search</span>
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search..."
+            className="h-11 pl-9"
+            autoComplete="off"
+          />
+        </label>
+      </div>
 
-        return (
-          <MoreSection key={label} title={label}>
-            {items.map((item) => (
-              <MoreRow key={item.href} item={item} />
-            ))}
-          </MoreSection>
-        );
-      })}
-
-      {hasGrant(grants, "nav:settings") && (
-        <MoreSection title="Setup">
-          <Link
+      <div className="overflow-hidden rounded-xl bg-card shadow-sm">
+        {navRows.map((row) => (
+          <MoreRow
+            key={row.href}
+            href={row.href}
+            label={row.label}
+            icon={row.icon}
+          />
+        ))}
+        {showSettings && (
+          <MoreRow
             href="/settings/restaurant"
-            className="flex min-h-[52px] items-center gap-3 px-4 active:bg-muted/60"
-          >
-            <span
-              className={cn(
-                "flex size-[34px] shrink-0 items-center justify-center rounded-[10px] bg-muted",
-              )}
-            >
-              <Settings className="size-4 text-muted-foreground" />
-            </span>
-            <span className="flex-1 text-base">Settings</span>
-            <ChevronRight className="size-4 text-muted-foreground/60" />
-          </Link>
-        </MoreSection>
-      )}
+            label="Settings"
+            icon={Settings}
+            mutedIcon
+          />
+        )}
+        {navRows.length === 0 && !showSettings && (
+          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+            No matches for &ldquo;{query.trim()}&rdquo;
+          </p>
+        )}
+      </div>
     </div>
   );
 }

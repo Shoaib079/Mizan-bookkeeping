@@ -152,10 +152,7 @@ function AppShellInner({
           {mainChrome}
         </main>
         {isMobile && (
-          <MobileBottomTabs
-            reviewTotal={reviewCounts.total}
-            showRecord={showRecordFab}
-          />
+          <MobileBottomTabs showRecord={showRecordFab} />
         )}
         <CommandPalette deliveryEnabled={deliveryEnabled} />
       </div>

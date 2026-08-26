@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-27
 
+- **Mobile UX fixes (`v0.mobile-ux-fixes`).** Bottom tabs are Home · Sales · Record · Banking · More (Review removed from the bar; Sales active on `/sales` and `/sales/*`). More menu is one flat list (Delivery, Customers, Suppliers, Staff, Partners, Cards, Reports, Settings) with a Search filter — Money In/Out/Held/Understand section headers removed.
+
 - **Mobile card tables (`v0.mobile-card-tables`).** On phone, money tables fork to shared `MobileCardList` / `MobileCardRow` (type · date, description, signed amount + tinted icon). Covers people ledgers (staff/partner/customer via `LedgerTable` `mobile`), supplier activity, expenses review, **all table-backed reports** (cash book, expense register, GL, P&L, balance sheet, cash flow, delivery sales, KDV input, period comparison, bank reconciliation lines), bank account statements/card payments, and FX wallet ledger. Helpers in `mobile-ledger-card.ts`. Month close stays checklist UI (no DataTable). Desktop tables unchanged. No guard/API changes.
 
 ## 2026-08-26

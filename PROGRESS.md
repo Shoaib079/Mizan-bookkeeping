@@ -22,9 +22,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Mobile card tables (`v0.mobile-card-tables`) |
-| **Last tag** | `v0.mobile-card-tables` |
+| **Last completed slice** | Mobile UX fixes (`v0.mobile-ux-fixes`) |
+| **Last tag** | `v0.mobile-ux-fixes` |
 | **Unpushed** | no (after push) |
-| **Next up** | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
+| **Next up** | Card clearing mobile cards (or owner pick) |
 | **Exact next action** | Owner picks next slice |
 | **Gate** | Idle |

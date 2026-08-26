@@ -70,7 +70,7 @@ export const MOBILE_TOAST_OFFSET =
 
 export const MOBILE_TAB_ROOTS = [
   "/",
-  "/review",
+  "/sales",
   "/record",
   "/banking",
   "/more",
@@ -105,16 +105,18 @@ export function normalizePathname(pathname: string): string {
 export function isMobileTabRoot(pathname: string): boolean {
   const path = normalizePathname(pathname);
   if ((MOBILE_TAB_ROOTS as readonly string[]).includes(path)) return true;
+  if (path === "/sales" || path.startsWith("/sales/")) return true;
   return isMobileBankingShellRoot(path);
 }
 
-/** Which bottom tab is active — includes drill-in pages under their section. */
-export function activeMobileTab(pathname: string): MobileTabRoot {
+/** Which bottom tab is active — includes drill-in pages under their section.
+ * Returns null when the page is not under a bottom-tab section (e.g. Review). */
+export function activeMobileTab(pathname: string): MobileTabRoot | null {
   const path = normalizePathname(pathname);
   if ((MOBILE_TAB_ROOTS as readonly string[]).includes(path)) {
     return path as MobileTabRoot;
   }
-  if (path.startsWith("/review")) return "/review";
+  if (path.startsWith("/sales")) return "/sales";
   if (path.startsWith("/banking")) return "/banking";
   if (
     path.startsWith("/record") ||
@@ -123,6 +125,7 @@ export function activeMobileTab(pathname: string): MobileTabRoot {
   ) {
     return "/record";
   }
+  if (path.startsWith("/review")) return null;
   return "/more";
 }
 
