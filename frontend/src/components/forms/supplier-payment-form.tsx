@@ -17,6 +17,7 @@ import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
 import {
   loadBankAndCashAccounts,
+  loadCashAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
@@ -35,6 +36,8 @@ type Props = {
   balanceKurus?: number;
   embedded?: boolean;
   onPaid?: () => void;
+  /** Cash drawers only — bank payments come from the statement. */
+  cashOnly?: boolean;
 };
 
 export function SupplierPaymentForm({
@@ -44,6 +47,7 @@ export function SupplierPaymentForm({
   balanceKurus,
   embedded,
   onPaid,
+  cashOnly = false,
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -64,10 +68,12 @@ export function SupplierPaymentForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
-    const merged = await loadBankAndCashAccounts(entityId);
+    const merged = cashOnly
+      ? await loadCashAccounts(entityId)
+      : await loadBankAndCashAccounts(entityId);
     setAccounts(merged);
     if (merged[0]) setPaymentGlAccountId(merged[0].gl_account_id);
-  }, [entityId]);
+  }, [entityId, cashOnly]);
 
   useEffect(() => {
     if (open) {
@@ -110,7 +116,7 @@ export function SupplierPaymentForm({
       return;
     }
     if (!paymentGlAccountId) {
-      setError("Choose a cash or bank account.");
+      setError(cashOnly ? "Choose a cash drawer." : "Choose a cash or bank account.");
       return;
     }
     setSubmitting(true);
@@ -232,7 +238,7 @@ export function SupplierPaymentForm({
               value: a.gl_account_id,
               label: `${a.name} (${a.account_kind})`,
             }))}
-            placeholder="Cash or bank account…"
+            placeholder={cashOnly ? "Cash drawer…" : "Cash or bank account…"}
           />
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

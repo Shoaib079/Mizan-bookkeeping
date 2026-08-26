@@ -99,10 +99,13 @@ describe("RecordDesk integration", () => {
     expect(source).toContain("shouldShowNewMenu");
   });
 
-  it("keeps Upload / Count / Close extras reachable from More", () => {
+  it("keeps Upload / Count / Close as grid tiles (no More menu)", () => {
     const source = sourceDeclaring("RecordDesk");
-    expect(source).toContain("RECORD_DESK_EXTRA_ACTION_IDS");
-    expect(source).toContain("openRecordAction");
+    expect(source).toContain("RECORD_DESK_TILES");
+    expect(source).not.toContain("MoreActionButton");
+    expect(sourceDeclaring("RECORD_DESK_TILES")).toContain('"addDocument"');
+    expect(sourceDeclaring("RECORD_DESK_TILES")).toContain('"countCash"');
+    expect(sourceDeclaring("RECORD_DESK_TILES")).toContain('"closeDay"');
   });
 
   it("always shows Most used when entity selected (defaults fill it)", () => {

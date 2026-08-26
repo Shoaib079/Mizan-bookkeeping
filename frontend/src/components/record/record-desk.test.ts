@@ -5,38 +5,51 @@ import { sourceDeclaring } from "@/test-support/source";
 const source = () => sourceDeclaring("RecordDesk");
 
 describe("RecordDesk", () => {
-  it("renders v3 icon grid and embedded primary forms", () => {
+  it("renders v3 icon grid and embedded forms without a More menu", () => {
     expect(source()).toContain("RecordDeskIconGrid");
     expect(source()).toContain("RECORD_DESK_TILES");
     expect(source()).toContain("RecordDeskFormPanel");
     expect(source()).toContain("RecentlyRecordedCard");
+    expect(source()).not.toContain("MoreActionButton");
+    expect(source()).not.toContain("RECORD_DESK_EXTRA_ACTION_IDS");
   });
 
   it("routes confirmed uploads through openRecordActionWithFile", () => {
     expect(source()).toContain("openRecordActionWithFile");
     expect(source()).toContain("handleDocumentConfirm");
   });
-
-  it("keeps Upload / Count cash / Close day in More extras", () => {
-    expect(source()).toContain("RECORD_DESK_EXTRA_ACTION_IDS");
-    expect(source()).toContain("MoreActionButton");
-    expect(source()).toContain("useDismissOnOutsideClick");
-    expect(source()).toContain('role="menu"');
-  });
 });
 
 describe("Record desk v3 tiles", () => {
-  it("defines seven icon tiles with required tints", () => {
+  it("defines nine tiles in three rows without a Salary tile", () => {
     const tiles = sourceDeclaring("RECORD_DESK_TILES");
     expect(tiles).toContain('"sales"');
     expect(tiles).toContain('"expense"');
-    expect(tiles).toContain('"staffSalary"');
     expect(tiles).toContain('"payment"');
     expect(tiles).toContain('"transfer"');
     expect(tiles).toContain('"split"');
     expect(tiles).toContain('"fx"');
-    expect(tiles).toContain('tint: "mint"');
-    expect(tiles).toContain('tint: "blush"');
-    expect(tiles).toContain('icon: Globe');
+    expect(tiles).toContain('"addDocument"');
+    expect(tiles).toContain('"countCash"');
+    expect(tiles).toContain('"closeDay"');
+    expect(tiles).not.toContain('"staffSalary"');
+    expect(tiles).not.toContain("Briefcase");
+  });
+
+  it("uses a three-column icon grid", () => {
+    expect(sourceDeclaring("RecordDeskIconGrid")).toContain("grid-cols-3");
+  });
+});
+
+describe("Record payment panel", () => {
+  it("defaults to Staff before Supplier and Customer", () => {
+    const src = sourceDeclaring("RecordPaymentPanel");
+    const staff = src.indexOf('label: "Staff"');
+    const supplier = src.indexOf('label: "Supplier"');
+    const customer = src.indexOf('label: "Customer"');
+    expect(staff).toBeGreaterThan(-1);
+    expect(staff).toBeLessThan(supplier);
+    expect(supplier).toBeLessThan(customer);
+    expect(src).toContain("useState(0)");
   });
 });

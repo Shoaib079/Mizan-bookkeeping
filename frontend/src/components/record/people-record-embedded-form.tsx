@@ -18,9 +18,11 @@ export function renderEmbeddedForm(
   entityId: string,
   onClose: () => void,
   paymentDateIso?: string,
+  options?: { cashOnly?: boolean },
 ) {
   const payCurrency = person.payCurrency ?? "TRY";
   const formProps = { embedded: true as const, open: true, onClose };
+  const cashOnly = options?.cashOnly === true;
 
   switch (action) {
     case "staffAccrual":
@@ -62,6 +64,7 @@ export function renderEmbeddedForm(
           {...formProps}
           customerId={person.id}
           balanceKurus={balanceKurus}
+          cashOnly={cashOnly}
         />
       );
     case "supplierPayment":
@@ -70,6 +73,7 @@ export function renderEmbeddedForm(
           {...formProps}
           supplierId={person.id}
           balanceKurus={balanceKurus}
+          cashOnly={cashOnly}
         />
       );
     default:

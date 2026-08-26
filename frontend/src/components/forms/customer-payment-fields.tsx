@@ -52,6 +52,7 @@ type Props = {
   error: string | null;
   submitting: boolean;
   submitBlocked: boolean;
+  accountPlaceholder?: string;
 };
 
 export function CustomerPaymentFields({
@@ -89,6 +90,7 @@ export function CustomerPaymentFields({
   error,
   submitting,
   submitBlocked,
+  accountPlaceholder = "Bank, cash, or FX wallet…",
 }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-3">
@@ -129,7 +131,7 @@ export function CustomerPaymentFields({
             value: a.gl_account_id,
             label: paymentReceiveAccountLabel(a),
           }))}
-          placeholder="Bank, cash, or FX wallet…"
+          placeholder={accountPlaceholder}
         />
       </div>
       {(isFxWallet || isFxReceivable) && selectedAccount?.currency && (

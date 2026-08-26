@@ -1,6 +1,6 @@
 "use client";
 
-/** Inline payment panel — pick kind + person, reuse people-record forms. */
+/** Inline payment panel — Staff first; supplier/customer cash-only. */
 
 import { useState } from "react";
 
@@ -20,10 +20,22 @@ const PAYMENT_KINDS: {
   action: RecordActionKey;
   kind: PersonPickerKind;
   label: string;
+  /** Cash drawers only — bank payments come from the statement. */
+  cashOnly: boolean;
 }[] = [
-  { action: "customerPayment", kind: "customer", label: "Customer" },
-  { action: "supplierPayment", kind: "supplier", label: "Supplier" },
-  { action: "staffPayment", kind: "staff", label: "Staff" },
+  { action: "staffPayment", kind: "staff", label: "Staff", cashOnly: false },
+  {
+    action: "supplierPayment",
+    kind: "supplier",
+    label: "Supplier",
+    cashOnly: true,
+  },
+  {
+    action: "customerPayment",
+    kind: "customer",
+    label: "Customer",
+    cashOnly: true,
+  },
 ];
 
 type Props = {
@@ -47,6 +59,7 @@ export function RecordPaymentPanel({ onSaved }: Props) {
           <button
             key={item.action}
             type="button"
+            data-testid={`record-payment-tab-${item.kind}`}
             onClick={() => setKindIndex(index)}
             className={cn(
               "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
@@ -59,6 +72,19 @@ export function RecordPaymentPanel({ onSaved }: Props) {
           </button>
         ))}
       </div>
+
+      {selected.cashOnly && (
+        <p className="text-xs text-muted-foreground">
+          Cash only — bank payments come from the statement.
+        </p>
+      )}
+
+      {!selected.cashOnly && (
+        <p className="text-xs text-muted-foreground">
+          Pay from cash drawer or a partner (owe them). Bank salaries come from
+          the statement.
+        </p>
+      )}
 
       {!page.entityId && (
         <p className="text-sm text-muted-foreground">
@@ -126,6 +152,7 @@ export function RecordPaymentPanel({ onSaved }: Props) {
                   page.entityId,
                   onSaved,
                   page.paymentDateIso,
+                  { cashOnly: selected.cashOnly },
                 )}
               </div>
             )}

@@ -13,6 +13,7 @@ import {
 } from "@/lib/fx-money";
 import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
 import {
+  loadCashAccounts,
   loadPaymentReceiveAccounts,
   type MoneyAccountOption,
 } from "@/lib/load-money-accounts";
@@ -34,6 +35,8 @@ export type CustomerPaymentFormProps = {
   remainingForexMinor?: number | null;
   embedded?: boolean;
   onSaved?: () => void;
+  /** Cash drawers only — bank/FX receipts come from statements / FX flows. */
+  cashOnly?: boolean;
 };
 
 export function useCustomerPaymentForm({
@@ -46,6 +49,7 @@ export function useCustomerPaymentForm({
   forexReceivableCurrency,
   remainingForexMinor,
   onSaved,
+  cashOnly = false,
 }: Omit<CustomerPaymentFormProps, "embedded">) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -78,6 +82,12 @@ export function useCustomerPaymentForm({
 
   const loadAccounts = useCallback(async () => {
     if (!entityId) return;
+    if (cashOnly && !isFxReceivable) {
+      const cash = await loadCashAccounts(entityId);
+      setAccounts(cash);
+      if (cash[0]) setPaymentGlAccountId(cash[0].gl_account_id);
+      return;
+    }
     const merged = await loadPaymentReceiveAccounts(entityId);
     const filtered = isFxReceivable
       ? merged.filter(
@@ -88,7 +98,7 @@ export function useCustomerPaymentForm({
       : merged;
     setAccounts(filtered);
     if (filtered[0]) setPaymentGlAccountId(filtered[0].gl_account_id);
-  }, [entityId, isFxReceivable, forexReceivableCurrency]);
+  }, [entityId, isFxReceivable, forexReceivableCurrency, cashOnly]);
 
   useEffect(() => {
     if (open) {

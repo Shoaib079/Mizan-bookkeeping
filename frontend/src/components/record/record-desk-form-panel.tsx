@@ -18,14 +18,10 @@ import type {
   RecordDeskTile,
   RecordDeskTileId,
 } from "@/components/record/record-desk-tiles";
-import type { RecordActionKey } from "@/lib/record-actions";
 import { cn } from "@/lib/utils";
-
-type ExtraMode = "addDocument" | "countCash" | "closeDay";
 
 type Props = {
   tile: RecordDeskTile | null;
-  extraMode: ExtraMode | null;
   deliveryEnabled: boolean;
   onRecorded: () => void;
   onDocumentConfirm: (type: DetectedDocumentType, file: File) => void;
@@ -37,7 +33,6 @@ type Props = {
 
 export function RecordDeskFormPanel({
   tile,
-  extraMode,
   deliveryEnabled,
   onRecorded,
   onDocumentConfirm,
@@ -46,21 +41,9 @@ export function RecordDeskFormPanel({
   onDraftChange,
   mobileQuick = false,
 }: Props) {
-  const modeId: RecordDeskTileId | ExtraMode | null = extraMode ?? tile?.id ?? null;
-  const title = extraMode
-    ? extraMode === "addDocument"
-      ? "Upload"
-      : extraMode === "countCash"
-        ? "Count cash"
-        : "Close day"
-    : tile?.label ?? "Record";
-  const hint = extraMode
-    ? extraMode === "addDocument"
-      ? "Receipts, statements, invoices, Z reports — auto-routed."
-      : extraMode === "countCash"
-        ? "Count notes and compare to the books — does not post."
-        : "Post over/short, lock the day, optionally send cash elsewhere."
-    : tile?.hint ?? "";
+  const modeId: RecordDeskTileId | null = tile?.id ?? null;
+  const title = tile?.label ?? "Record";
+  const hint = tile?.hint ?? "";
   const ActiveIcon = tile?.icon;
 
   return (
@@ -79,7 +62,7 @@ export function RecordDeskFormPanel({
           )}
         >
           <div className="flex items-center gap-2.5">
-            {ActiveIcon && !extraMode && tile && (
+            {ActiveIcon && tile && (
               <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
                 <ActiveIcon className="size-4" aria-hidden />
               </span>
@@ -100,18 +83,6 @@ export function RecordDeskFormPanel({
               open
               title="Daily expenses"
               defaultRecordKind="expense"
-              showRecordKindToggle={false}
-              onClose={() => undefined}
-              onSaved={onRecorded}
-            />
-          )}
-
-          {modeId === "staffSalary" && (
-            <ManualExpenseForm
-              embedded
-              open
-              title="Staff salary"
-              defaultRecordKind="salary"
               showRecordKindToggle={false}
               onClose={() => undefined}
               onSaved={onRecorded}
@@ -184,9 +155,3 @@ export function RecordDeskFormPanel({
     </section>
   );
 }
-
-export type { ExtraMode };
-export type ExtraActionKey = Extract<
-  RecordActionKey,
-  "addDocument" | "countCash" | "closeDay"
->;

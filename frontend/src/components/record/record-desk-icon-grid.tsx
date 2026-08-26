@@ -1,6 +1,6 @@
 "use client";
 
-/** Left rail — 2-column icon grid for Record desk v3. */
+/** Left rail — 3-column icon grid for Record desk v3. */
 
 import { IconSquare } from "@/components/ui/icon-square";
 import type { RecordDeskTile } from "@/components/record/record-desk-tiles";
@@ -10,17 +10,26 @@ type Props = {
   tiles: readonly RecordDeskTile[];
   activeId: string;
   onSelect: (id: RecordDeskTile["id"]) => void;
+  /** Optional draft indicator on Count cash. */
+  cashCountDraftPending?: boolean;
 };
 
-export function RecordDeskIconGrid({ tiles, activeId, onSelect }: Props) {
+export function RecordDeskIconGrid({
+  tiles,
+  activeId,
+  onSelect,
+  cashCountDraftPending = false,
+}: Props) {
   return (
     <nav
       aria-label="Record type"
       data-testid="record-desk-icon-grid"
-      className="grid w-full grid-cols-2 gap-2 lg:w-56 lg:shrink-0"
+      className="grid w-full grid-cols-3 gap-2 lg:w-64 lg:shrink-0"
     >
       {tiles.map((tile) => {
         const active = tile.id === activeId;
+        const showDraft =
+          tile.id === "countCash" && cashCountDraftPending;
         return (
           <button
             key={tile.id}
@@ -29,12 +38,18 @@ export function RecordDeskIconGrid({ tiles, activeId, onSelect }: Props) {
             aria-pressed={active}
             onClick={() => onSelect(tile.id)}
             className={cn(
-              "flex flex-col items-center gap-2 rounded-[var(--radius-card)] border px-2 py-3 text-center transition-colors",
+              "relative flex flex-col items-center gap-2 rounded-[var(--radius-card)] border px-1.5 py-3 text-center transition-colors",
               active
                 ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
                 : "border-border bg-card hover:border-primary/30 hover:bg-muted/40",
             )}
           >
+            {showDraft && (
+              <span
+                className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-primary"
+                aria-hidden
+              />
+            )}
             <IconSquare
               icon={tile.icon}
               tint={tile.tint}
@@ -43,12 +58,15 @@ export function RecordDeskIconGrid({ tiles, activeId, onSelect }: Props) {
             />
             <span
               className={cn(
-                "text-xs font-medium",
+                "text-[11px] font-medium leading-tight",
                 active ? "text-primary" : "text-foreground",
               )}
             >
               {tile.label}
             </span>
+            {showDraft && (
+              <span className="sr-only"> — saved draft</span>
+            )}
           </button>
         );
       })}

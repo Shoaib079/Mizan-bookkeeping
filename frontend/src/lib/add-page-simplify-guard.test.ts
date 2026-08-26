@@ -69,6 +69,14 @@ describe("Add page amount-first desk", () => {
     expect(dailyVisibleSections({ deliveryEnabled: true })).toHaveLength(1);
   });
 
+  it("puts Upload, Count cash, and Close day on the icon grid", () => {
+    const tiles = sourceDeclaring("RECORD_DESK_TILES");
+    expect(tiles).toContain('"addDocument"');
+    expect(tiles).toContain('"countCash"');
+    expect(tiles).toContain('"closeDay"');
+    expect(sourceDeclaring("RecordDesk")).not.toContain("MoreActionButton");
+  });
+
   it("hides bank transfer and card batch actions from the Add hub grid", () => {
     const visible = RECORD_ACTIONS.filter((action) => !action.hidden).map(
       (action) => action.id,

@@ -20,6 +20,7 @@ export function CustomerPaymentForm({
   remainingForexMinor,
   embedded,
   onSaved,
+  cashOnly,
 }: CustomerPaymentFormProps) {
   const s = useCustomerPaymentForm({
     open,
@@ -31,6 +32,7 @@ export function CustomerPaymentForm({
     forexReceivableCurrency,
     remainingForexMinor,
     onSaved,
+    cashOnly,
   });
 
   return (
@@ -75,6 +77,9 @@ export function CustomerPaymentForm({
         error={s.error}
         submitting={s.submitting}
         submitBlocked={s.submitBlocked}
+        accountPlaceholder={
+          cashOnly ? "Cash drawer…" : "Bank, cash, or FX wallet…"
+        }
       />
     </FormDialogShell>
   );

@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Record layout fix (`v0.record-v3-layout`).** Icon grid is 3 columns with 9 tiles (Sale, Expense, Payment, Transfer, Split, FX, Upload, Count cash, Close day). Removed More dropdown and separate Salary tile (salary stays under Payment → Staff). Payment tabs order Staff → Supplier → Customer; supplier/customer account pickers are cash-only (bank from statements). Staff funding remains cash drawer / partner per existing cash-only guard. Vitest 1480 + eslint + tsc + next build green.
+
 - **Record page v3 (`v0.record-v3`).** Redesigned `/record`: left 2-col IconSquare grid (Sale, Expense, Salary, Payment, Transfer, Split, FX); right panel embeds existing forms (ManualDailySalesForm, ManualExpenseForm, payment people panel, TransferForm+embedded, RecordSplitPanel, FxUnifiedDialog). Upload / Count cash / Close day stay under More. Bottom: Recent transactions table (Date / Type / Description / Amount / Status) via existing ledger entries API. No guard/API path changes. Vitest 1478 + eslint + tsc + next build green.
 
 - **Dashboard order + FX display (`v0.dashboard-order-fx`).** Reordered home to Sales this month → Cash & bank → Balances → Top expenses. Compact Balances FX amount no longer uses CSS `truncate` (wraps with `break-words` so `$252 · €1.080 · £100` stays fully visible). Vitest 1477 + eslint + tsc + next build green.

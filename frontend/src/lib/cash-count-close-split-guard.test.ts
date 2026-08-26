@@ -68,7 +68,8 @@ describe("Count cash vs Close day split", () => {
     expect(desk).toContain('modeId === "closeDay"');
     expect(desk).toContain("CashCountForm");
     expect(desk).toContain("onContinueToCloseDay");
-    expect(desk).toContain("RECORD_DESK_EXTRA_ACTION_IDS");
     expect(desk).toContain("cashCountDraftPending");
+    expect(sourceDeclaring("RECORD_DESK_TILES")).toContain('"countCash"');
+    expect(sourceDeclaring("RECORD_DESK_TILES")).toContain('"closeDay"');
   });
 });

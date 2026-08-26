@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Record page v3 (`v0.record-v3`):** Icon grid + inline forms + recent transactions table. Upload / Count cash / Close day under More.
+- **Record layout fix (`v0.record-v3-layout`):** 3-col icon grid (9 tiles); no More menu; Payment defaults to Staff; supplier/customer cash-only.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Record page v3 |
-| **Last tag** | `v0.record-v3` |
+| **Last completed slice** | Record layout fix |
+| **Last tag** | `v0.record-v3-layout` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |
