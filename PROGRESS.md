@@ -18,13 +18,13 @@
 
 ## Current
 
-- **App responsive (`v0.app-responsive`):** FormPage default max-w-4xl; wide/full fill main; desktop `<main>` min-w-0 + overflow-x-hidden.
+- **Record icon tiles (`v0.record-tile-size`):** Rail `lg:w-56`; tiles `min-h` ~84px, `p-4`, `gap-4`, IconSquare `xl`.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | App responsive |
-| **Last tag** | `v0.app-responsive` |
+| **Last completed slice** | Record icon tiles |
+| **Last tag** | `v0.record-tile-size` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

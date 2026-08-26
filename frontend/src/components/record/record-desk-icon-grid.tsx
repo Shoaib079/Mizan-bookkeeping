@@ -24,7 +24,7 @@ export function RecordDeskIconGrid({
     <nav
       aria-label="Record type"
       data-testid="record-desk-icon-grid"
-      className="grid w-full grid-cols-3 gap-1.5 lg:w-48 lg:shrink-0"
+      className="grid w-full grid-cols-3 gap-4 lg:w-56 lg:shrink-0"
     >
       {tiles.map((tile) => {
         const active = tile.id === activeId;
@@ -38,7 +38,7 @@ export function RecordDeskIconGrid({
             aria-pressed={active}
             onClick={() => onSelect(tile.id)}
             className={cn(
-              "relative flex flex-col items-center gap-1.5 rounded-[var(--radius-card)] border px-1 py-2.5 text-center transition-colors",
+              "relative flex min-h-[5.25rem] flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border p-4 text-center transition-colors",
               active
                 ? "border-primary/40 bg-primary/5 ring-1 ring-primary/20"
                 : "border-border bg-card hover:border-primary/30 hover:bg-muted/40",
@@ -54,11 +54,11 @@ export function RecordDeskIconGrid({
               icon={tile.icon}
               tint={tile.tint}
               stroke={tile.stroke}
-              size="lg"
+              size="xl"
             />
             <span
               className={cn(
-                "text-[11px] font-medium leading-tight",
+                "text-xs font-medium leading-tight",
                 active ? "text-primary" : "text-foreground",
               )}
             >

@@ -36,8 +36,8 @@ export function IconSquare({
   icon: LucideIcon;
   tint: IconTint;
   stroke: IconStroke;
-  /** lg = 44×44 (KPI / sticker / settings); sm = dense list rows */
-  size?: "lg" | "sm";
+  /** lg = 44×44 (KPI / sticker / settings); xl = 48×48 (Record desk); sm = dense list rows */
+  size?: "lg" | "xl" | "sm";
   className?: string;
 }) {
   return (
@@ -47,14 +47,18 @@ export function IconSquare({
       data-stroke={stroke}
       className={cn(
         "inline-flex shrink-0 items-center justify-center",
-        size === "lg" ? "size-11 rounded-[12px]" : "size-9 rounded-[10px]",
+        size === "xl" && "size-12 rounded-[14px]",
+        size === "lg" && "size-11 rounded-[12px]",
+        size === "sm" && "size-9 rounded-[10px]",
         TINT_CLASS[tint],
         STROKE_CLASS[stroke],
         className,
       )}
     >
       <Icon
-        className={size === "lg" ? "size-5" : "size-4"}
+        className={
+          size === "xl" ? "size-6" : size === "lg" ? "size-5" : "size-4"
+        }
         strokeWidth={2}
         fill="none"
         aria-hidden
