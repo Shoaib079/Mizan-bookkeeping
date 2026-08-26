@@ -25,6 +25,8 @@ type Props = {
   defaultFromId?: string;
   defaultToId?: string;
   onTransferred?: () => void;
+  /** When true, render the form body without a Dialog shell (Record desk). */
+  embedded?: boolean;
 };
 
 export function TransferForm({
@@ -33,6 +35,7 @@ export function TransferForm({
   defaultFromId,
   defaultToId,
   onTransferred,
+  embedded = false,
 }: Props) {
   const { entityId, actorId } = useEntity();
   const { toast } = useToast();
@@ -137,8 +140,9 @@ export function TransferForm({
     label: `${a.name} (${a.account_kind})`,
   }));
 
-  return (
-    <Dialog open={open} title="Transfer between accounts" onClose={onClose}>
+  if (!open && !embedded) return null;
+
+  const formBody = (
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
           <Label htmlFor="xfer-date">Date (DD.MM.YYYY)</Label>
@@ -201,6 +205,13 @@ export function TransferForm({
           {submitting ? "Transferring…" : "Record transfer"}
         </Button>
       </form>
+  );
+
+  if (embedded) return formBody;
+
+  return (
+    <Dialog open={open} title="Transfer between accounts" onClose={onClose}>
+      {formBody}
     </Dialog>
   );
 }

@@ -23,7 +23,7 @@ describe("RecentEntriesCard", () => {
     expect(source()).toContain("{title}");
     expect(source()).toContain("{emptyMessage}");
     expect(source()).toContain("viewAllHref");
-    expect(source()).toContain('title = "Recently recorded"');
+    expect(source()).toContain('title = "Recent transactions"');
   });
 
   it("filters void-reversal rows and shows voided / corrected chrome", () => {

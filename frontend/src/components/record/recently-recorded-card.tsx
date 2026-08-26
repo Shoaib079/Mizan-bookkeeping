@@ -15,7 +15,7 @@ export function RecentlyRecordedCard({ entityId, className }: Props) {
     <RecentEntriesCard
       entityId={entityId}
       className={className}
-      title="Recently recorded"
+      title="Recent transactions"
       listUrl={recentEntriesListUrl(entityId, {
         limit: 25,
         effectiveOnly: true,

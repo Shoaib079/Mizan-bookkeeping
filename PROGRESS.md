@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Dashboard order + FX (`v0.dashboard-order-fx`):** Sales first; Cash & bank; Balances; Top expenses. FX strip shows full multi-currency string.
+- **Record page v3 (`v0.record-v3`):** Icon grid + inline forms + recent transactions table. Upload / Count cash / Close day under More.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Dashboard order + FX display |
-| **Last tag** | `v0.dashboard-order-fx` |
+| **Last completed slice** | Record page v3 |
+| **Last tag** | `v0.record-v3` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

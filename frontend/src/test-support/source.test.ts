@@ -55,9 +55,9 @@ describe("finding source by symbol", () => {
   });
 
   it("joins a feature spread over several files, without duplicating one", () => {
-    const desk = sourceDeclaringAll("RecordDesk", "DeskModeButton");
-    expect(desk).toContain("primaryRecordActions");
-    expect(desk).toContain('role="tab"');
+    const desk = sourceDeclaringAll("RecordDesk", "RecordDeskIconGrid");
+    expect(desk).toContain("RECORD_DESK_TILES");
+    expect(desk).toContain("record-desk-icon-grid");
 
     const twice = sourceDeclaringAll("GlEditDialogs", "GlEditTarget");
     const once = sourceDeclaring("GlEditDialogs");

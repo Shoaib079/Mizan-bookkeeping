@@ -25,9 +25,9 @@ describe("partner paid labels (not fronted)", () => {
   });
 
   it("Record / review / classify copy say partner paid, not fronted", () => {
-    const desk = sourceDeclaring("DESK_HINTS");
-    expect(desk).toContain("Cash or partner paid");
-    expect(desk).not.toMatch(/partner-fronted/i);
+    const tiles = sourceDeclaring("RECORD_DESK_TILES");
+    expect(tiles).toContain("Cash or partner paid");
+    expect(tiles).not.toMatch(/partner-fronted/i);
 
     const actions = sourceDeclaring("RECORD_ACTIONS");
     expect(actions).toContain("Cash or partner paid");

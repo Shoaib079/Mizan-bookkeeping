@@ -18,7 +18,7 @@ export default function RecordPage() {
         meta={
           isMobile
             ? undefined
-            : "Type amounts for daily work, or switch to Upload for receipts and monthly bank or card statements."
+            : "Pick a type, fill the form, and see recent transactions below."
         }
       />
       {!isMobile && <RecordReviewPanel />}

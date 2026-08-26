@@ -63,11 +63,12 @@ describe("Count cash vs Close day split", () => {
   });
 
   it("Record desk wires both modes", () => {
-    const desk = sourceDeclaring("RecordDesk");
-    expect(desk).toContain('mode === "countCash"');
-    expect(desk).toContain('mode === "closeDay"');
+    const desk = sourceDeclaringAll("RecordDesk", "RecordDeskFormPanel");
+    expect(desk).toContain('modeId === "countCash"');
+    expect(desk).toContain('modeId === "closeDay"');
     expect(desk).toContain("CashCountForm");
     expect(desk).toContain("onContinueToCloseDay");
-    expect(desk).toContain('action.id === "countCash" && cashCountDraftPending');
+    expect(desk).toContain("RECORD_DESK_EXTRA_ACTION_IDS");
+    expect(desk).toContain("cashCountDraftPending");
   });
 });

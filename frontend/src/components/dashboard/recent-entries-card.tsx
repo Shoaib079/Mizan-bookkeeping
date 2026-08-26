@@ -1,6 +1,6 @@
 "use client";
 
-/** Journal entry list — Record desk “Recently recorded” (and reusable elsewhere). */
+/** Journal entry list — Record desk “Recent transactions” (and reusable elsewhere). */
 
 import Link from "next/link";
 import { useMemo } from "react";
@@ -34,7 +34,12 @@ type Props = {
   viewAllHref?: string;
 };
 
-function EntryRow({
+function statusLabel(entry: RecentEntryRow): string {
+  if (entry.status === "voided") return "Voided";
+  return "Posted";
+}
+
+function EntryTableRow({
   entry,
   onOpen,
 }: {
@@ -45,60 +50,63 @@ function EntryRow({
   const corrected = entryWasCorrected(entry);
 
   return (
-    <li>
-      <button
-        type="button"
-        data-testid="recent-entry-row"
-        data-entry-date={entry.entry_date}
-        data-entry-status={entry.status ?? "posted"}
-        className={cn(
-          "flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 rounded-sm px-1 py-2.5 text-left text-sm transition-colors hover:bg-muted/50 sm:py-2",
-          journalEntryRowClassName(entry.status ?? "posted"),
-        )}
-        onClick={() => onOpen(entry)}
+    <tr
+      data-testid="recent-entry-row"
+      data-entry-date={entry.entry_date}
+      data-entry-status={entry.status ?? "posted"}
+      className={cn(
+        "cursor-pointer transition-colors hover:bg-muted/50",
+        journalEntryRowClassName(entry.status ?? "posted"),
+      )}
+      onClick={() => onOpen(entry)}
+    >
+      <td
+        data-testid="recent-entry-date"
+        className="whitespace-nowrap px-2 py-2.5 text-xs text-muted-foreground tabular-nums"
       >
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-1.5">
-            <span
-              className={cn(
-                "block truncate font-medium",
-                voided && "line-through",
-              )}
-            >
-              {entry.description}
-            </span>
-            {voided ? <StatusBadge status="voided" /> : null}
-            {corrected && !voided ? <EditedBadge /> : null}
-          </span>
-          <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <span data-testid="recent-entry-date">
-              {formatTrDate(entry.entry_date)}
-            </span>
-            <span
-              data-testid="recent-entry-source"
-              className="inline-flex rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground"
-            >
-              {journalSourceLabel(entry.source)}
-            </span>
-          </span>
-        </span>
+        {formatTrDate(entry.entry_date)}
+      </td>
+      <td className="px-2 py-2.5">
         <span
-          className={cn(
-            "shrink-0 tabular-nums font-medium",
-            voided && "line-through",
-          )}
+          data-testid="recent-entry-source"
+          className="inline-flex rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[0.65rem] font-medium text-muted-foreground"
         >
-          {formatTry(journalEntryTotalKurus(entry.lines))}
+          {journalSourceLabel(entry.source)}
         </span>
-      </button>
-    </li>
+      </td>
+      <td className="max-w-[14rem] px-2 py-2.5 text-sm">
+        <span className="flex flex-wrap items-center gap-1.5">
+          <span
+            className={cn(
+              "truncate font-medium",
+              voided && "line-through",
+            )}
+          >
+            {entry.description}
+          </span>
+          {voided ? <StatusBadge status="voided" /> : null}
+          {corrected && !voided ? <EditedBadge /> : null}
+        </span>
+      </td>
+      <td
+        className={cn(
+          "whitespace-nowrap px-2 py-2.5 text-right text-sm tabular-nums font-medium",
+          voided && "line-through",
+        )}
+      >
+        {formatTry(journalEntryTotalKurus(entry.lines))}
+      </td>
+      <td className="whitespace-nowrap px-2 py-2.5 text-xs text-muted-foreground">
+        {statusLabel(entry)}
+      </td>
+    </tr>
   );
 }
 
 export function RecentEntriesCard({
   entityId,
   className,
-  title = "Recently recorded",
+  title = "Recent transactions",
   listUrl,
   queryKey,
   emptyMessage = "Nothing recorded yet",
@@ -156,15 +164,28 @@ export function RecentEntriesCard({
       )}
 
       {!loading && items.length > 0 && (
-        <ul className="divide-y divide-border">
-          {items.map((entry) => (
-            <EntryRow
-              key={entry.id}
-              entry={entry}
-              onOpen={openTransaction}
-            />
-          ))}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[32rem] border-collapse text-left">
+            <thead>
+              <tr className="border-b border-border text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
+                <th className="px-2 py-2">Date</th>
+                <th className="px-2 py-2">Type</th>
+                <th className="px-2 py-2">Description</th>
+                <th className="px-2 py-2 text-right">Amount</th>
+                <th className="px-2 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {items.map((entry) => (
+                <EntryTableRow
+                  key={entry.id}
+                  entry={entry}
+                  onOpen={openTransaction}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

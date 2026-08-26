@@ -23,7 +23,11 @@ import {
  * components means the next split is invisible here.
  */
 function readDesk(): string {
-  return sourceDeclaringAll("RecordDesk", "DeskModeButton");
+  return sourceDeclaringAll(
+    "RecordDesk",
+    "RecordDeskIconGrid",
+    "RecordDeskFormPanel",
+  );
 }
 
 describe("Add page amount-first desk", () => {
@@ -43,22 +47,22 @@ describe("Add page amount-first desk", () => {
     expect(PRIMARY_RECORD_ACTION_IDS).toEqual(primary);
   });
 
-  it("uses a left mode rail with icons beside the embedded form panel", () => {
+  it("uses a left icon grid beside the embedded form panel", () => {
     const desk = readDesk();
     const page = sourceAt("app/record/page.tsx");
     expect(page).toContain("<RecordDesk");
-    expect(desk).toContain("primaryRecordActions");
-    expect(desk).toContain("DeskModeButton");
-    expect(desk).toContain('role="tab"');
+    expect(desk).toContain("RECORD_DESK_TILES");
+    expect(desk).toContain("RecordDeskIconGrid");
+    expect(desk).toContain("RecordDeskFormPanel");
     expect(desk).toContain("embedded");
     expect(desk).toContain("<RecentlyRecordedCard");
     expect(desk).not.toContain("RecordCard");
   });
 
-  it("surfaces Split in Add cash actions (partner Record is on Partners)", () => {
+  it("surfaces Split as a primary desk tile (partner Record is on Partners)", () => {
     const desk = readDesk();
-    expect(desk).toContain("DeskExtraButton");
-    expect(desk).toContain("moreActions.length === 1");
+    expect(desk).toContain('"split"');
+    expect(desk).toContain("RecordSplitPanel");
     const payments = recordActionsBySection("payments", { deliveryEnabled: true });
     expect(payments.map((action) => action.id)).toEqual(["splitExpense"]);
     expect(occasionalRecordActions({ deliveryEnabled: true })).toHaveLength(0);

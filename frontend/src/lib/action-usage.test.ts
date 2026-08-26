@@ -81,10 +81,10 @@ describe("action-usage", () => {
 });
 
 describe("RecordDesk integration", () => {
-  it("uses primaryRecordActions for the mode rail", () => {
+  it("uses RECORD_DESK_TILES for the icon grid", () => {
     const source = sourceDeclaring("RecordDesk");
-    expect(source).toContain("primaryRecordActions");
-    expect(source).toContain("DeskModeButton");
+    expect(source).toContain("RECORD_DESK_TILES");
+    expect(source).toContain("RecordDeskIconGrid");
   });
 
   it("records usage on openRecordAction", () => {
@@ -99,9 +99,9 @@ describe("RecordDesk integration", () => {
     expect(source).toContain("shouldShowNewMenu");
   });
 
-  it("filters extra actions through dailyVisibleSections", () => {
+  it("keeps Upload / Count / Close extras reachable from More", () => {
     const source = sourceDeclaring("RecordDesk");
-    expect(source).toContain("dailyVisibleSections");
+    expect(source).toContain("RECORD_DESK_EXTRA_ACTION_IDS");
     expect(source).toContain("openRecordAction");
   });
 

@@ -70,7 +70,7 @@ describe("Recently recorded — render", () => {
     await waitFor(() => {
       expect(screen.getAllByTestId("recent-entry-row").length).toBe(10);
     });
-    expect(screen.getByText("Recently recorded")).toBeTruthy();
+    expect(screen.getByText("Recent transactions")).toBeTruthy();
     const rows = screen.getAllByTestId("recent-entry-row");
     expect(rows[0]?.getAttribute("data-entry-date")).toBe("2026-08-22");
     expect(rows[1]?.getAttribute("data-entry-date")).toBe("2026-08-15");
@@ -155,9 +155,9 @@ describe("Recently recorded — render", () => {
 });
 
 describe("RecentlyRecordedCard wiring + mutation", () => {
-  it("uses effective-only list URL and Recently recorded heading", () => {
+  it("uses effective-only list URL and Recent transactions heading", () => {
     const src = sourceDeclaring("RecentlyRecordedCard");
-    expect(src).toContain('title="Recently recorded"');
+    expect(src).toContain('title="Recent transactions"');
     expect(src).toContain("recentEntriesListUrl(entityId");
     expect(src).toContain("effectiveOnly: true");
     expect(src).toContain('viewAllHref="/reports/ledger"');
