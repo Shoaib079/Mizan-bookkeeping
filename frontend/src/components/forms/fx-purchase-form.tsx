@@ -164,7 +164,7 @@ export function FxPurchaseFormFields({
         />
       </div>
       <div>
-        <Label htmlFor="fx-buy-native">{currency} amount</Label>
+        <Label htmlFor="fx-buy-native">Amount ({currency})</Label>
         <Input
           id="fx-buy-native"
           placeholder="e.g. 100,00"
@@ -194,6 +194,11 @@ export function FxPurchaseFormFields({
           }}
           required
         />
+        {nativeText.trim() && (
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            You will receive {nativeText.trim()} {currency}
+          </p>
+        )}
       </div>
       <CashDrawerPicker
         id="fx-buy-from"

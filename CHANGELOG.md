@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **FX form Convert + polish (`v0.fx-form-convert`).** Record FX panel modes are Buy / Sell / Convert / Spend (Sell and Convert both use FX→TRY conversion). Form header is just “FX” (no hardcoded-currency subtitle). Labels: Amount (currency); conversion adds Rate + You will receive (TRY) with amount×rate autofill; buy shows You will receive preview. Dynamic FX wallets unchanged. Vitest 1482 + eslint + tsc + next build + ratchet + pytest green.
+
 - **Record layout fix (`v0.record-v3-layout`).** Icon grid is 3 columns with 9 tiles (Sale, Expense, Payment, Transfer, Split, FX, Upload, Count cash, Close day). Removed More dropdown and separate Salary tile (salary stays under Payment → Staff). Payment tabs order Staff → Supplier → Customer; supplier/customer account pickers are cash-only (bank from statements). Staff funding remains cash drawer / partner per existing cash-only guard. Vitest 1480 + eslint + tsc + next build green.
 
 - **Record page v3 (`v0.record-v3`).** Redesigned `/record`: left 2-col IconSquare grid (Sale, Expense, Salary, Payment, Transfer, Split, FX); right panel embeds existing forms (ManualDailySalesForm, ManualExpenseForm, payment people panel, TransferForm+embedded, RecordSplitPanel, FxUnifiedDialog). Upload / Count cash / Close day stay under More. Bottom: Recent transactions table (Date / Type / Description / Amount / Status) via existing ledger entries API. No guard/API path changes. Vitest 1478 + eslint + tsc + next build green.

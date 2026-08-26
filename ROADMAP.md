@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Record layout fix** (`v0.record-v3-layout`) |
-| **Last commit/tag**      | `v0.record-v3-layout` |
+| **Last completed slice** | **FX form Convert + polish** (`v0.fx-form-convert`) |
+| **Last commit/tag**      | `v0.fx-form-convert` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | FX form Convert + polish                        | `v0.fx-form-convert`                                   | Unified FX: Buy/Sell/Convert/Spend; drop subtitle; Amount (currency) + rate + You will receive; dynamic wallets kept |
 | 2026-08-26 | Record layout fix (3-col, no More)              | `v0.record-v3-layout`                                 | 3-col grid; Upload/Count/Close as tiles; drop Salary; Payment tabs Staff→Supplier→Customer; supplier/customer cash-only |
 | 2026-08-26 | Record page v3                                  | `v0.record-v3`                                         | Icon grid (Sale/Expense/Salary/Payment/Transfer/Split/FX) + inline forms; Upload/Count/Close in More; recent transactions table; TransferForm embedded |
 | 2026-08-26 | Dashboard order + FX display                    | `v0.dashboard-order-fx`                                | Sales this month first; then Cash & bank, Balances, Top expenses; compact FX amount no longer CSS-truncated |

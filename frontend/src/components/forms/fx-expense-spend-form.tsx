@@ -134,7 +134,7 @@ export function FxExpenseSpendForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-spend-native">{currency} amount</Label>
+          <Label htmlFor="fx-spend-native">Amount ({currency})</Label>
           <Input
             id="fx-spend-native"
             placeholder="e.g. 25,00"

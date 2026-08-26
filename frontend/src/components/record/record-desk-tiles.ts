@@ -88,7 +88,7 @@ export const RECORD_DESK_TILES: readonly RecordDeskTile[] = [
   {
     id: "fx",
     label: "FX",
-    hint: "Buy, sell, or spend USD, EUR, or GBP.",
+    hint: "",
     icon: Globe,
     tint: "gray",
     stroke: "gray",

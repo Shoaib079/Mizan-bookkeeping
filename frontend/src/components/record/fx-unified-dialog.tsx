@@ -1,6 +1,6 @@
 "use client";
 
-/** Add hub — buy, sell (convert), and spend foreign currency in one dialog. */
+/** Add hub — buy, sell, convert, and spend foreign currency in one dialog. */
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -18,7 +18,7 @@ import { fxWalletToggleLabel } from "@/lib/fx-purchase-helpers";
 import { useEntity } from "@/lib/entity-context";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 
-export type FxUnifiedMode = "buy" | "convert" | "spend";
+export type FxUnifiedMode = "buy" | "sell" | "convert" | "spend";
 
 type Props = {
   open: boolean;
@@ -28,9 +28,17 @@ type Props = {
   initialMode?: FxUnifiedMode;
 };
 
+const MODE_ORDER: readonly FxUnifiedMode[] = [
+  "buy",
+  "sell",
+  "convert",
+  "spend",
+];
+
 const MODE_LABELS: Record<FxUnifiedMode, string> = {
   buy: "Buy",
-  convert: "Sell",
+  sell: "Sell",
+  convert: "Convert",
   spend: "Spend",
 };
 
@@ -147,7 +155,7 @@ export function FxUnifiedDialog({
           <SegmentedControl
             role="tablist"
             ariaLabel="FX action"
-            options={(["buy", "convert", "spend"] as const).map((entry) => ({
+            options={MODE_ORDER.map((entry) => ({
               value: entry,
               label: MODE_LABELS[entry],
             }))}
@@ -173,7 +181,7 @@ export function FxUnifiedDialog({
                 onClose={handleSaved}
               />
             )}
-            {mode === "convert" && (
+            {(mode === "sell" || mode === "convert") && (
               <FxConversionForm
                 embedded
                 open
@@ -202,7 +210,7 @@ export function FxUnifiedDialog({
   if (embedded) return panelBody;
 
   return (
-    <Dialog open={open} title="Foreign exchange" onClose={handleClose}>
+    <Dialog open={open} title="FX" onClose={handleClose}>
       {panelBody}
     </Dialog>
   );

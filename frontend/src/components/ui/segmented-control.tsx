@@ -1,6 +1,6 @@
 "use client";
 
-/** One row of mutually exclusive options — Buy/Sell/Spend, USD/EUR/GBP.
+/** One row of mutually exclusive options — Buy/Sell/Convert/Spend, currency wallets.
  *
  * Extracted because the FX dialog hand-rolled this twice in one file, and both
  * copies marked the chosen option with `bg-background`: white on a grey track,

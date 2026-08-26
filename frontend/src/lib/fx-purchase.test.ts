@@ -14,16 +14,38 @@ describe("FX unified Add hub", () => {
     expect(modals).toContain('effectiveModal === "fx"');
   });
 
-  it("combines buy, sell, and spend on one screen", async () => {
+  it("combines buy, sell, convert, and spend on one screen", async () => {
     const unified = sourceDeclaring("FxUnifiedDialog");
     expect(unified).toContain("loadAllForeignCurrencyAccounts");
     expect(unified).toContain("FxPurchaseFormFields");
     expect(unified).toContain("FxConversionForm");
     expect(unified).toContain("FxExpenseSpendForm");
     expect(unified).toContain('"buy"');
+    expect(unified).toContain('"sell"');
     expect(unified).toContain('"convert"');
     expect(unified).toContain('"spend"');
     expect(unified).toContain("Sell");
+    expect(unified).toContain("Convert");
+  });
+
+  it("shows Amount (currency) labels and conversion receive preview", async () => {
+    const purchase = sourceDeclaring("FxPurchaseForm");
+    const conversion = sourceDeclaring("FxConversionForm");
+    const spend = sourceDeclaring("FxExpenseSpendForm");
+    expect(purchase).toContain("Amount ({currency})");
+    expect(purchase).toContain("You will receive");
+    expect(conversion).toContain("Amount ({currency})");
+    expect(conversion).toContain("fx-conv-rate");
+    expect(conversion).toContain("You will receive");
+    expect(conversion).toContain("computeTryCostKurusFromRate");
+    expect(spend).toContain("Amount ({currency})");
+  });
+
+  it("keeps FX desk title without a hardcoded-currency subtitle", async () => {
+    const tiles = sourceDeclaring("RECORD_DESK_TILES");
+    expect(tiles).toMatch(/id:\s*"fx"[\s\S]*?label:\s*"FX"/);
+    expect(tiles).toMatch(/id:\s*"fx"[\s\S]*?hint:\s*""/);
+    expect(tiles).not.toMatch(/id:\s*"fx"[\s\S]*?USD, EUR, or GBP/);
   });
 
   it("keeps legacy buyFx key wired to the unified dialog", async () => {

@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Record layout fix (`v0.record-v3-layout`):** 3-col icon grid (9 tiles); no More menu; Payment defaults to Staff; supplier/customer cash-only.
+- **FX form Convert + polish (`v0.fx-form-convert`):** Buy / Sell / Convert / Spend; title just “FX”; Amount (currency) + rate + You will receive; dynamic wallets unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Record layout fix |
-| **Last tag** | `v0.record-v3-layout` |
+| **Last completed slice** | FX form Convert + polish |
+| **Last tag** | `v0.fx-form-convert` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

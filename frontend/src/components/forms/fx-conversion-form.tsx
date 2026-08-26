@@ -16,7 +16,8 @@ import { useToast } from "@/lib/toast";
 import type { MoneyAccountLeaf } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { parseFxNative } from "@/lib/fx-money";
-import { parseTrDate, parseTryToKurus } from "@/lib/money";
+import { computeTryCostKurusFromRate } from "@/lib/fx-purchase-helpers";
+import { formatKurus, parseTrDate, parseTryToKurus } from "@/lib/money";
 import { todayTrDate } from "@/lib/dates";
 
 type Props = {
@@ -46,7 +47,9 @@ export function FxConversionForm({
   const [tryAccounts, setTryAccounts] = useState<MoneyAccountLeaf[]>([]);
   const [tryAccountId, setTryAccountId] = useState("");
   const [nativeText, setNativeText] = useState("");
+  const [rateText, setRateText] = useState("");
   const [tryReceivedText, setTryReceivedText] = useState("");
+  const [tryReceivedTouched, setTryReceivedTouched] = useState(false);
   const [dateText, setDateText] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +78,13 @@ export function FxConversionForm({
       void loadAccounts().catch(() => undefined);
     }
   }, [open, loadAccounts]);
+
+  useEffect(() => {
+    if (tryReceivedTouched) return;
+    const computed = computeTryCostKurusFromRate(nativeText, rateText);
+    if (computed === null) return;
+    setTryReceivedText(formatKurus(computed));
+  }, [nativeText, rateText, tryReceivedTouched]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -120,7 +130,9 @@ export function FxConversionForm({
       toast("FX conversion recorded");
       onClose();
       setNativeText("");
+      setRateText("");
       setTryReceivedText("");
+      setTryReceivedTouched(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Conversion failed");
     } finally {
@@ -146,7 +158,7 @@ export function FxConversionForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-conv-native">{currency} spent</Label>
+          <Label htmlFor="fx-conv-native">Amount ({currency})</Label>
           <Input
             id="fx-conv-native"
             placeholder="e.g. 50,00"
@@ -156,14 +168,31 @@ export function FxConversionForm({
           />
         </div>
         <div>
-          <Label htmlFor="fx-conv-try">TRY received</Label>
+          <Label htmlFor="fx-conv-rate">Rate (TRY per 1 {currency})</Label>
+          <MoneyInput
+            id="fx-conv-rate"
+            placeholder="e.g. 34,50"
+            value={rateText}
+            onChange={setRateText}
+          />
+        </div>
+        <div>
+          <Label htmlFor="fx-conv-try">You will receive (TRY)</Label>
           <MoneyInput
             id="fx-conv-try"
             placeholder="e.g. 1.750,00"
             value={tryReceivedText}
-            onChange={setTryReceivedText}
+            onChange={(value) => {
+              setTryReceivedTouched(true);
+              setTryReceivedText(value);
+            }}
             required
           />
+          {tryReceivedText.trim() && (
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              You will receive {tryReceivedText.trim()} TRY
+            </p>
+          )}
         </div>
         <div>
           <Label htmlFor="fx-conv-to">Deposit to (TRY)</Label>
