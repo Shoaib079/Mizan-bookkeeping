@@ -74,7 +74,7 @@ export const RECORD_ACTIONS: RecordActionDef[] = [
   {
     id: "fx",
     label: "Foreign exchange",
-    description: "Buy, sell, convert, or spend foreign currency.",
+    description: "Buy, sell, or spend foreign currency.",
     icon: Banknote,
     section: "today",
   },

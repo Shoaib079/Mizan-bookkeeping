@@ -14,7 +14,7 @@ describe("FX unified Add hub", () => {
     expect(modals).toContain('effectiveModal === "fx"');
   });
 
-  it("combines buy, sell, convert, and spend on one screen", async () => {
+  it("combines buy, sell, and spend on one screen", async () => {
     const unified = sourceDeclaring("FxUnifiedDialog");
     expect(unified).toContain("loadAllForeignCurrencyAccounts");
     expect(unified).toContain("FxPurchaseFormFields");
@@ -22,10 +22,16 @@ describe("FX unified Add hub", () => {
     expect(unified).toContain("FxExpenseSpendForm");
     expect(unified).toContain('"buy"');
     expect(unified).toContain('"sell"');
-    expect(unified).toContain('"convert"');
     expect(unified).toContain('"spend"');
     expect(unified).toContain("Sell");
-    expect(unified).toContain("Convert");
+    expect(unified).not.toContain('"convert"');
+    expect(unified).not.toMatch(/MODE_LABELS[\s\S]*Convert/);
+  });
+
+  it("maps legacy fxConvert action to Sell mode", async () => {
+    const modals = sourceDeclaring("RecordActionModals");
+    expect(modals).toContain('effectiveModal === "fxConvert"');
+    expect(modals).toContain('return "sell"');
   });
 
   it("shows Amount (currency) labels and conversion receive preview", async () => {

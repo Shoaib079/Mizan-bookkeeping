@@ -32,4 +32,12 @@ describe("RecentEntriesCard", () => {
     expect(source()).toContain("EditedBadge");
     expect(source()).toContain("journalEntryRowClassName");
   });
+
+  it("aligns Date Type Description Amount Status columns", () => {
+    const src = source();
+    expect(src).toContain("table-fixed");
+    expect(src).toContain("<colgroup>");
+    expect(src).toMatch(/Date[\s\S]*Type[\s\S]*Description[\s\S]*Amount[\s\S]*Status/);
+    expect(src).toContain('data-testid="recent-entry-status"');
+  });
 });

@@ -171,6 +171,7 @@
   --segment-track-bg: color-mix(in srgb, var(--muted) 40%, transparent);
   --segment-active-bg: var(--primary);
   --segment-active-fg: var(--primary-foreground);
+  --segment-inactive-fg: var(--muted-foreground);
   --sheet-handle-bg: var(--border);
 }
 
@@ -302,10 +303,11 @@
   --record-fab-size: 3.5rem;
   --record-fab-shadow: 0 6px 20px color-mix(in srgb, #2563eb 40%, transparent);
 
-  /* Segmented period: track #F1F5F9; active white chip + hairline + ink */
+  /* Segmented: track slate; active = primary blue + white text */
   --segment-track-bg: #f1f5f9;
-  --segment-active-bg: #ffffff;
-  --segment-active-fg: #0b1526;
+  --segment-active-bg: #2563eb;
+  --segment-active-fg: #ffffff;
+  --segment-inactive-fg: #5b6b83;
   --sheet-handle-bg: #e6eaf2;
 }
 
@@ -380,10 +382,10 @@
   color: #5b6b83;
 }
 
-/* Segmented active chip gets hairline under v2 */
+/* Segmented active chip — blue fill already carries the highlight */
 [data-theme="v2"] [role="tab"][aria-selected="true"],
 [data-theme="v2"] [data-segment-active="true"] {
-  box-shadow: inset 0 0 0 1px #e6eaf2;
+  box-shadow: none;
 }
 
 /* Buttons under v2 — pill radius only.

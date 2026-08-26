@@ -38,6 +38,7 @@ const COLOUR_TOKENS = [
   "text-success",
   "--segment-active-bg",
   "--segment-active-fg",
+  "--segment-inactive-fg",
 ];
 
 /** Clickable, but deliberately not a button to look at.

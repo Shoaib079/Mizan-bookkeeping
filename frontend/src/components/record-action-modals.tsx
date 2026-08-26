@@ -81,7 +81,7 @@ export function RecordActionModals({
   const effectiveModal = routedTo ?? modalAction;
 
   const fxInitialMode = useMemo((): FxUnifiedMode => {
-    if (effectiveModal === "fxConvert") return "convert";
+    if (effectiveModal === "fxConvert") return "sell";
     if (effectiveModal === "fxSpend") return "spend";
     return "buy";
   }, [effectiveModal]);

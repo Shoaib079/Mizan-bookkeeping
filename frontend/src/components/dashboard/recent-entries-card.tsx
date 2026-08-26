@@ -74,8 +74,8 @@ function EntryTableRow({
           {journalSourceLabel(entry.source)}
         </span>
       </td>
-      <td className="max-w-[14rem] px-2 py-2.5 text-sm">
-        <span className="flex flex-wrap items-center gap-1.5">
+      <td className="px-2 py-2.5 text-sm">
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
           <span
             className={cn(
               "truncate font-medium",
@@ -84,7 +84,6 @@ function EntryTableRow({
           >
             {entry.description}
           </span>
-          {voided ? <StatusBadge status="voided" /> : null}
           {corrected && !voided ? <EditedBadge /> : null}
         </span>
       </td>
@@ -97,7 +96,10 @@ function EntryTableRow({
         {formatTry(journalEntryTotalKurus(entry.lines))}
       </td>
       <td className="whitespace-nowrap px-2 py-2.5 text-xs text-muted-foreground">
-        {statusLabel(entry)}
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          {voided ? <StatusBadge status="voided" /> : null}
+          <span data-testid="recent-entry-status">{statusLabel(entry)}</span>
+        </span>
       </td>
     </tr>
   );
@@ -165,14 +167,31 @@ export function RecentEntriesCard({
 
       {!loading && items.length > 0 && (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[32rem] border-collapse text-left">
+          <table className="w-full min-w-[36rem] table-fixed border-collapse text-left">
+            <colgroup>
+              <col className="w-[6.5rem]" />
+              <col className="w-[7rem]" />
+              <col />
+              <col className="w-[7.5rem]" />
+              <col className="w-[5.5rem]" />
+            </colgroup>
             <thead>
               <tr className="border-b border-border text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-                <th className="px-2 py-2">Date</th>
-                <th className="px-2 py-2">Type</th>
-                <th className="px-2 py-2">Description</th>
-                <th className="px-2 py-2 text-right">Amount</th>
-                <th className="px-2 py-2">Status</th>
+                <th scope="col" className="px-2 py-2 text-left">
+                  Date
+                </th>
+                <th scope="col" className="px-2 py-2 text-left">
+                  Type
+                </th>
+                <th scope="col" className="px-2 py-2 text-left">
+                  Description
+                </th>
+                <th scope="col" className="px-2 py-2 text-right">
+                  Amount
+                </th>
+                <th scope="col" className="px-2 py-2 text-left">
+                  Status
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

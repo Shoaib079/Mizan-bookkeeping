@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Record FX + segments + recent table (`v0.record-fx-segments`).** FX unified modes are Buy / Sell / Spend (Convert removed; legacy `fxConvert` opens Sell). SegmentedControl active = primary blue + white text; inactive = medium gray (`--segment-inactive-fg`). Recent transactions table uses `table-fixed` + colgroup so Date / Type / Description / Amount / Status headers line up; status badge lives under Status. Vitest + eslint + tsc + next build + ratchet + pytest green.
+
 - **Record icon tiles (`v0.record-tile-size`).** Record desk icon rail widened `lg:w-48` → `lg:w-56` (~224px). Tiles use `p-4`, `gap-4`, `min-h-[5.25rem]`, and IconSquare `xl` (48px square / size-6 glyph). Form panel still fills remaining width. Vitest + eslint + tsc + next build + ratchet + pytest green.
 
 - **App responsive (`v0.app-responsive`).** FormPage default width raised to `max-w-4xl`; `wide`/`full` fill the main column. Desktop AppShell `<main>` gets `min-w-0 overflow-x-hidden` so wide tables scroll inside the card, not the page. Mobile shell and DataTable `wide` min-width unchanged. Vitest + eslint + tsc + next build + ratchet + pytest green.

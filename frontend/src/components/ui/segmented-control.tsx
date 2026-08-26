@@ -1,6 +1,6 @@
 "use client";
 
-/** One row of mutually exclusive options — Buy/Sell/Convert/Spend, currency wallets.
+/** One row of mutually exclusive options — Buy/Sell/Spend, currency wallets.
  *
  * Extracted because the FX dialog hand-rolled this twice in one file, and both
  * copies marked the chosen option with `bg-background`: white on a grey track,
@@ -59,11 +59,11 @@ export function SegmentedControl<T extends string>({
             aria-pressed={role === "group" ? active : undefined}
             onClick={() => onChange(option.value)}
             className={cn(
-              "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm font-medium transition-colors",
+              "inline-flex h-8 min-w-[3rem] flex-1 items-center justify-center rounded px-3 text-sm transition-colors",
               MOBILE_TOUCH_TARGET,
               active
-                ? "bg-[var(--segment-active-bg)] text-[var(--segment-active-fg)] font-semibold shadow-sm"
-                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                ? "bg-[var(--segment-active-bg)] font-semibold text-[var(--segment-active-fg)] shadow-sm"
+                : "font-medium text-[var(--segment-inactive-fg)] hover:bg-background/60 hover:text-foreground",
             )}
             data-segment-active={active ? "true" : "false"}
           >
