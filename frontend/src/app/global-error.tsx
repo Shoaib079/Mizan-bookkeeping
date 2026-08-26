@@ -4,16 +4,7 @@
 
 import "./globals.css";
 
-const themeBootstrapScript = `
-try {
-  var stored = localStorage.getItem("mizan:theme");
-  var dark =
-    stored === "dark" ||
-    (stored !== "light" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches);
-  if (dark) document.documentElement.classList.add("dark");
-} catch (e) {}
-`;
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme-preference";
 
 export default function GlobalError({
   error,
@@ -25,7 +16,7 @@ export default function GlobalError({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
       </head>
       <body className="flex min-h-dvh items-center justify-center bg-background p-8 font-sans text-foreground antialiased">
         <div className="max-w-md text-center">

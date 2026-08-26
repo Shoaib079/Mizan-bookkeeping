@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Theme system + dark v2 (`v0.theme-system-dark`).** Appearance is Light / Dark / System (default System, stored as `mizan:theme`). Shared preference store + OS `prefers-color-scheme` listener when System is selected. Bootstrap script in root layout avoids a light flash. Fixed dark mode under live v2 by adding `.dark[data-theme="v2"]` surface overrides plus darker tints / brighter icon and accent-bar tokens.
+
 - **Settings breadcrumb + mobile hub (`v0.settings-breadcrumb-hub`).** Settings page trail is top-level (**Settings**, not Understand / Settings). Mobile settings hub mirrors the six restaurant tabs via `SETTINGS_PAGE_TABS` (Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups). Removed dead `MobileSettingsModules` inline toggles from the hub.
 
 - **Settings tabs without Your Profile (`v0.settings-tabs-no-profile`).** Removed the Your Profile tab from restaurant settings — profile stays on `/settings/profile` only. Six tabs remain: Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups; delete still below.

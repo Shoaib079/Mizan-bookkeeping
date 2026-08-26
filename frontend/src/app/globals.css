@@ -218,6 +218,25 @@
   --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
   --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
   --shadow-elevated: var(--shadow-pop);
+  /* Accepted-live tints / icon strokes — darker fills, brighter glyphs on navy */
+  --tint-mint: #1f3d2e;
+  --tint-sky: #1f3d5c;
+  --tint-sand: #3d3320;
+  --tint-blush: #3d1f1f;
+  --tint-gray: #1e293b;
+  --icon-green: #4ade80;
+  --icon-blue: #60a5fa;
+  --icon-amber: #fbbf24;
+  --icon-red: #f87171;
+  --icon-gray: #94a3b8;
+  --accent-bar-green: #4ade80;
+  --accent-bar-red: #f87171;
+  --accent-bar-amber: #fbbf24;
+  --accent-bar-blue: #60a5fa;
+  --accent-bar-gray: #64748b;
+  --ink-strong: #e2e8f0;
+  --ink-soft: #94a3b8;
+  --rule-soft: #1e293b;
   color-scheme: dark;
 }
 
@@ -309,6 +328,115 @@
   --segment-active-fg: #ffffff;
   --segment-inactive-fg: #5b6b83;
   --sheet-handle-bg: #e6eaf2;
+}
+
+/*
+ * v2 is baked onto <html> always. Its light surfaces must not win over `.dark`.
+ * This block re-asserts dark tokens at equal/higher specificity.
+ */
+.dark[data-theme="v2"] {
+  --background: #0f172a;
+  --card: #111c33;
+  --sidebar: #0f172a;
+  --border: #1e293b;
+  --foreground: #e2e8f0;
+  --muted: #16213a;
+  --muted-foreground: #94a3b8;
+  --primary: #60a5fa;
+  --primary-foreground: #0b1222;
+  --ink: #e2e8f0;
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-pop: 0 8px 24px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.4);
+  --shadow-elevated: var(--shadow-pop);
+
+  --accent-bar-green: #4ade80;
+  --accent-bar-red: #f87171;
+  --accent-bar-amber: #fbbf24;
+  --accent-bar-blue: #60a5fa;
+  --accent-bar-gray: #64748b;
+
+  --tint-mint: #1f3d2e;
+  --tint-sky: #1f3d5c;
+  --tint-sand: #3d3320;
+  --tint-blush: #3d1f1f;
+  --tint-gray: #1e293b;
+
+  --icon-green: #4ade80;
+  --icon-blue: #60a5fa;
+  --icon-amber: #fbbf24;
+  --icon-red: #f87171;
+  --icon-gray: #94a3b8;
+
+  --success: #4ade80;
+  --success-soft: #1f3d2e;
+  --destructive: #f87171;
+  --destructive-foreground: #450a0a;
+  --destructive-soft: #3d1f1f;
+  --warning: #fbbf24;
+  --chip-in: #4ade80;
+  --chip-in-soft: #1f3d2e;
+  --chip-out: #f87171;
+  --chip-out-soft: #3d1f1f;
+  --chip-attention: #fbbf24;
+  --chip-attention-soft: #3d3320;
+  --chip-neutral: #60a5fa;
+  --chip-neutral-soft: #1f3d5c;
+
+  --kpi-icon-bg: #1f3d5c;
+  --kpi-icon-fg: #60a5fa;
+  --kpi-icon-gradient: none;
+  --list-icon-bg: #1f3d5c;
+  --list-icon-fg: #60a5fa;
+  --settings-icon-bg: #1f3d5c;
+  --settings-icon-fg: #60a5fa;
+
+  --trend-up-fg: #4ade80;
+  --trend-down-fg: #f87171;
+
+  --tab-active-fg: #60a5fa;
+  --tab-bar-bg: #0f172a;
+  --record-fab-shadow: 0 6px 20px color-mix(in srgb, #60a5fa 40%, transparent);
+
+  --segment-track-bg: #16213a;
+  --segment-active-bg: #60a5fa;
+  --segment-active-fg: #0b1222;
+  --segment-inactive-fg: #94a3b8;
+  --sheet-handle-bg: #1e293b;
+}
+
+.dark[data-theme="v2"] [data-meaning-card] {
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.dark[data-theme="v2"] [data-testid="entity-balance-sticker"] {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  color: var(--foreground);
+}
+
+.dark[data-theme="v2"] [data-testid="entity-balance-sticker"][data-direction="company_owes"] [data-sticker-heading] {
+  color: var(--accent-bar-green);
+}
+.dark[data-theme="v2"] [data-testid="entity-balance-sticker"][data-direction="they_owe"] [data-sticker-heading] {
+  color: var(--accent-bar-red);
+}
+.dark[data-theme="v2"] [data-testid="entity-balance-sticker"][data-direction="settled"] [data-sticker-heading] {
+  color: var(--accent-bar-gray);
+}
+.dark[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-figure] {
+  color: var(--foreground);
+}
+.dark[data-theme="v2"] [data-testid="entity-balance-sticker"] [data-sticker-caption] {
+  color: var(--muted-foreground);
+}
+
+.dark[data-theme="v2"] [data-stat-figure] {
+  color: var(--foreground);
+}
+.dark[data-theme="v2"] [data-stat-label] {
+  color: var(--muted-foreground);
 }
 
 [data-theme="v2"] .mobile-tab-dot {

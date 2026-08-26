@@ -1,67 +1,108 @@
 "use client";
 
-/** Light/dark theme control — tokens flip in globals.css `.dark` block.
- * One hook owns the logic; the top-bar button and the profile page share it. */
+/** Light / Dark / System theme control — tokens flip in globals.css `.dark`. */
 
-import { Moon, Sun } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useEffect, useSyncExternalStore } from "react";
 
-const KEY = "mizan:theme";
+import {
+  THEME_MODES,
+  getThemeSnapshot,
+  hydrateThemePreference,
+  setThemeMode,
+  subscribeTheme,
+  type ThemeMode,
+} from "@/lib/theme-preference";
+import { cn } from "@/lib/utils";
 
-function applyTheme(dark: boolean) {
-  document.documentElement.classList.toggle("dark", dark);
-}
+export type { ThemeMode };
 
-function initialDarkPreference(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    const stored = window.localStorage.getItem(KEY);
-    if (stored === "dark") return true;
-    if (stored === "light") return false;
-  } catch {
-    // ignore
-  }
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
-}
+const serverSnapshot = { mode: "system" as ThemeMode, dark: false };
 
 export function useTheme() {
-  const [dark, setDark] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
   useEffect(() => {
-    const initial = initialDarkPreference();
-    setDark(initial);
-    applyTheme(initial);
-    setMounted(true);
+    hydrateThemePreference();
   }, []);
 
-  const setDarkMode = useCallback((next: boolean) => {
-    setDark(next);
-    applyTheme(next);
-    try {
-      window.localStorage.setItem(KEY, next ? "dark" : "light");
-    } catch {
-      // ignore
-    }
-  }, []);
+  const { mode, dark } = useSyncExternalStore(
+    subscribeTheme,
+    getThemeSnapshot,
+    () => serverSnapshot,
+  );
 
-  const toggle = useCallback(() => setDarkMode(!dark), [dark, setDarkMode]);
+  const mounted = typeof window !== "undefined";
 
-  return { dark, mounted, toggle, setDarkMode };
+  return {
+    mode,
+    dark,
+    mounted,
+    setMode: setThemeMode,
+    setDarkMode: (nextDark: boolean) =>
+      setThemeMode(nextDark ? "dark" : "light"),
+    toggle: () => setThemeMode(dark ? "light" : "dark"),
+  };
 }
 
-export function ThemeToggle() {
-  const { dark, mounted, toggle } = useTheme();
+const MODE_META: Record<
+  ThemeMode,
+  { label: string; icon: typeof Sun; title: string }
+> = {
+  light: { label: "Light", icon: Sun, title: "Light mode" },
+  dark: { label: "Dark", icon: Moon, title: "Dark mode" },
+  system: { label: "System", icon: Monitor, title: "Follow system setting" },
+};
+
+type ThemeModePickerProps = {
+  /** Icon-only compact control for the sidebar. */
+  compact?: boolean;
+  className?: string;
+};
+
+export function ThemeModePicker({
+  compact = false,
+  className,
+}: ThemeModePickerProps) {
+  const { mode, setMode } = useTheme();
 
   return (
-    <button
-      type="button"
-      className="inline-flex size-9 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      title={dark ? "Light mode" : "Dark mode"}
-      onClick={toggle}
+    <div
+      role="group"
+      aria-label="Color theme"
+      className={cn(
+        "inline-flex rounded-md border border-border bg-[var(--segment-track-bg)] p-0.5",
+        className,
+      )}
     >
-      {mounted && dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-    </button>
+      {THEME_MODES.map((id) => {
+        const meta = MODE_META[id];
+        const Icon = meta.icon;
+        const active = mode === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={active}
+            aria-label={meta.title}
+            title={meta.title}
+            onClick={() => setMode(id)}
+            className={cn(
+              "inline-flex items-center justify-center gap-1.5 rounded px-2 py-1.5 text-xs font-medium transition-colors",
+              compact ? "size-8 px-0" : "min-w-[4.5rem]",
+              active
+                ? "bg-[var(--segment-active-bg)] font-semibold text-[var(--segment-active-fg)] shadow-sm"
+                : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+            )}
+          >
+            <Icon className="size-3.5 shrink-0" aria-hidden />
+            {!compact && <span>{meta.label}</span>}
+          </button>
+        );
+      })}
+    </div>
   );
+}
+
+/** Sidebar / chrome control — Light, Dark, System. */
+export function ThemeToggle() {
+  return <ThemeModePicker compact />;
 }

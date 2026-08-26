@@ -3,13 +3,13 @@
 /** Your profile — identity, restaurants & role, appearance (IA v2). */
 
 import Link from "next/link";
-import { Check, Moon, Sun } from "lucide-react";
+import { Check } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { AppShell } from "@/components/layout/app-shell";
+import { ThemeModePicker } from "@/components/layout/theme-toggle";
 import { ProfileSignOutClerk } from "@/components/settings/profile-sign-out";
 import { FormPage, FormSection } from "@/components/page/form-page";
-import { useTheme } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { apiFetch } from "@/lib/api";
@@ -41,7 +41,6 @@ export default function ProfileSettingsPage() {
   const { role, grants } = useEntityAccess();
   const canSwitch = canSwitchEntity(grants);
   const listEntities = canSwitch ? entities : visibleEntities;
-  const { dark, mounted, setDarkMode } = useTheme();
   const { toast } = useToast();
   const submitIdempotency = useSubmitIdempotency();
 
@@ -196,23 +195,12 @@ export default function ProfileSettingsPage() {
         {/* Appearance */}
         <FormSection>
           <h2 className="text-sm font-semibold">Appearance</h2>
-          <div className="mt-3 flex gap-2">
-            <Button
-              type="button"
-              variant={mounted && !dark ? "primary" : "secondary"}
-              className="gap-2"
-              onClick={() => setDarkMode(false)}
-            >
-              <Sun className="size-4" /> Light
-            </Button>
-            <Button
-              type="button"
-              variant={mounted && dark ? "primary" : "secondary"}
-              className="gap-2"
-              onClick={() => setDarkMode(true)}
-            >
-              <Moon className="size-4" /> Dark
-            </Button>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Light and Dark stay fixed. System follows your device and updates
+            when the OS theme changes.
+          </p>
+          <div className="mt-3">
+            <ThemeModePicker />
           </div>
         </FormSection>
 

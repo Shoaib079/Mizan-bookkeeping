@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 
 import { Providers } from "@/app/providers";
 import { ThemeRoot } from "@/components/layout/theme-root";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme-preference";
 import { THEME_V2_ATTR } from "@/lib/theme-v2";
 
 import "./globals.css";
@@ -33,6 +34,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning {...htmlThemeAttr}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }}
+        />
+      </head>
       <body className={`${inter.variable} font-sans`}>
         <ThemeRoot />
         <Providers>{children}</Providers>

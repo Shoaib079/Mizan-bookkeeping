@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Settings breadcrumb + mobile hub (`v0.settings-breadcrumb-hub`):** Settings trail is top-level (no Understand/); mobile hub lists all six settings tabs via `SETTINGS_PAGE_TABS`.
+- **Theme system + dark v2 (`v0.theme-system-dark`):** Light / Dark / System preference (`mizan:theme`); OS listener in System mode; `.dark[data-theme=v2]` restores dark surfaces + tint/icon tokens.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Settings breadcrumb + mobile hub |
-| **Last tag** | `v0.settings-breadcrumb-hub` |
+| **Last completed slice** | Theme system + dark v2 |
+| **Last tag** | `v0.theme-system-dark` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |
