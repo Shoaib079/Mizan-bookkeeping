@@ -1,6 +1,6 @@
 "use client";
 
-/** Dashboard body — Cash & bank, balances, monthly sales, top expenses. */
+/** Dashboard body — sales, cash & bank, balances, top expenses. */
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -127,46 +127,27 @@ export function DashboardHomeContent() {
         </>
       }
       stats={
-        data && (
+        data &&
+        !canReadFinancialReports && (
           <div
             data-testid="dashboard-kpi-row"
             data-layout="as-of-cash"
-            className="grid gap-4"
+            className="grid gap-4 sm:grid-cols-2"
           >
-            {canReadFinancialReports ? (
-              <CashBankSnapshotCard
-                cashKurus={data.cash_in_hand_kurus}
-                bankKurus={data.bank_balance_kurus}
-                cashAccounts={data.cash_accounts}
-                interactive={false}
-              />
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <StatCard
-                  label="Sales"
-                  amountKurus={data.sales.total_sales_kurus}
-                />
-                <StatCard
-                  label="Expenses"
-                  amountKurus={data.total_expenses_kurus}
-                />
-              </div>
-            )}
+            <StatCard
+              label="Sales"
+              amountKurus={data.sales.total_sales_kurus}
+            />
+            <StatCard
+              label="Expenses"
+              amountKurus={data.total_expenses_kurus}
+            />
           </div>
         )
       }
     >
       {data && canReadFinancialReports && (
         <>
-          {entityId && (
-            <OverviewSection
-              title="Balances"
-              hint="Payables, receivables, FX, staff, and partners — open a line for detail."
-            >
-              <BalancesOverview embedded compact />
-            </OverviewSection>
-          )}
-
           <OverviewSection
             title="Sales this month"
             hint="Cash, card, and total versus the same dates last month."
@@ -176,6 +157,28 @@ export function DashboardHomeContent() {
               prior={priorSales}
             />
           </OverviewSection>
+
+          <div
+            data-testid="dashboard-kpi-row"
+            data-layout="as-of-cash"
+            className="mt-6 grid gap-4"
+          >
+            <CashBankSnapshotCard
+              cashKurus={data.cash_in_hand_kurus}
+              bankKurus={data.bank_balance_kurus}
+              cashAccounts={data.cash_accounts}
+              interactive={false}
+            />
+          </div>
+
+          {entityId && (
+            <OverviewSection
+              title="Balances"
+              hint="Payables, receivables, FX, staff, and partners — open a line for detail."
+            >
+              <BalancesOverview embedded compact />
+            </OverviewSection>
+          )}
 
           <OverviewSection
             title="Top expenses"

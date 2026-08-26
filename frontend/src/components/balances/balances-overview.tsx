@@ -79,7 +79,8 @@ function CompactBalanceStrip({ items }: { items: CompactItem[] }) {
             data-testid="balances-overview-figure"
             data-figure-tone={item.figureTone}
             className={cn(
-              "truncate text-sm font-semibold tabular-nums",
+              // Amounts must stay fully visible (FX can be "$252 · €1.080 · £100").
+              "text-sm font-semibold tabular-nums leading-snug break-words",
               item.figureTone
                 ? OVERVIEW_FIGURE_CLASS[item.figureTone]
                 : undefined,

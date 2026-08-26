@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Dashboard v3 compact + expense bars** (`v0.dashboard-v3-fix`) |
-| **Last commit/tag**      | `v0.dashboard-v3-fix` |
+| **Last completed slice** | **Dashboard order + FX display** (`v0.dashboard-order-fx`) |
+| **Last commit/tag**      | `v0.dashboard-order-fx` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1932,6 +1932,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | Dashboard order + FX display                    | `v0.dashboard-order-fx`                                | Sales this month first; then Cash & bank, Balances, Top expenses; compact FX amount no longer CSS-truncated |
 | 2026-08-26 | Dashboard v3 compact + expense bars             | `v0.dashboard-v3-fix`                                 | Balances = one inline strip (not StatCards); Top expenses = horizontal bars (not cards); sales MoM cards unchanged |
 | 2026-08-26 | Dashboard v3 layout                             | `v0.dashboard-v3`                                      | Static Cash & bank; compact Balances StatCards + links; monthly Cash/Card/Total + MoM; top 5 expenses; drop WeeklyChart/delivery/invoice callouts; no sidebar/API changes |
 | 2026-08-25 | Split partner record form (file size)           | `v0.fe-split-partner-record`                           | Form 406→~67; hook + fields + types; dropped dead defaultDescription + orphan @deprecated; cash-copy guard → sourceDeclaringAll; redeemed from baseline; no behavior change |

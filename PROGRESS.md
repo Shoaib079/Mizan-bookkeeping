@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Dashboard v3 fix (`v0.dashboard-v3-fix`):** Balances = one compact inline strip; Top expenses = horizontal bars (not cards).
+- **Dashboard order + FX (`v0.dashboard-order-fx`):** Sales first; Cash & bank; Balances; Top expenses. FX strip shows full multi-currency string.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Dashboard v3 compact + expense bars |
-| **Last tag** | `v0.dashboard-v3-fix` |
+| **Last completed slice** | Dashboard order + FX display |
+| **Last tag** | `v0.dashboard-order-fx` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

@@ -48,6 +48,32 @@ describe("balances on dashboard", () => {
     expect(overview).not.toContain("bankAccounts.map");
   });
 
+  it("dashboard order is Sales → Cash & bank → Balances → Top expenses", () => {
+    const page = home();
+    const sales = page.indexOf('title="Sales this month"');
+    const cash = page.indexOf("CashBankSnapshotCard", sales);
+    const balances = page.indexOf('title="Balances"', sales);
+    const expenses = page.indexOf('title="Top expenses"', sales);
+    expect(sales).toBeGreaterThan(-1);
+    expect(cash).toBeGreaterThan(-1);
+    expect(balances).toBeGreaterThan(-1);
+    expect(expenses).toBeGreaterThan(-1);
+    expect(sales).toBeLessThan(cash);
+    expect(cash).toBeLessThan(balances);
+    expect(balances).toBeLessThan(expenses);
+  });
+
+  it("compact FX amount is not CSS-truncated", () => {
+    const overview = sourceDeclaring("BalancesOverview");
+    const compactStart = overview.indexOf("CompactBalanceStrip");
+    const figureClass = overview.slice(
+      overview.indexOf("balances-overview-figure", compactStart),
+      overview.indexOf("item.loading", compactStart),
+    );
+    expect(figureClass).toContain("break-words");
+    expect(figureClass).not.toContain("truncate");
+  });
+
   it("mutation: This period card reappears on dashboard → red", () => {
     const page = home();
     expect(page).toContain('data-layout="as-of-cash"');
