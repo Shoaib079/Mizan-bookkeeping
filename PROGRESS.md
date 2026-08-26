@@ -25,6 +25,6 @@
 | **Active slice** | *(none)* |
 | **Last completed slice** | Transfer form cash+bank only |
 | **Last tag** | `v0.transfer-cash-bank-only` |
-| **Unpushed** | yes (local commit only — do not push until owner asks) |
+| **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |
