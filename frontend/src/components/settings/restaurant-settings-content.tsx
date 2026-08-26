@@ -264,20 +264,6 @@ export function RestaurantSettingsContent() {
 
       {activeTab === "backups" && <BackupsInfoPanel embedded />}
 
-      {activeTab === "profile" && (
-        <FormSection id="profile">
-          <p className="text-sm text-muted-foreground">
-            Name, email, and sign-out live on your personal profile page.
-          </p>
-          <Link
-            href="/settings/profile"
-            className="mt-3 inline-block text-sm text-primary hover:underline"
-          >
-            Manage your profile →
-          </Link>
-        </FormSection>
-      )}
-
       {/* Always below the tab panels — read Backups before deleting. */}
       <DeleteRestaurantPanel />
     </FormPage>

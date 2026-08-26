@@ -11,7 +11,7 @@ import {
 import { sourceDeclaring } from "@/test-support/source";
 
 describe("settings page tabs catalog", () => {
-  it("lists seven tabs in the owner-specified order", () => {
+  it("lists six restaurant-settings tabs in the owner-specified order", () => {
     expect(SETTINGS_PAGE_TABS.map((t) => t.label)).toEqual([
       "Company Profile",
       "Menu & Documents",
@@ -19,8 +19,8 @@ describe("settings page tabs catalog", () => {
       "Modules",
       "Opening Balances",
       "Backups",
-      "Your Profile",
     ]);
+    expect(SETTINGS_PAGE_TABS.map((t) => t.id)).not.toContain("profile");
   });
 
   it("maps mobile hashes onto the matching tab", () => {
@@ -30,7 +30,7 @@ describe("settings page tabs catalog", () => {
     expect(settingsTabFromHash("#modules")).toBe("modules");
     expect(settingsTabFromHash("#opening-balances")).toBe("opening");
     expect(settingsTabFromHash("#backups")).toBe("backups");
-    expect(settingsTabFromHash("#profile")).toBe("profile");
+    expect(settingsTabFromHash("#profile")).toBeNull();
     expect(settingsTabFromHash("")).toBeNull();
     expect(DEFAULT_SETTINGS_PAGE_TAB).toBe("company");
     expect(hashForSettingsTab("teams")).toBe("#team");
@@ -47,8 +47,9 @@ describe("RestaurantSettingsContent tabbed layout", () => {
     expect(src).toContain("EntityFeatureToggles");
     expect(src).toContain("BackupsInfoPanel");
     expect(src).toContain("DeleteRestaurantPanel");
-    expect(src).toContain('href="/settings/profile"');
-    expect(src).toContain("Manage your profile →");
+    expect(src).not.toContain('href="/settings/profile"');
+    expect(src).not.toContain("Manage your profile →");
+    expect(src).not.toContain('activeTab === "profile"');
     expect(src).toContain('id="team"');
     expect(sourceDeclaring("CompanyProfilePanel")).toContain(
       'id="company-profile"',

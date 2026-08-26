@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Settings tabbed layout (`v0.settings-tabs`):** Restaurant settings is tabbed (Company Profile, Menu & Documents, Teams, Modules, Opening Balances, Backups, Your Profile); delete stays below; mobile hash deep-links kept.
+- **Settings tabs without Your Profile (`v0.settings-tabs-no-profile`):** Six restaurant tabs only; personal profile stays on `/settings/profile`.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Settings tabbed layout |
-| **Last tag** | `v0.settings-tabs` |
+| **Last completed slice** | Settings tabs without Your Profile |
+| **Last tag** | `v0.settings-tabs-no-profile` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

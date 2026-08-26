@@ -6,8 +6,7 @@ export type SettingsPageTabId =
   | "teams"
   | "modules"
   | "opening"
-  | "backups"
-  | "profile";
+  | "backups";
 
 export type SettingsPageTab = {
   id: SettingsPageTabId;
@@ -24,7 +23,6 @@ export const SETTINGS_PAGE_TABS: readonly SettingsPageTab[] = [
   { id: "modules", label: "Modules", hash: "modules" },
   { id: "opening", label: "Opening Balances", hash: "opening-balances" },
   { id: "backups", label: "Backups", hash: "backups" },
-  { id: "profile", label: "Your Profile", hash: "profile" },
 ] as const;
 
 export const DEFAULT_SETTINGS_PAGE_TAB: SettingsPageTabId = "company";
