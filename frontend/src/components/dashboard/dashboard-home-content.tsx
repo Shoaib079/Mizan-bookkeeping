@@ -161,7 +161,7 @@ export function DashboardHomeContent() {
           {entityId && (
             <OverviewSection
               title="Balances"
-              hint="Payables, receivables, FX, staff, and partners — open a card for detail."
+              hint="Payables, receivables, FX, staff, and partners — open a line for detail."
             >
               <BalancesOverview embedded compact />
             </OverviewSection>

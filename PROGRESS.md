@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Dashboard v3 (`v0.dashboard-v3`):** Four sections — static Cash & bank, compact Balances (StatCard + links), monthly Cash/Card/Total sales with MoM trends, top 5 expenses.
+- **Dashboard v3 fix (`v0.dashboard-v3-fix`):** Balances = one compact inline strip; Top expenses = horizontal bars (not cards).
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Dashboard v3 layout |
-| **Last tag** | `v0.dashboard-v3` |
+| **Last completed slice** | Dashboard v3 compact + expense bars |
+| **Last tag** | `v0.dashboard-v3-fix` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |

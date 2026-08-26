@@ -15,7 +15,6 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { StatCard } from "@/components/page/stat-card";
 import {
   IconSquare,
   type IconStroke,
@@ -50,6 +49,49 @@ import {
   useStaffBalanceTotal,
 } from "@/lib/use-subledger-total";
 import { cn } from "@/lib/utils";
+
+type CompactItem = {
+  href: string;
+  label: string;
+  value: string;
+  loading?: boolean;
+  figureTone?: OverviewFigureTone;
+};
+
+function CompactBalanceStrip({ items }: { items: CompactItem[] }) {
+  return (
+    <div
+      data-testid="balances-overview-compact"
+      className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-card)] border border-border bg-border sm:grid-cols-3 xl:grid-cols-5"
+    >
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          data-testid="balances-overview-compact-item"
+          data-card-title={item.label}
+          className="flex min-w-0 flex-col gap-0.5 bg-card px-3 py-2.5 transition-colors hover:bg-muted/50"
+        >
+          <span className="truncate text-xs font-medium text-muted-foreground">
+            {item.label}
+          </span>
+          <span
+            data-testid="balances-overview-figure"
+            data-figure-tone={item.figureTone}
+            className={cn(
+              "truncate text-sm font-semibold tabular-nums",
+              item.figureTone
+                ? OVERVIEW_FIGURE_CLASS[item.figureTone]
+                : undefined,
+            )}
+          >
+            {item.loading ? "…" : item.value}
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 type CardProps = {
   href: string;
@@ -134,7 +176,7 @@ function staffHint(
 type Props = {
   /** When embedded on the dashboard, omit the page intro (section heading lives above). */
   embedded?: boolean;
-  /** Compact StatCards with drill-in links (dashboard v3). */
+  /** Compact inline strip with drill-in links (dashboard v3). */
   compact?: boolean;
 };
 
@@ -215,83 +257,45 @@ export function BalancesOverview({ embedded = false, compact = false }: Props) {
         </p>
       )}
       {compact ? (
-        <div
-          data-testid="balances-overview-compact"
-          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
-        >
-          <StatCard
-            href="/suppliers"
-            label="Payables"
-            icon={Receipt}
-            amountKurus={payablesDisplay.amountKurus}
-            caption={payablesDisplay.hint}
-            tone={payablesDisplay.tone === "you_owe" ? "good" : payablesDisplay.tone === "they_owe" ? "bad" : "default"}
-            figureClassName={OVERVIEW_FIGURE_CLASS[payablesDisplay.tone]}
-            iconTint="mint"
-            iconStroke="green"
-          />
-          <StatCard
-            href="/customers"
-            label="Receivables"
-            icon={HandCoins}
-            amountKurus={receivablesDisplay.amountKurus}
-            caption={receivablesDisplay.hint}
-            tone={
-              receivablesDisplay.tone === "they_owe"
-                ? "bad"
-                : receivablesDisplay.tone === "you_owe"
-                  ? "good"
-                  : "default"
-            }
-            figureClassName={OVERVIEW_FIGURE_CLASS[receivablesDisplay.tone]}
-            iconTint="blush"
-            iconStroke="red"
-          />
-          <StatCard
-            href="/banking/fx"
-            label="FX"
-            icon={Coins}
-            value={fxLoading ? "…" : fxNativeSummary}
-            caption="Held as FX — open Banking → FX"
-            figureClassName={OVERVIEW_FIGURE_CLASS.ink}
-            iconTint="sky"
-            iconStroke="blue"
-          />
-          <StatCard
-            href="/staff"
-            label="Staff"
-            icon={Users}
-            value={staff.loading ? "…" : staff.amountLabel}
-            caption={staffCaption}
-            tone={
-              staffTone === "you_owe"
-                ? "good"
-                : staffTone === "they_owe"
-                  ? "bad"
-                  : "default"
-            }
-            figureClassName={OVERVIEW_FIGURE_CLASS[staffTone]}
-            iconTint={staffTint}
-            iconStroke={staffStroke}
-          />
-          <StatCard
-            href="/partners"
-            label="Partners"
-            icon={Banknote}
-            amountKurus={partnersDisplay.amountKurus}
-            caption={partnersDisplay.hint}
-            tone={
-              partnersDisplay.tone === "you_owe"
-                ? "good"
-                : partnersDisplay.tone === "they_owe"
-                  ? "bad"
-                  : "default"
-            }
-            figureClassName={OVERVIEW_FIGURE_CLASS[partnersDisplay.tone]}
-            iconTint={partners.totalKurus > 0 ? "mint" : "gray"}
-            iconStroke={partners.totalKurus > 0 ? "green" : "gray"}
-          />
-        </div>
+        <CompactBalanceStrip
+          items={[
+            {
+              href: "/suppliers",
+              label: "Payables",
+              value: formatTry(payablesDisplay.amountKurus),
+              loading: payables.loading,
+              figureTone: payablesDisplay.tone,
+            },
+            {
+              href: "/customers",
+              label: "Receivables",
+              value: formatTry(receivablesDisplay.amountKurus),
+              loading: receivables.loading,
+              figureTone: receivablesDisplay.tone,
+            },
+            {
+              href: "/banking/fx",
+              label: "FX",
+              value: fxNativeSummary,
+              loading: fxLoading,
+              figureTone: "ink",
+            },
+            {
+              href: "/staff",
+              label: "Staff",
+              value: staff.amountLabel,
+              loading: staff.loading,
+              figureTone: staffTone,
+            },
+            {
+              href: "/partners",
+              label: "Partners",
+              value: formatTry(partnersDisplay.amountKurus),
+              loading: partners.loading,
+              figureTone: partnersDisplay.tone,
+            },
+          ]}
+        />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <BalanceCard

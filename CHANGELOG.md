@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Dashboard v3 compact + expense bars (`v0.dashboard-v3-fix`).** Owner fix: Balances compact mode is one inline strip (label + amount links), not five StatCards. Top expenses is one bar list (category + amount + width vs max), not five StatCards. Vitest 1475 + eslint + tsc + next build green.
+
 - **Dashboard v3 layout (`v0.dashboard-v3`).** Desktop home: (1) Cash & bank static (`interactive={false}` on CashBankSnapshotCard); (2) compact Balances via StatCard + drill-in links; (3) this-month Cash / Card / Total StatCards with MoM trends from a second dashboard fetch (same dates last month); (4) top 5 expense accounts from expense-register. Removed WeeklyChart, delivery balance, and invoice callouts from the dashboard. Split into `dashboard-home-content` + monthly-sales + top-expenses helpers. No sidebar changes; no API path changes. Vitest 1472 + eslint 0 + tsc + next build + ratchet + pytest green.
 
 ## 2026-08-25
