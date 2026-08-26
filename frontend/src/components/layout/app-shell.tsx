@@ -169,7 +169,7 @@ function AppShellInner({
     <div className="flex h-screen overflow-hidden bg-background">
       <aside
         className={cn(
-          "flex h-full w-60 shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar",
+          "flex h-full w-[12.5rem] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-border bg-sidebar",
           DESKTOP_CHROME_ONLY,
         )}
       >

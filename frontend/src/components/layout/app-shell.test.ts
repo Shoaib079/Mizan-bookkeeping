@@ -86,4 +86,15 @@ describe("AppShell mobile shell (C4)", () => {
     expect(mobileBranch).not.toContain("SidebarNav");
     expect(mobileBranch).toContain("MobileBottomTabs");
   });
+
+  it("keeps the desktop sidebar at ~200px so main content has more room", () => {
+    const text = source();
+    const desktop = text.slice(text.lastIndexOf("  return ("));
+    const aside = desktop.slice(
+      desktop.indexOf("<aside"),
+      desktop.indexOf("</aside>"),
+    );
+    expect(aside).toContain("w-[12.5rem]");
+    expect(aside).not.toContain("w-60");
+  });
 });

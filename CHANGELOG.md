@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-08-26
 
+- **Sidebar width (`v0.sidebar-narrow`).** Desktop shell sidebar narrowed from `w-60` (~240px) to `w-[12.5rem]` (200px). Icons, labels, logo, and nav items unchanged — main content gains the freed width. Vitest + eslint + tsc + next build + ratchet + pytest green.
+
 - **Record form width (`v0.record-form-width`).** Narrowed Record icon rail from `lg:w-64` (~256px) to `lg:w-48` (~192px) and removed `lg:max-w-2xl` on the form panel so Split/Sale/Expense/Payment/Transfer/FX fill remaining width without cutting amount fields. Vitest + eslint + tsc + next build + ratchet + pytest green.
 
 - **FX form Convert + polish (`v0.fx-form-convert`).** Record FX panel modes are Buy / Sell / Convert / Spend (Sell and Convert both use FX→TRY conversion). Form header is just “FX” (no hardcoded-currency subtitle). Labels: Amount (currency); conversion adds Rate + You will receive (TRY) with amount×rate autofill; buy shows You will receive preview. Dynamic FX wallets unchanged. Vitest 1482 + eslint + tsc + next build + ratchet + pytest green.

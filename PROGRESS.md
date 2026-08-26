@@ -18,13 +18,13 @@
 
 ## Current
 
-- **Record form width (`v0.record-form-width`):** Icon rail ~192px (`lg:w-48`); form panel fills remaining width (no `max-w-2xl`).
+- **Sidebar width (`v0.sidebar-narrow`):** Desktop aside `w-60` → `w-[12.5rem]` (200px); nav items/logo unchanged.
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Record form width |
-| **Last tag** | `v0.record-form-width` |
+| **Last completed slice** | Sidebar width |
+| **Last tag** | `v0.sidebar-narrow` |
 | **Unpushed** | no (after push) |
 | **Next up** | Live baseline / ratchet / deferred per-menu period report / remaining FE audit cleanup |
 | **Exact next action** | Await next owner slice |
