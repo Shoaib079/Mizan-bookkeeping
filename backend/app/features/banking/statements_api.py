@@ -459,6 +459,7 @@ def record_statement_bounce_pair(
             fee_line_ids=payload.fee_line_ids,
             actor_id=actor_id,
             reason=payload.reason,
+            auto_void_confirmed=payload.auto_void_confirmed,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

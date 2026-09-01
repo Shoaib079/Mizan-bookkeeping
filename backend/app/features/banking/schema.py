@@ -395,6 +395,7 @@ class StatementBouncePairRequest(BaseModel):
     fee_line_id: uuid.UUID | None = None
     fee_line_ids: list[uuid.UUID] | None = None
     reason: str | None = Field(default=None, max_length=512)
+    auto_void_confirmed: bool = False
     actor_id: OptionalActorId = None
 
 

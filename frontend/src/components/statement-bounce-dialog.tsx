@@ -13,15 +13,18 @@ import type {
   BouncePersonType,
   StatementBouncePairResult,
 } from "@/lib/banking-types";
-import { formatTry } from "@/lib/money";
 import {
   BOUNCE_NET_FEE_OPTION,
+  bounceAutoVoidTargets,
   bounceFeeCandidates,
+  bounceLineNeedsAutoVoid,
   bounceOutflowCandidates,
   buildBounceNetFee,
   formatBounceNetFeeLabel,
+  formatBounceOutflowLabel,
   recordPaymentBounce,
 } from "@/lib/statement-bounce";
+import { formatTry } from "@/lib/money";
 import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 
@@ -59,12 +62,18 @@ export function StatementBounceDialog({
   const [personId, setPersonId] = useState("");
   const [outflowLineId, setOutflowLineId] = useState("");
   const [netFeeChoice, setNetFeeChoice] = useState("");
+  const [autoVoidConfirmed, setAutoVoidConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const outflowCandidates = useMemo(
     () => bounceOutflowCandidates(lines, returnLine),
     [lines, returnLine],
+  );
+
+  const selectedOutflow = useMemo(
+    () => outflowCandidates.find((line) => line.id === outflowLineId) ?? null,
+    [outflowCandidates, outflowLineId],
   );
 
   const feeCandidates = useMemo(
@@ -76,6 +85,22 @@ export function StatementBounceDialog({
   );
 
   const netFee = useMemo(() => buildBounceNetFee(feeCandidates), [feeCandidates]);
+
+  const feeLineIds = useMemo(
+    () =>
+      netFeeChoice === BOUNCE_NET_FEE_OPTION && netFee ? netFee.lineIds : [],
+    [netFee, netFeeChoice],
+  );
+
+  const autoVoidTargets = useMemo(
+    () =>
+      outflowLineId
+        ? bounceAutoVoidTargets(lines, outflowLineId, returnLine.id, feeLineIds)
+        : [],
+    [feeLineIds, lines, outflowLineId, returnLine.id],
+  );
+
+  const needsAutoVoid = autoVoidTargets.length > 0;
 
   const personOptions = useMemo(() => {
     if (personType === "supplier") {
@@ -91,7 +116,7 @@ export function StatementBounceDialog({
     () =>
       outflowCandidates.map((line) => ({
         value: line.id,
-        label: `${formatTry(line.amount_kurus)} · ${line.description}`,
+        label: formatBounceOutflowLabel(line),
       })),
     [outflowCandidates],
   );
@@ -110,6 +135,7 @@ export function StatementBounceDialog({
     setPersonId("");
     setOutflowLineId(outflowCandidates[0]?.id ?? "");
     setNetFeeChoice("");
+    setAutoVoidConfirmed(false);
     setError(null);
     submitIdempotency.resetSubmit();
   }, [open, returnLine.id, outflowCandidates, submitIdempotency]);
@@ -126,8 +152,15 @@ export function StatementBounceDialog({
     setNetFeeChoice(BOUNCE_NET_FEE_OPTION);
   }, [netFee]);
 
+  useEffect(() => {
+    if (!needsAutoVoid) {
+      setAutoVoidConfirmed(false);
+    }
+  }, [needsAutoVoid]);
+
   async function handleSubmit() {
     if (!personId || !outflowLineId || submitting) return;
+    if (needsAutoVoid && !autoVoidConfirmed) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -136,10 +169,8 @@ export function StatementBounceDialog({
         returnLineId: returnLine.id,
         personType,
         personId,
-        feeLineIds:
-          netFeeChoice === BOUNCE_NET_FEE_OPTION && netFee
-            ? netFee.lineIds
-            : null,
+        feeLineIds: feeLineIds.length > 0 ? feeLineIds : null,
+        autoVoidConfirmed: !needsAutoVoid || autoVoidConfirmed,
         actorId,
         idempotencyKey: submitIdempotency.beginSubmit(),
       });
@@ -155,8 +186,8 @@ export function StatementBounceDialog({
   return (
     <Dialog open={open} title="Payment bounced" onClose={onClose}>
       <p className="text-sm text-muted-foreground">
-        Void the payment first if it was already posted. The return is not income
-        — this pairs the outflow and return without posting the payment again.
+        Pair the original outflow with this return. Posted payments are voided
+        automatically when you confirm below — no need to void first.
       </p>
       <p className="mt-2 text-sm font-medium">
         {formatTry(returnLine.amount_kurus)} · {returnLine.description}
@@ -211,6 +242,24 @@ export function StatementBounceDialog({
             />
           </div>
         ) : null}
+
+        {needsAutoVoid ? (
+          <div className="rounded border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/40">
+            <p className="text-sm text-amber-900 dark:text-amber-100">
+              {autoVoidTargets.length === 1 && selectedOutflow && bounceLineNeedsAutoVoid(selectedOutflow)
+                ? "This payment was already posted. It will be voided when you record the bounce."
+                : "Some selected lines have ledger entries. They will be voided when you record the bounce."}
+            </p>
+            <label className="mt-2 flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={autoVoidConfirmed}
+                onChange={(event) => setAutoVoidConfirmed(event.target.checked)}
+              />
+              Auto-void and proceed
+            </label>
+          </div>
+        ) : null}
       </div>
 
       {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
@@ -227,7 +276,8 @@ export function StatementBounceDialog({
             !personId ||
             !outflowLineId ||
             pickers.loading ||
-            outflowCandidates.length === 0
+            outflowCandidates.length === 0 ||
+            (needsAutoVoid && !autoVoidConfirmed)
           }
           onClick={() => void handleSubmit()}
         >

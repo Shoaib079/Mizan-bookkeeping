@@ -16,6 +16,7 @@ export type RecordPaymentBounceInput = {
   feeLineId?: string | null;
   feeLineIds?: string[] | null;
   reason?: string;
+  autoVoidConfirmed?: boolean;
   actorId?: string | null;
   idempotencyKey: string;
 };
@@ -27,6 +28,50 @@ export type BounceNetFee = {
 };
 
 export const BOUNCE_NET_FEE_OPTION = "net";
+
+export type BounceLineUiState =
+  | "unposted"
+  | "posted"
+  | "linked"
+  | "classified"
+  | "needs_void";
+
+/** Rough UI state from line fields (journal may be voided server-side). */
+export function bounceLineUiState(line: BankStatementLine): BounceLineUiState {
+  if (line.status === "linked") return "linked";
+  if (line.status === "posted") return "posted";
+  if (line.status === "classified") return "classified";
+  if (line.journal_entry_id) return "needs_void";
+  return "unposted";
+}
+
+export function bounceLineNeedsAutoVoid(line: BankStatementLine): boolean {
+  const state = bounceLineUiState(line);
+  return state === "posted" || state === "linked" || state === "needs_void";
+}
+
+export function bounceOutflowStateHint(line: BankStatementLine): string | null {
+  switch (bounceLineUiState(line)) {
+    case "posted":
+      return "Posted — will auto-void";
+    case "linked":
+      return "Linked — will auto-void";
+    case "classified":
+      return "Skipped — will pair";
+    case "needs_void":
+      return "Has ledger entry — will auto-void";
+    default:
+      return null;
+  }
+}
+
+function isBounceCandidateLine(line: BankStatementLine): boolean {
+  return line.classification !== "payment_bounced" && line.bounce_pair_id == null;
+}
+
+function matchesOutflowAmount(line: BankStatementLine, amount: number): boolean {
+  return line.amount_kurus < 0 && Math.abs(line.amount_kurus) === amount;
+}
 
 export function recordPaymentBounce(
   entityId: string,
@@ -50,6 +95,7 @@ export function recordPaymentBounce(
         fee_line_id: feeLineIds?.length === 1 ? feeLineIds[0] : null,
         fee_line_ids: feeLineIds,
         reason: input.reason ?? null,
+        auto_void_confirmed: input.autoVoidConfirmed ?? false,
         actor_id: input.actorId ?? null,
       }),
     },
@@ -66,9 +112,7 @@ export function bounceReturnCandidates(
       line.id !== outflow.id &&
       line.amount_kurus > 0 &&
       line.amount_kurus === amount &&
-      line.status !== "posted" &&
-      line.status !== "linked" &&
-      line.classification !== "payment_bounced",
+      isBounceCandidateLine(line),
   );
 }
 
@@ -82,11 +126,8 @@ export function bounceOutflowCandidates(
   return lines.filter(
     (line) =>
       line.id !== returnLine.id &&
-      line.amount_kurus < 0 &&
-      Math.abs(line.amount_kurus) === amount &&
-      line.status !== "posted" &&
-      line.status !== "linked" &&
-      line.classification !== "payment_bounced",
+      matchesOutflowAmount(line, amount) &&
+      isBounceCandidateLine(line),
   );
 }
 
@@ -100,10 +141,14 @@ export function bounceFeeCandidates(
       line.id !== outflowLineId &&
       line.id !== returnLineId &&
       line.amount_kurus !== 0 &&
-      line.status !== "posted" &&
-      line.status !== "linked" &&
-      line.classification !== "payment_bounced",
+      isBounceCandidateLine(line),
   );
+}
+
+export function formatBounceOutflowLabel(line: BankStatementLine): string {
+  const hint = bounceOutflowStateHint(line);
+  const base = `${formatTry(line.amount_kurus)} · ${line.description}`;
+  return hint ? `${base} (${hint})` : base;
 }
 
 export function buildBounceNetFee(
@@ -123,4 +168,15 @@ export function buildBounceNetFee(
 
 export function formatBounceNetFeeLabel(netFee: BounceNetFee): string {
   return `Net fee: ${formatTry(netFee.netKurus)} · ${netFee.description}`;
+}
+
+/** Lines involved in a bounce that may need auto-void on submit. */
+export function bounceAutoVoidTargets(
+  lines: BankStatementLine[],
+  outflowLineId: string,
+  returnLineId: string,
+  feeLineIds: string[],
+): BankStatementLine[] {
+  const ids = new Set([outflowLineId, returnLineId, ...feeLineIds]);
+  return lines.filter((line) => ids.has(line.id) && bounceLineNeedsAutoVoid(line));
 }

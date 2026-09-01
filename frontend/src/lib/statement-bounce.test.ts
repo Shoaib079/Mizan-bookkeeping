@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   bounceFeeCandidates,
+  bounceLineNeedsAutoVoid,
   bounceOutflowCandidates,
   bounceReturnCandidates,
   buildBounceNetFee,
   formatBounceNetFeeLabel,
+  formatBounceOutflowLabel,
 } from "@/lib/statement-bounce";
 import type { BankStatementLine } from "@/lib/banking-types";
 import { STATEMENT_CLASSIFICATION_OPTIONS } from "@/lib/statement-classification-catalog";
@@ -104,11 +106,37 @@ describe("statement bounce helpers", () => {
 });
 
 describe("statement bounce dialog", () => {
+  it("finds outflow candidates including posted lines", () => {
+    const ret = line({ id: "r", amount_kurus: 5_000_000 });
+    const imported = line({ id: "o1", amount_kurus: -5_000_000 });
+    const posted = line({ id: "o2", amount_kurus: -5_000_000, status: "posted" });
+    const other = line({ id: "x", amount_kurus: -1_000_000 });
+    expect(bounceOutflowCandidates([ret, imported, posted, other], ret).map((l) => l.id).sort()).toEqual([
+      "o1",
+      "o2",
+    ]);
+  });
+
+  it("detects lines that need auto-void", () => {
+    expect(bounceLineNeedsAutoVoid(line({ id: "a", amount_kurus: -1, status: "posted" }))).toBe(
+      true,
+    );
+    expect(bounceLineNeedsAutoVoid(line({ id: "b", amount_kurus: -1, status: "imported" }))).toBe(
+      false,
+    );
+  });
+
+  it("labels outflow state in dropdown text", () => {
+    const posted = line({ id: "o", amount_kurus: -5_000_000, status: "posted" });
+    expect(formatBounceOutflowLabel(posted)).toContain("will auto-void");
+  });
+
   it("posts snake_case payload fields", () => {
     const source = sourceDeclaring("recordPaymentBounce");
     expect(source).toContain("outflow_line_id");
     expect(source).toContain("return_line_id");
     expect(source).toContain("fee_line_ids");
+    expect(source).toContain("auto_void_confirmed");
     expect(source).toContain("person_type");
   });
 });

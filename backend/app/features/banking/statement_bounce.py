@@ -5,20 +5,12 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.features.banking.statement_bounce_fees import (
     primary_fee_line_id,
     settle_bounce_fee_lines,
 )
-from app.core.ledger.models import JournalEntry, JournalEntryStatus
-from app.core.partners.models import PartnerLedgerEntry
-from app.core.partners.types import PartnerMovementType
-from app.core.payables.models import SupplierLedgerEntry
-from app.core.payables.types import SupplierMovementType
-from app.core.staff.models import StaffLedgerEntry
-from app.core.staff.types import StaffMovementType
 from app.features.partners.models import Partner
 from app.features.staff.models import Employee
 from app.features.suppliers.models import Supplier
@@ -28,6 +20,13 @@ from app.features.banking.schema import (
     StatementBouncePairRead,
     StatementBouncePairResult,
 )
+from app.features.banking.statement_bounce_prepare import (
+    AUTO_VOID_ORPHAN_PAYMENT_MSG,
+    BouncePairError,
+    prepare_line_for_bounce,
+    void_orphan_person_payment,
+)
+from app.features.banking.statement_bounce_payments import find_active_payment_journal
 from app.features.banking.statement_classify_core import _to_line_read
 from app.features.banking.statement_models import (
     BankStatement,
@@ -38,27 +37,6 @@ from app.features.banking.statement_models import (
     StatementLineStatus,
 )
 from app.features.entities import service as entity_service
-
-_STAFF_OUTFLOW_TYPES = frozenset(
-    {
-        StaffMovementType.SALARY_PAYMENT,
-        StaffMovementType.ADVANCE_PAID,
-        StaffMovementType.INCENTIVE_PAID,
-    }
-)
-
-_PARTNER_OUTFLOW_TYPES = frozenset(
-    {
-        PartnerMovementType.REIMBURSEMENT_PAID,
-        PartnerMovementType.DRAWING,
-        PartnerMovementType.PROFIT_PAID,
-        PartnerMovementType.PARTNER_LOAN_REPAID,
-    }
-)
-
-
-class BouncePairError(ValueError):
-    """Invalid bounce pair request."""
 
 
 def _get_line(
@@ -72,18 +50,6 @@ def _get_line(
     if line is None or line.statement_id != statement_id:
         raise BouncePairError(f"{label} not found on this statement")
     return line
-
-
-def _assert_bounceable(line: BankStatementLine, *, label: str) -> None:
-    if line.bounce_pair_id is not None:
-        raise BouncePairError(f"{label} is already part of a bounce pair")
-    if line.status not in (
-        StatementLineStatus.IMPORTED,
-        StatementLineStatus.NEEDS_REVIEW,
-    ):
-        raise BouncePairError(f"{label} is already settled — cannot bounce")
-    if line.journal_entry_id is not None:
-        raise BouncePairError(f"{label} already has a ledger entry")
 
 
 def _set_person_on_line(
@@ -123,101 +89,6 @@ def _assert_person_exists(
     partner = session.get(Partner, person_id)
     if partner is None or partner.entity_id != entity_id:
         raise BouncePairError("Partner not found")
-
-
-def _active_supplier_payment(
-    session: Session,
-    *,
-    supplier_id: uuid.UUID,
-    amount_kurus: int,
-    payment_date: date,
-) -> SupplierLedgerEntry | None:
-    return session.scalar(
-        select(SupplierLedgerEntry)
-        .join(JournalEntry, SupplierLedgerEntry.journal_entry_id == JournalEntry.id)
-        .where(
-            JournalEntry.status == JournalEntryStatus.POSTED,
-            SupplierLedgerEntry.supplier_id == supplier_id,
-            SupplierLedgerEntry.movement_type == SupplierMovementType.PAYMENT,
-            SupplierLedgerEntry.movement_date == payment_date,
-            SupplierLedgerEntry.amount_kurus == -amount_kurus,
-        )
-        .limit(1)
-    )
-
-
-def _active_staff_payment(
-    session: Session,
-    *,
-    employee_id: uuid.UUID,
-    amount_kurus: int,
-    payment_date: date,
-) -> StaffLedgerEntry | None:
-    return session.scalar(
-        select(StaffLedgerEntry)
-        .join(JournalEntry, StaffLedgerEntry.journal_entry_id == JournalEntry.id)
-        .where(
-            JournalEntry.status == JournalEntryStatus.POSTED,
-            StaffLedgerEntry.employee_id == employee_id,
-            StaffLedgerEntry.movement_type.in_(_STAFF_OUTFLOW_TYPES),
-            StaffLedgerEntry.movement_date == payment_date,
-            StaffLedgerEntry.amount_kurus == -amount_kurus,
-        )
-        .limit(1)
-    )
-
-
-def _active_partner_payment(
-    session: Session,
-    *,
-    partner_id: uuid.UUID,
-    amount_kurus: int,
-    payment_date: date,
-) -> PartnerLedgerEntry | None:
-    return session.scalar(
-        select(PartnerLedgerEntry)
-        .join(JournalEntry, PartnerLedgerEntry.journal_entry_id == JournalEntry.id)
-        .where(
-            JournalEntry.status == JournalEntryStatus.POSTED,
-            PartnerLedgerEntry.partner_id == partner_id,
-            PartnerLedgerEntry.movement_type.in_(_PARTNER_OUTFLOW_TYPES),
-            PartnerLedgerEntry.movement_date == payment_date,
-            PartnerLedgerEntry.amount_kurus == -amount_kurus,
-        )
-        .limit(1)
-    )
-
-
-def _find_active_payment_journal(
-    session: Session,
-    *,
-    person_type: BouncePersonType,
-    person_id: uuid.UUID,
-    amount_kurus: int,
-    payment_date: date,
-) -> uuid.UUID | None:
-    if person_type == BouncePersonType.SUPPLIER:
-        row = _active_supplier_payment(
-            session,
-            supplier_id=person_id,
-            amount_kurus=amount_kurus,
-            payment_date=payment_date,
-        )
-    elif person_type == BouncePersonType.STAFF:
-        row = _active_staff_payment(
-            session,
-            employee_id=person_id,
-            amount_kurus=amount_kurus,
-            payment_date=payment_date,
-        )
-    else:
-        row = _active_partner_payment(
-            session,
-            partner_id=person_id,
-            amount_kurus=amount_kurus,
-            payment_date=payment_date,
-        )
-    return row.journal_entry_id if row is not None else None
 
 
 def _mark_bounced_line(
@@ -261,6 +132,7 @@ def record_payment_bounce(
     fee_line_ids: list[uuid.UUID] | None = None,
     actor_id: uuid.UUID,
     reason: str | None = None,
+    auto_void_confirmed: bool = False,
 ) -> StatementBouncePairResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -293,28 +165,81 @@ def record_payment_bounce(
         if return_line.amount_kurus != payment_amount:
             raise BouncePairError("Return amount must equal the outflow amount")
 
-        _assert_bounceable(outflow, label="Outflow line")
-        _assert_bounceable(return_line, label="Return line")
         for index, fee in enumerate(fee_lines, start=1):
             if fee.amount_kurus == 0:
                 raise BouncePairError(f"Fee line {index} must be non-zero")
-            _assert_bounceable(fee, label=f"Fee line {index}")
 
         _assert_person_exists(
             session, entity_id, person_type=person_type, person_id=person_id
         )
 
-        active_journal = _find_active_payment_journal(
+        voided_journal_ids: list[uuid.UUID] = []
+        bounce_reason = reason.strip() if reason and reason.strip() else None
+
+        outflow_voided = prepare_line_for_bounce(
+            session,
+            entity_id,
+            outflow,
+            label="Outflow line",
+            auto_void_confirmed=auto_void_confirmed,
+            actor_id=actor_id,
+            reason=bounce_reason,
+            person_type=person_type,
+        )
+        if outflow_voided is not None:
+            voided_journal_ids.append(outflow_voided)
+
+        return_voided = prepare_line_for_bounce(
+            session,
+            entity_id,
+            return_line,
+            label="Return line",
+            auto_void_confirmed=auto_void_confirmed,
+            actor_id=actor_id,
+            reason=bounce_reason,
+        )
+        if return_voided is not None:
+            voided_journal_ids.append(return_voided)
+
+        for index, fee in enumerate(fee_lines, start=1):
+            fee_voided = prepare_line_for_bounce(
+                session,
+                entity_id,
+                fee,
+                label=f"Fee line {index}",
+                auto_void_confirmed=auto_void_confirmed,
+                actor_id=actor_id,
+                reason=bounce_reason,
+            )
+            if fee_voided is not None:
+                voided_journal_ids.append(fee_voided)
+
+        exclude = set(voided_journal_ids)
+        orphan_journal = find_active_payment_journal(
             session,
             person_type=person_type,
             person_id=person_id,
             amount_kurus=payment_amount,
             payment_date=outflow.transaction_date,
+            exclude_journal_ids=exclude,
         )
-        if active_journal is not None:
-            raise BouncePairError(
-                "A posted payment still exists for this person and amount — void the payment first"
+        if orphan_journal is not None:
+            if not auto_void_confirmed:
+                raise BouncePairError(AUTO_VOID_ORPHAN_PAYMENT_MSG)
+            void_orphan_person_payment(
+                session,
+                entity_id,
+                orphan_journal,
+                person_type=person_type,
+                actor_id=actor_id,
+                reason=f"Auto-voided for bounce: {bounce_reason or 'Payment returned'}",
+                void_date=outflow.transaction_date,
             )
+            voided_journal_ids.append(orphan_journal)
+            session.refresh(outflow)
+            session.refresh(return_line)
+
+        primary_voided = voided_journal_ids[0] if voided_journal_ids else None
 
         pair = StatementBouncePair(
             entity_id=entity_id,
@@ -324,9 +249,9 @@ def record_payment_bounce(
             outflow_line_id=outflow.id,
             return_line_id=return_line.id,
             fee_line_id=primary_fee_line_id(fee_lines),
-            voided_journal_entry_id=None,
+            voided_journal_entry_id=primary_voided,
             actor_id=actor_id,
-            reason=reason.strip() if reason and reason.strip() else None,
+            reason=bounce_reason,
         )
         session.add(pair)
         session.flush()

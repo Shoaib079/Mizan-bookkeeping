@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Bounce net fee (`v0.statement-bounce-net-fee`) |
-| **Last tag** | `v0.statement-bounce-net-fee` |
+| **Last completed slice** | Universal payment bounce (`v0.statement-bounce-universal`) |
+| **Last tag** | `v0.statement-bounce-universal` |
 | **Unpushed** | yes |
-| **Active slice** | *(none)* |
+| **Active slice** | Statement rule auto-post conflict fix (in progress) |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Green light → commit/tag net fee slice |
+| **Exact next action** | Green light → commit/tag auto-post fix |
 | **Gate** | Idle |

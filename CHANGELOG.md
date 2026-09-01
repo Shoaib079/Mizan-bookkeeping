@@ -8,6 +8,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-01
 
+- **Universal payment bounce (`v0.statement-bounce-universal`).** Bounce pairs work from any line state: never-posted lines pair directly; posted/linked lines and orphan ledger payments auto-void when `auto_void_confirmed` is set; voided journal refs are cleared automatically. `statement_bounce_prepare.py` + `statement_bounce_payments.py`; API `auto_void_confirmed`; frontend shows all matching outflows with state hints and confirmation checkbox. 7 new pytest + vitest.
+
+- **Statement rule auto-post conflict fix (in progress).** `evaluate_rule_match` marks `high_confidence` from the best rule alone (conflict no longer blocks). `try_auto_apply_line` auto-posts when the best learned rule is HIGH; only low confidence or no match routes to Needs Review.
+
 - **Bounce net fee (`v0.statement-bounce-net-fee`).** Payment bounce combines fee charges and refunds into one **net fee** option; backend accepts `fee_line_ids`, posts a single bank-fee entry when net ≠ 0, settles all components when net is 0. `statement_bounce_fees.py` split; 3 pytest + vitest.
 
 - **Bounce trigger from return lines (`v0.statement-bounce-return-trigger`).** **Payment bounced…** appears on positive (return) inflows in the statement queue; dialog picks the matching outflow. `bounceOutflowCandidates` + vitest/page guard.
