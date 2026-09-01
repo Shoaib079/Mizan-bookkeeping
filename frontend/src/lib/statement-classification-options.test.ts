@@ -71,46 +71,40 @@ describe("classificationOptionsForAmount", () => {
 });
 
 describe("suggestClassificationForLine", () => {
-  it("suggests delivery settlement for Trendyol marketplace text", () => {
+  it("uses direction-only defaults — no hardcoded bank-text teachers", () => {
     expect(
       suggestClassificationForLine({
         amount_kurus: 223_039,
         description:
           "TYG TURKEY ELEKTRONİK TİCARET HİZMETLERİ TRENDYOL MARKETPLACE ÖDEME",
       }),
-    ).toBe("delivery_settlement");
-  });
+    ).toBe("customer_payment");
 
-  it("suggests pos settlement for NET SATIŞ inflow", () => {
     expect(
       suggestClassificationForLine({
         amount_kurus: 3_060_854,
         description: "NET SATIŞ TUTARI INDIA GATE RESTAURANT",
       }),
-    ).toBe("pos_settlement");
-  });
+    ).toBe("customer_payment");
 
-  it("suggests pos commission for POS komisyon outflows", () => {
     expect(
       suggestClassificationForLine({
         amount_kurus: -3_000,
         description: "POS KOMİSYONU INDIA GATE RESTAURANT",
       }),
-    ).toBe("pos_commission");
-  });
+    ).toBe("supplier_payment");
 
-  it("suggests bank fee for HAVALE outflows", () => {
     expect(
       suggestClassificationForLine({
         amount_kurus: -768_500,
         description: "GIDEN HAVALE -CA***** TA***** AN*****",
       }),
-    ).toBe("bank_fee");
+    ).toBe("supplier_payment");
   });
 });
 
 describe("initialClassificationForLine", () => {
-  it("keeps posted classification instead of HAVALE bank-fee heuristic", () => {
+  it("keeps posted classification instead of direction fallback", () => {
     expect(
       initialClassificationForLine({
         amount_kurus: -768_500,
@@ -121,7 +115,19 @@ describe("initialClassificationForLine", () => {
     ).toBe("partner_drawing_repayment");
   });
 
-  it("still suggests for unposted queue lines", () => {
+  it("prefers API/learned suggestion over direction fallback", () => {
+    expect(
+      initialClassificationForLine({
+        amount_kurus: -768_500,
+        description: "GIDEN HAVALE -CA***** TA***** AN*****",
+        classification: "unclassified",
+        status: "imported",
+        suggestion: { classification: "bank_fee" },
+      }),
+    ).toBe("bank_fee");
+  });
+
+  it("falls back to direction default when queue line has no suggestion", () => {
     expect(
       initialClassificationForLine({
         amount_kurus: -768_500,
@@ -129,7 +135,7 @@ describe("initialClassificationForLine", () => {
         classification: "unclassified",
         status: "imported",
       }),
-    ).toBe("bank_fee");
+    ).toBe("supplier_payment");
   });
 });
 

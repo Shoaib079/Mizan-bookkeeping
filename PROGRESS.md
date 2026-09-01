@@ -22,9 +22,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | POS deposit auto-create (`v0.statement-pos-deposit-auto`) |
-| **Last tag** | `v0.statement-pos-deposit-auto` |
-| **Unpushed** | no (after push) |
-| **Next up** | Owner pick — FE audit cleanup or live baseline |
-| **Exact next action** | Owner picks next slice |
+| **Last completed slice** | FE statement hint cleanup (`v0.statement-fe-hint-cleanup`) |
+| **Last tag** | `v0.statement-fe-hint-cleanup` |
+| **Unpushed** | yes — pending push |
+| **Next up** | Owner push when ready; else pick next |
+| **Exact next action** | Push tag when owner says |
 | **Gate** | Idle |

@@ -81,42 +81,21 @@ export function classificationLabel(value: string): string {
   );
 }
 
-const DELIVERY_HINT =
-  /TRENDYOL|GETIR|YEMEK|MIGROS|TYG\s|DELIVERY|MARKETPLACE|YEMEKSEPETI/i;
-const POS_HINT =
-  /POS|KART|CARD|ÖKC|BKM|SANAL|VISA|MASTERCARD|NET\s*SAT/i;
-const POS_COMMISSION_HINT =
-  /POS.*KOM[İI]SYON|KOM[İI]SYON.*POS|KART.*KOM[İI]SYON|KOM[İI]SYON.*KART|BKM.*KOM[İI]SYON|ÖKC.*KOM[İI]SYON|POS\s*ÜCRET|POS\s*MASRAF/i;
-const BANK_FEE_HINT = /BANKA|MASRAF|ÜCRET|EFT|HAVALE|BSM|BSMV/i;
-const STORE_PURCHASE_HINT =
-  /\bMIGROS\b|\bBIM\b|\bBİM\b|\bA101\b|\bSOK\b|\bŞOK\b|\bCARREFOUR\b|\bFILE\b|\bHAPPY\s*CENTER\b/i;
-const SALARY_HINT = /MAAŞ|MAAS|SALARY|ÜCRET\s*ÖD|UCRET\s*OD/i;
-const LOAN_HINT = /KREDI|LOAN|FAIZ|FAİZ|TAKSIT|TAKSİT/i;
-
-/** Best-effort default when a line is first shown. */
+/**
+ * Direction-only fallback when the API has no suggestion yet.
+ * Do not hardcode bank-text “teachers” here — learning + backend suggest own that.
+ */
 export function suggestClassificationForLine(line: {
   amount_kurus: number;
   description: string;
 }): StatementLineClassification {
-  const text = line.description;
-  if (line.amount_kurus > 0) {
-    if (DELIVERY_HINT.test(text)) return "delivery_settlement";
-    if (POS_HINT.test(text)) return "pos_settlement";
-    if (LOAN_HINT.test(text)) return "loan_receipt";
-    return "customer_payment";
-  }
-  if (line.amount_kurus < 0) {
-    if (POS_COMMISSION_HINT.test(text)) return "pos_commission";
-    if (BANK_FEE_HINT.test(text)) return "bank_fee";
-    if (STORE_PURCHASE_HINT.test(text)) return "store_purchase";
-    if (SALARY_HINT.test(text)) return "staff_payment";
-    if (LOAN_HINT.test(text)) return "loan_payment";
-    return "supplier_payment";
-  }
+  void line.description;
+  if (line.amount_kurus > 0) return "customer_payment";
+  if (line.amount_kurus < 0) return "supplier_payment";
   return "unknown";
 }
 
-/** Queue lines: suggestion/heuristic. Resolved lines: keep posted classification. */
+/** Queue lines: API/learned suggestion first; else direction fallback. Resolved: keep posted. */
 export function initialClassificationForLine(line: {
   amount_kurus: number;
   description: string;
@@ -133,7 +112,7 @@ export function initialClassificationForLine(line: {
   return suggestClassificationForLine(line);
 }
 
-/** Match delivery platform name from statement description (e.g. TRENDYOL → Trendyol). */
+/** Match delivery platform name from statement description (owner platforms only). */
 export function suggestDeliveryPlatformId(
   description: string,
   platforms: { id: string; name: string }[],
@@ -145,25 +124,12 @@ export function suggestDeliveryPlatformId(
       return platform.id;
     }
   }
-  if (/TRENDYOL|TYG/.test(upper)) {
+  // Common short bank code for Trendyol payouts — only if that platform exists.
+  if (/TYG\b/.test(upper)) {
     const trendyol = platforms.find((p) =>
       p.name.toUpperCase().includes("TRENDYOL"),
     );
     if (trendyol) return trendyol.id;
-  }
-  if (/GETIR/.test(upper)) {
-    const getir = platforms.find((p) => p.name.toUpperCase().includes("GETIR"));
-    if (getir) return getir.id;
-  }
-  if (/YEMEK/.test(upper)) {
-    const ys = platforms.find((p) =>
-      /YEMEK|SEPET/.test(p.name.toUpperCase()),
-    );
-    if (ys) return ys.id;
-  }
-  if (/MIGROS/.test(upper)) {
-    const migros = platforms.find((p) => p.name.toUpperCase().includes("MIGROS"));
-    if (migros) return migros.id;
   }
   return null;
 }
@@ -196,7 +162,7 @@ export function suggestSupplierId(
   return best?.id ?? null;
 }
 
-/** Best-effort brand label from bank description (for picker hints). */
+/** Best-effort brand label from bank description (for picker hints only). */
 export function likelyDeliveryBrandInDescription(description: string): string | null {
   const upper = description.toUpperCase();
   if (/TRENDYOL|TYG\s/.test(upper)) return "Trendyol";

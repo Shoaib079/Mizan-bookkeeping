@@ -18,7 +18,10 @@ describe("statement-classification-options split", () => {
       "Repay partner (partner-paid expenses)",
     );
     expect(sourceDeclaring("suggestClassificationForLine")).toContain(
-      "delivery_settlement",
+      "customer_payment",
+    );
+    expect(sourceDeclaring("suggestClassificationForLine")).toContain(
+      "Do not hardcode bank-text",
     );
     expect(sourceDeclaring("suggestSupplierId")).toContain("toLocaleLowerCase");
   });
