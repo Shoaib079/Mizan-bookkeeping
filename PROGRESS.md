@@ -24,7 +24,7 @@
 | **Active slice** | *(none)* |
 | **Last completed slice** | Statement card-commission learning (`v0.statement-pos-commission-learn`) |
 | **Last tag** | `v0.statement-pos-commission-learn` |
-| **Unpushed** | commit/tag pending push |
+| **Unpushed** | yes — `main` ahead 1 (`v0.statement-pos-commission-learn`) |
 | **Next up** | Optional deposit create-on-import for multi-bank patches; else owner pick |
 | **Exact next action** | Owner sign-off; push when ready |
 | **Gate** | Idle |
