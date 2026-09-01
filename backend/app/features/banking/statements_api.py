@@ -22,8 +22,14 @@ from app.core.auth.deps import member_read_guard, operations_write_guard, resolv
 from app.features.auth.models import User
 from app.features.banking import import_profiles as import_profile_service
 from app.features.banking import statements as statement_service
-from app.features.banking.statement_bounce import BouncePairError, record_payment_bounce
-from app.features.banking.statement_models import BouncePersonType
+from app.features.banking.statement_bounce import (
+    BouncePairError,
+    record_payment_bounce_from_request,
+)
+from app.features.banking.statement_bounce_schema import (
+    StatementBouncePairRequest,
+    StatementBouncePairResult,
+)
 from app.features.suppliers.service import DuplicateSupplierError
 from app.features.banking.schema import (
     BankImportProfileRead,
@@ -36,8 +42,6 @@ from app.features.banking.schema import (
     CorrectStatementLineRequest,
     CreateSupplierFromLineRequest,
     CreateSupplierFromLineResult,
-    StatementBouncePairRequest,
-    StatementBouncePairResult,
     DiscardBankStatementResult,
     NeedsReviewStatementLineRead,
 )
@@ -447,19 +451,8 @@ def record_statement_bounce_pair(
 ) -> StatementBouncePairResult:
     actor_id = resolve_actor_id(_guard, payload.actor_id)
     try:
-        return record_payment_bounce(
-            session,
-            entity_id,
-            statement_id,
-            outflow_line_id=payload.outflow_line_id,
-            return_line_id=payload.return_line_id,
-            person_type=BouncePersonType(payload.person_type),
-            person_id=payload.person_id,
-            fee_line_id=payload.fee_line_id,
-            fee_line_ids=payload.fee_line_ids,
-            actor_id=actor_id,
-            reason=payload.reason,
-            auto_void_confirmed=payload.auto_void_confirmed,
+        return record_payment_bounce_from_request(
+            session, entity_id, statement_id, payload, actor_id
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

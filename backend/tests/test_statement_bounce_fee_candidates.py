@@ -8,10 +8,12 @@ from app.core.banking.bank_fee_detect import is_bank_fee_refund_description
 from app.features.banking.statement_bounce_fees import (
     BOUNCE_FEE_SMALL_KURUS,
     is_bounce_fee_candidate_line,
+    is_unposted_bounce_fee_line,
 )
 from app.features.banking.statement_models import (
     BankStatementLine,
     StatementLineClassification,
+    StatementLineStatus,
 )
 
 
@@ -99,3 +101,13 @@ def test_fee_candidates_reject_classified_bank_fee_over_ceiling() -> None:
 
 def test_fee_candidates_tiny_amount_without_keyword() -> None:
     assert is_bounce_fee_candidate_line(_line(amount_kurus=76, description="X"))
+
+
+def test_unposted_fee_line_rejects_posted() -> None:
+    posted = _line(
+        amount_kurus=-399,
+        description="BSMV",
+        classification=StatementLineClassification.UNCLASSIFIED,
+    )
+    posted.status = StatementLineStatus.POSTED
+    assert is_unposted_bounce_fee_line(posted) is False

@@ -8,23 +8,26 @@ import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import type {
   BankStatementLine,
   BouncePersonType,
   StatementBouncePairResult,
 } from "@/lib/banking-types";
+import { formatTry, parseTryToKurus } from "@/lib/money";
 import {
-  BOUNCE_NET_FEE_OPTION,
   bounceAutoVoidTargets,
-  bounceFeeCandidates,
   bounceLineNeedsAutoVoid,
   bounceOutflowCandidates,
-  buildBounceNetFee,
-  formatBounceNetFeeLabel,
   formatBounceOutflowLabel,
   recordPaymentBounce,
 } from "@/lib/statement-bounce";
-import { formatTry } from "@/lib/money";
+import {
+  formatFeeCandidateRow,
+  getBounceFeeCandidates,
+  resolveBounceNetFeeKurus,
+  toggleFeeSelection,
+} from "@/lib/statement-bounce-fee-candidates";
 import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 
@@ -61,7 +64,9 @@ export function StatementBounceDialog({
   const [personType, setPersonType] = useState<BouncePersonType>("supplier");
   const [personId, setPersonId] = useState("");
   const [outflowLineId, setOutflowLineId] = useState("");
-  const [netFeeChoice, setNetFeeChoice] = useState("");
+  const [selectedFeeIds, setSelectedFeeIds] = useState<string[]>([]);
+  const [manualFeeAmount, setManualFeeAmount] = useState("");
+  const [showFeeSelector, setShowFeeSelector] = useState(false);
   const [autoVoidConfirmed, setAutoVoidConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -79,17 +84,30 @@ export function StatementBounceDialog({
   const feeCandidates = useMemo(
     () =>
       outflowLineId
-        ? bounceFeeCandidates(lines, outflowLineId, returnLine.id)
+        ? getBounceFeeCandidates(lines, outflowLineId, returnLine.id)
         : [],
     [lines, outflowLineId, returnLine.id],
   );
 
-  const netFee = useMemo(() => buildBounceNetFee(feeCandidates), [feeCandidates]);
+  const selectedFees = useMemo(
+    () => feeCandidates.filter((fee) => selectedFeeIds.includes(fee.id)),
+    [feeCandidates, selectedFeeIds],
+  );
 
+  const manualFeeKurus = useMemo(() => {
+    if (!manualFeeAmount.trim()) return null;
+    return parseTryToKurus(manualFeeAmount);
+  }, [manualFeeAmount]);
+
+  const netFeeKurus = useMemo(
+    () => resolveBounceNetFeeKurus(manualFeeKurus, selectedFees),
+    [manualFeeKurus, selectedFees],
+  );
+
+  const usingManualFee = manualFeeKurus !== null;
   const feeLineIds = useMemo(
-    () =>
-      netFeeChoice === BOUNCE_NET_FEE_OPTION && netFee ? netFee.lineIds : [],
-    [netFee, netFeeChoice],
+    () => (usingManualFee ? [] : selectedFeeIds),
+    [usingManualFee, selectedFeeIds],
   );
 
   const autoVoidTargets = useMemo(
@@ -101,6 +119,7 @@ export function StatementBounceDialog({
   );
 
   const needsAutoVoid = autoVoidTargets.length > 0;
+  const manualFeeInvalid = manualFeeAmount.trim().length > 0 && manualFeeKurus === null;
 
   const personOptions = useMemo(() => {
     if (personType === "supplier") {
@@ -121,20 +140,14 @@ export function StatementBounceDialog({
     [outflowCandidates],
   );
 
-  const netFeeOptions = useMemo(() => {
-    if (!netFee) return [];
-    return [
-      { value: "", label: "Skip net fee" },
-      { value: BOUNCE_NET_FEE_OPTION, label: formatBounceNetFeeLabel(netFee) },
-    ];
-  }, [netFee]);
-
   useEffect(() => {
     if (!open) return;
     setPersonType("supplier");
     setPersonId("");
     setOutflowLineId(outflowCandidates[0]?.id ?? "");
-    setNetFeeChoice("");
+    setSelectedFeeIds([]);
+    setManualFeeAmount("");
+    setShowFeeSelector(false);
     setAutoVoidConfirmed(false);
     setError(null);
     submitIdempotency.resetSubmit();
@@ -145,21 +158,34 @@ export function StatementBounceDialog({
   }, [personType]);
 
   useEffect(() => {
-    if (!netFee) {
-      setNetFeeChoice("");
-      return;
-    }
-    setNetFeeChoice(BOUNCE_NET_FEE_OPTION);
-  }, [netFee]);
-
-  useEffect(() => {
     if (!needsAutoVoid) {
       setAutoVoidConfirmed(false);
     }
   }, [needsAutoVoid]);
 
+  useEffect(() => {
+    if (feeCandidates.length === 1 && selectedFeeIds.length === 0 && !manualFeeAmount) {
+      setSelectedFeeIds([feeCandidates[0]!.id]);
+    }
+  }, [feeCandidates, manualFeeAmount, selectedFeeIds.length]);
+
+  function handleToggleFee(feeId: string) {
+    setSelectedFeeIds((prev) => toggleFeeSelection(prev, feeId));
+    if (manualFeeAmount) setManualFeeAmount("");
+  }
+
+  function handleManualFeeChange(value: string) {
+    setManualFeeAmount(value);
+    if (selectedFeeIds.length > 0) setSelectedFeeIds([]);
+  }
+
+  function handleClearFees() {
+    setSelectedFeeIds([]);
+    setManualFeeAmount("");
+  }
+
   async function handleSubmit() {
-    if (!personId || !outflowLineId || submitting) return;
+    if (!personId || !outflowLineId || submitting || manualFeeInvalid) return;
     if (needsAutoVoid && !autoVoidConfirmed) return;
     setSubmitting(true);
     setError(null);
@@ -169,7 +195,8 @@ export function StatementBounceDialog({
         returnLineId: returnLine.id,
         personType,
         personId,
-        feeLineIds: feeLineIds.length > 0 ? feeLineIds : null,
+        feeLineIds: usingManualFee ? null : feeLineIds.length > 0 ? feeLineIds : null,
+        manualNetFeeKurus: usingManualFee ? manualFeeKurus : null,
         autoVoidConfirmed: !needsAutoVoid || autoVoidConfirmed,
         actorId,
         idempotencyKey: submitIdempotency.beginSubmit(),
@@ -182,6 +209,8 @@ export function StatementBounceDialog({
       setSubmitting(false);
     }
   }
+
+  const showFeeSection = outflowLineId.length > 0;
 
   return (
     <Dialog open={open} title="Payment bounced" onClose={onClose}>
@@ -231,15 +260,66 @@ export function StatementBounceDialog({
           />
         </div>
 
-        {netFee ? (
-          <div>
-            <Label className="text-xs text-muted-foreground">Bank fee (optional)</Label>
-            <Combobox
-              value={netFeeChoice}
-              onValueChange={setNetFeeChoice}
-              options={netFeeOptions}
-              className="mt-1 h-9 w-full text-xs"
-            />
+        {showFeeSection ? (
+          <div className="space-y-3 rounded border border-border p-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs text-muted-foreground">Bank fee (optional)</Label>
+              {(selectedFeeIds.length > 0 || manualFeeAmount) && (
+                <Button type="button" variant="ghost" className="h-7 px-2 text-xs" onClick={handleClearFees}>
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            <div>
+              <Label className="text-xs text-muted-foreground">Net fee (manual)</Label>
+              <MoneyInput
+                value={manualFeeAmount}
+                onChange={handleManualFeeChange}
+                placeholder="e.g. -16,76"
+                className="mt-1 h-9 text-xs"
+              />
+            </div>
+
+            {feeCandidates.length > 0 ? (
+              <>
+                <p className="text-center text-xs text-muted-foreground">or select from statement</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-8 w-full text-xs"
+                  onClick={() => setShowFeeSelector((open) => !open)}
+                >
+                  {showFeeSelector ? "Hide fee lines" : `Show fee lines (${feeCandidates.length})`}
+                </Button>
+                {showFeeSelector ? (
+                  <ul className="max-h-40 space-y-2 overflow-y-auto">
+                    {feeCandidates.map((fee) => (
+                      <li key={fee.id}>
+                        <label className="flex cursor-pointer items-start gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5"
+                            checked={selectedFeeIds.includes(fee.id)}
+                            onChange={() => handleToggleFee(fee.id)}
+                          />
+                          <span>{formatFeeCandidateRow(fee)}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">No unposted fee lines on this statement.</p>
+            )}
+
+            {(selectedFeeIds.length > 0 || manualFeeKurus !== null) && !manualFeeInvalid ? (
+              <p className="text-sm font-medium">
+                Net fee: {formatTry(netFeeKurus)}
+                {usingManualFee ? " (manual)" : selectedFees.length > 1 ? ` (${selectedFees.length} lines)` : null}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -277,6 +357,7 @@ export function StatementBounceDialog({
             !outflowLineId ||
             pickers.loading ||
             outflowCandidates.length === 0 ||
+            manualFeeInvalid ||
             (needsAutoVoid && !autoVoidConfirmed)
           }
           onClick={() => void handleSubmit()}

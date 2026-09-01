@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 
 from app.features.banking.statement_bounce_fees import (
     is_bounce_fee_candidate_line,
+    is_unposted_bounce_fee_line,
     primary_fee_line_id,
     settle_bounce_fee_lines,
+    settle_manual_bounce_net_fee,
 )
 from app.features.partners.models import Partner
 from app.features.staff.models import Employee
@@ -18,7 +20,10 @@ from app.features.suppliers.models import Supplier
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.schema import (
     BankStatementLineRead,
+)
+from app.features.banking.statement_bounce_schema import (
     StatementBouncePairRead,
+    StatementBouncePairRequest,
     StatementBouncePairResult,
 )
 from app.features.banking.statement_bounce_prepare import (
@@ -120,6 +125,30 @@ def _resolve_fee_line_ids(
     return []
 
 
+def record_payment_bounce_from_request(
+    session: Session,
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    payload: StatementBouncePairRequest,
+    actor_id: uuid.UUID,
+) -> StatementBouncePairResult:
+    return record_payment_bounce(
+        session,
+        entity_id,
+        statement_id,
+        outflow_line_id=payload.outflow_line_id,
+        return_line_id=payload.return_line_id,
+        person_type=BouncePersonType(payload.person_type),
+        person_id=payload.person_id,
+        fee_line_id=payload.fee_line_id,
+        fee_line_ids=payload.fee_line_ids,
+        actor_id=actor_id,
+        reason=payload.reason,
+        auto_void_confirmed=payload.auto_void_confirmed,
+        manual_net_fee_kurus=payload.manual_net_fee_kurus,
+    )
+
+
 def record_payment_bounce(
     session: Session,
     entity_id: uuid.UUID,
@@ -134,6 +163,7 @@ def record_payment_bounce(
     actor_id: uuid.UUID,
     reason: str | None = None,
     auto_void_confirmed: bool = False,
+    manual_net_fee_kurus: int | None = None,
 ) -> StatementBouncePairResult:
     if entity_service.get_entity(session, entity_id) is None:
         raise LookupError("Entity not found")
@@ -169,10 +199,15 @@ def record_payment_bounce(
         for index, fee in enumerate(fee_lines, start=1):
             if fee.amount_kurus == 0:
                 raise BouncePairError(f"Fee line {index} must be non-zero")
+            if not is_unposted_bounce_fee_line(fee):
+                raise BouncePairError(f"Fee line {index} is already posted — cannot use as fee")
             if not is_bounce_fee_candidate_line(fee):
                 raise BouncePairError(
                     f"Fee line {index} does not look like a bank fee or fee refund"
                 )
+
+        if manual_net_fee_kurus is not None and fee_lines:
+            raise BouncePairError("Use fee lines or manual net fee, not both")
 
         _assert_person_exists(
             session, entity_id, person_type=person_type, person_id=person_id
@@ -283,6 +318,18 @@ def record_payment_bounce(
                     statement,
                     fee_lines,
                     bounce_pair_id=pair.id,
+                    actor_id=actor_id,
+                )
+            except ValueError as exc:
+                raise BouncePairError(str(exc)) from exc
+        elif manual_net_fee_kurus is not None and manual_net_fee_kurus != 0:
+            try:
+                fee_journal_id = settle_manual_bounce_net_fee(
+                    session,
+                    entity_id,
+                    statement,
+                    manual_net_fee_kurus,
+                    entry_date=outflow.transaction_date,
                     actor_id=actor_id,
                 )
             except ValueError as exc:

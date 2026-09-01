@@ -7,31 +7,20 @@ import type {
   StatementBouncePairResult,
 } from "@/lib/banking-types";
 import { formatTry } from "@/lib/money";
-import {
-  bounceFeeLineKind,
-  isBounceFeeCandidateLine,
-} from "@/lib/statement-bounce-fee-candidates";
+import { getBounceFeeCandidates } from "@/lib/statement-bounce-fee-candidates";
 
 export type RecordPaymentBounceInput = {
   outflowLineId: string;
   returnLineId: string;
   personType: BouncePersonType;
   personId: string;
-  feeLineId?: string | null;
   feeLineIds?: string[] | null;
+  manualNetFeeKurus?: number | null;
   reason?: string;
   autoVoidConfirmed?: boolean;
   actorId?: string | null;
   idempotencyKey: string;
 };
-
-export type BounceNetFee = {
-  lineIds: string[];
-  netKurus: number;
-  description: string;
-};
-
-export const BOUNCE_NET_FEE_OPTION = "net";
 
 export type BounceLineUiState =
   | "unposted"
@@ -82,9 +71,8 @@ export function recordPaymentBounce(
   statementId: string,
   input: RecordPaymentBounceInput,
 ): Promise<StatementBouncePairResult> {
-  const feeLineIds =
-    input.feeLineIds ??
-    (input.feeLineId ? [input.feeLineId] : null);
+  const hasManual = input.manualNetFeeKurus != null;
+  const feeLineIds = hasManual ? null : (input.feeLineIds ?? null);
 
   return apiFetch<StatementBouncePairResult>(
     `/entities/${entityId}/banking/statements/${statementId}/bounce-pair`,
@@ -98,6 +86,7 @@ export function recordPaymentBounce(
         person_id: input.personId,
         fee_line_id: feeLineIds?.length === 1 ? feeLineIds[0] : null,
         fee_line_ids: feeLineIds,
+        manual_net_fee_kurus: hasManual ? input.manualNetFeeKurus : null,
         reason: input.reason ?? null,
         auto_void_confirmed: input.autoVoidConfirmed ?? false,
         actor_id: input.actorId ?? null,
@@ -135,59 +124,22 @@ export function bounceOutflowCandidates(
   );
 }
 
+/** Unposted fee/refund lines eligible for bounce net-fee selection. */
 export function bounceFeeCandidates(
   lines: BankStatementLine[],
   outflowLineId: string,
   returnLineId: string,
 ): BankStatementLine[] {
-  return lines.filter(
-    (line) =>
-      line.id !== outflowLineId &&
-      line.id !== returnLineId &&
-      isBounceCandidateLine(line) &&
-      isBounceFeeCandidateLine(line),
+  const ids = new Set(
+    getBounceFeeCandidates(lines, outflowLineId, returnLineId).map((fee) => fee.id),
   );
+  return lines.filter((line) => ids.has(line.id));
 }
-
-export { formatBounceFeeLineLabel } from "@/lib/statement-bounce-fee-candidates";
 
 export function formatBounceOutflowLabel(line: BankStatementLine): string {
   const hint = bounceOutflowStateHint(line);
   const base = `${formatTry(line.amount_kurus)} · ${line.description}`;
   return hint ? `${base} (${hint})` : base;
-}
-
-export function buildBounceNetFee(
-  candidates: BankStatementLine[],
-): BounceNetFee | null {
-  if (candidates.length === 0) return null;
-  const netKurus = candidates.reduce((sum, line) => sum + line.amount_kurus, 0);
-  const description =
-    netKurus === 0
-      ? "No net fee"
-      : candidates
-          .map((line) => {
-            const kind = bounceFeeLineKind(line);
-            const tag =
-              kind === "refund"
-                ? "refund"
-                : kind === "commission"
-                  ? "commission"
-                  : kind === "fee"
-                    ? "fee"
-                    : line.description;
-            return tag;
-          })
-          .join(" · ");
-  return {
-    lineIds: candidates.map((line) => line.id),
-    netKurus,
-    description,
-  };
-}
-
-export function formatBounceNetFeeLabel(netFee: BounceNetFee): string {
-  return `Net fee: ${formatTry(netFee.netKurus)} · ${netFee.description}`;
 }
 
 /** Lines involved in a bounce that may need auto-void on submit. */

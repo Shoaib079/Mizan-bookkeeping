@@ -1,11 +1,25 @@
-/** Fee/refund detection for payment bounce net-fee selection (mirrors backend). */
+/** Fee/refund detection and selection for payment bounce (mirrors backend). */
 
 import type { BankStatementLine, StatementLineClassification } from "@/lib/banking-types";
+import { formatTry } from "@/lib/money";
 
 /** 1.000 ₺ — fees and refunds above this are usually payments, not charges. */
 export const BOUNCE_FEE_SMALL_KURUS = 100_000;
 /** 50 ₺ — tiny lines are almost always bank fees or fee refunds. */
 export const BOUNCE_FEE_TINY_KURUS = 5_000;
+
+export type FeeCandidateType = "bank_fee" | "pos_commission" | "refund" | "fee";
+
+export type FeeCandidate = {
+  id: string;
+  amountKurus: number;
+  description: string;
+  transactionDate: string;
+  status: BankStatementLine["status"];
+  classification: BankStatementLine["classification"];
+  isRefund: boolean;
+  type: FeeCandidateType;
+};
 
 const TURKISH_FOLD: Record<string, string> = {
   ü: "u",
@@ -67,6 +81,18 @@ const FEE_REFUND_PATTERNS = [
 
 const BARE_FEE_TOKENS = new Set(["komisyon", "komisyonu", "masraf", "masrafi", "ucret", "ucreti"]);
 
+const FEE_CLASSIFICATIONS = new Set<StatementLineClassification>([
+  "bank_fee",
+  "pos_commission",
+]);
+
+const FEE_TYPE_LABELS: Record<FeeCandidateType, string> = {
+  bank_fee: "Bank fee",
+  pos_commission: "Card commission",
+  refund: "Fee refund",
+  fee: "Fee",
+};
+
 function matchesAny(text: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
 }
@@ -90,11 +116,6 @@ export function isBankFeeRefundDescription(description: string): boolean {
   return normalized.length > 0 && matchesAny(normalized, FEE_REFUND_PATTERNS);
 }
 
-const FEE_CLASSIFICATIONS = new Set<StatementLineClassification>([
-  "bank_fee",
-  "pos_commission",
-]);
-
 export function isBounceFeeCandidateLine(line: BankStatementLine): boolean {
   if (line.amount_kurus === 0) return false;
 
@@ -110,10 +131,7 @@ export function isBounceFeeCandidateLine(line: BankStatementLine): boolean {
   const { description } = line;
   if (isBankFeeRefundDescription(description)) return true;
   if (isBankFeeDescription(description) || isPosCommissionDescription(description)) return true;
-  if (
-    amount <= BOUNCE_FEE_SMALL_KURUS &&
-    /\b(?:fee|charge)\b/i.test(description)
-  ) {
+  if (amount <= BOUNCE_FEE_SMALL_KURUS && /\b(?:fee|charge)\b/i.test(description)) {
     return true;
   }
 
@@ -122,43 +140,88 @@ export function isBounceFeeCandidateLine(line: BankStatementLine): boolean {
   return false;
 }
 
-export type BounceFeeLineKind = "fee" | "refund" | "commission" | "other";
+export function isUnpostedBounceFeeLine(line: BankStatementLine): boolean {
+  if (line.status === "posted" || line.status === "linked") return false;
+  if (line.journal_entry_id != null) return false;
+  if (line.classification === "payment_bounced") return false;
+  if (line.bounce_pair_id != null) return false;
+  return true;
+}
 
-export function bounceFeeLineKind(line: BankStatementLine): BounceFeeLineKind {
-  if (line.classification === "pos_commission" || isPosCommissionDescription(line.description)) {
-    return "commission";
-  }
+export function getFeeType(line: BankStatementLine): FeeCandidateType {
+  if (line.classification === "bank_fee") return "bank_fee";
+  if (line.classification === "pos_commission") return "pos_commission";
   if (
-    line.amount_kurus > 0 &&
-    (isBankFeeRefundDescription(line.description) ||
-      normalizeFeeText(line.description).includes("iade"))
+    isBankFeeRefundDescription(line.description) ||
+    (line.amount_kurus > 0 && normalizeFeeText(line.description).includes("iade"))
   ) {
     return "refund";
   }
-  if (line.amount_kurus < 0 || line.classification === "bank_fee" || isBankFeeDescription(line.description)) {
-    return "fee";
-  }
-  return "other";
+  if (isPosCommissionDescription(line.description)) return "pos_commission";
+  return "fee";
 }
 
-export function formatBounceFeeLineLabel(line: BankStatementLine): string {
-  const base = `${line.amount_kurus > 0 ? "+" : ""}${formatAmountInline(line.amount_kurus)} · ${line.description}`;
-  switch (bounceFeeLineKind(line)) {
-    case "refund":
-      return `${base} (Fee refund)`;
-    case "commission":
-      return `${base} (Card commission)`;
-    case "fee":
-      return `${base} (Bank fee)`;
-    default:
-      return base;
-  }
+export function getBounceFeeCandidates(
+  lines: BankStatementLine[],
+  outflowId: string,
+  returnId: string,
+): FeeCandidate[] {
+  return lines
+    .filter(
+      (line) =>
+        line.id !== outflowId &&
+        line.id !== returnId &&
+        isUnpostedBounceFeeLine(line) &&
+        isBounceFeeCandidateLine(line),
+    )
+    .map((line) => {
+      const type = getFeeType(line);
+      return {
+        id: line.id,
+        amountKurus: line.amount_kurus,
+        description: line.description,
+        transactionDate: line.transaction_date,
+        status: line.status,
+        classification: line.classification,
+        isRefund: type === "refund",
+        type,
+      };
+    });
 }
 
-function formatAmountInline(kurus: number): string {
-  const abs = Math.abs(kurus);
-  const lira = Math.floor(abs / 100);
-  const frac = abs % 100;
-  const whole = lira.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  return `${kurus < 0 ? "-" : ""}${whole},${frac.toString().padStart(2, "0")} ₺`;
+export function formatFeeLabel(fee: FeeCandidate): string {
+  return FEE_TYPE_LABELS[fee.type];
+}
+
+export function formatFeeCandidateRow(fee: FeeCandidate): string {
+  const sign = fee.amountKurus > 0 ? "+" : "";
+  return `${sign}${formatTry(fee.amountKurus)} · ${fee.description} (${formatFeeLabel(fee)})`;
+}
+
+export function sumFeeCandidateKurus(fees: FeeCandidate[]): number {
+  return fees.reduce((sum, fee) => sum + fee.amountKurus, 0);
+}
+
+export function resolveBounceNetFeeKurus(
+  manualNetFeeKurus: number | null,
+  selectedFees: FeeCandidate[],
+): number {
+  if (manualNetFeeKurus !== null) return manualNetFeeKurus;
+  return sumFeeCandidateKurus(selectedFees);
+}
+
+export function toggleFeeSelection(selectedIds: string[], feeId: string): string[] {
+  return selectedIds.includes(feeId)
+    ? selectedIds.filter((id) => id !== feeId)
+    : [...selectedIds, feeId];
+}
+
+/** Selecting fee lines clears manual entry (caller clears manual string). */
+export function feeSelectionClearsManual(manualFeeAmount: string): boolean {
+  return manualFeeAmount.trim().length > 0;
+}
+
+/** Manual entry clears fee line selections (caller clears selected ids). */
+export function manualFeeClearsSelection(selectedFeeIds: string[]): boolean {
+  return selectedFeeIds.length > 0;
 }

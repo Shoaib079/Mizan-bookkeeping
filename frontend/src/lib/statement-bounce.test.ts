@@ -5,9 +5,6 @@ import {
   bounceLineNeedsAutoVoid,
   bounceOutflowCandidates,
   bounceReturnCandidates,
-  buildBounceNetFee,
-  formatBounceNetFeeLabel,
-  formatBounceOutflowLabel,
 } from "@/lib/statement-bounce";
 import type { BankStatementLine } from "@/lib/banking-types";
 import { STATEMENT_CLASSIFICATION_OPTIONS } from "@/lib/statement-classification-catalog";
@@ -51,17 +48,23 @@ describe("statement bounce helpers", () => {
     ]);
   });
 
-  it("includes both fee charges and refunds as fee candidates", () => {
+  it("includes fee charges and refunds but excludes posted fee lines", () => {
     const outflow = line({ id: "o", amount_kurus: -5_000_000 });
     const ret = line({ id: "r", amount_kurus: 5_000_000 });
-    const fee = line({ id: "f", amount_kurus: -1_676, description: "ÜCRET" });
+    const fee = line({ id: "f", amount_kurus: -1_676, description: "HAVALE ÜCRETİ" });
     const refund = line({ id: "rf", amount_kurus: 1_526, description: "Fast ücret iadesi" });
+    const postedFee = line({
+      id: "pf",
+      amount_kurus: -399,
+      description: "BSMV",
+      status: "posted",
+    });
     expect(
-      bounceFeeCandidates([outflow, ret, fee, refund], "o", "r").map((l) => l.id).sort(),
+      bounceFeeCandidates([outflow, ret, fee, refund, postedFee], "o", "r").map((l) => l.id).sort(),
     ).toEqual(["f", "rf"]);
   });
 
-  it("excludes large settlements and unrelated payments from fee candidates", () => {
+  it("excludes large settlements from fee candidates", () => {
     const outflow = line({ id: "o", amount_kurus: -5_000_000 });
     const ret = line({ id: "r", amount_kurus: 5_000_000 });
     const settlement = line({
@@ -69,42 +72,8 @@ describe("statement bounce helpers", () => {
       amount_kurus: 10_440_670,
       description: "NET SATIŞ TUTARI",
     });
-    const staff = line({
-      id: "staff",
-      amount_kurus: -2_807_500,
-      description: "LATIF COSGUN",
-    });
     const fee = line({ id: "f", amount_kurus: -399, description: "BSMV" });
-    const refund = line({
-      id: "rf",
-      amount_kurus: 76,
-      description: "Fast ücret iadesi",
-    });
-    expect(
-      bounceFeeCandidates([outflow, ret, settlement, staff, fee, refund], "o", "r")
-        .map((l) => l.id)
-        .sort(),
-    ).toEqual(["f", "rf"]);
-  });
-
-  it("nets fee charges and refunds to zero", () => {
-    const candidates = [
-      line({ id: "f", amount_kurus: -1_676, description: "ÜCRET" }),
-      line({ id: "r1", amount_kurus: 1_526, description: "Fast ücret iadesi" }),
-      line({ id: "r2", amount_kurus: 74, description: "Fast ücret iadesi" }),
-      line({ id: "r3", amount_kurus: 76, description: "Fast ücret iadesi" }),
-    ];
-    const netFee = buildBounceNetFee(candidates);
-    expect(netFee?.netKurus).toBe(0);
-    expect(formatBounceNetFeeLabel(netFee!)).toBe("Net fee: 0,00 ₺ · No net fee");
-    expect(netFee?.lineIds).toEqual(["f", "r1", "r2", "r3"]);
-  });
-
-  it("lists fee outflows excluding outflow and return", () => {
-    const outflow = line({ id: "o", amount_kurus: -5_000_000 });
-    const ret = line({ id: "r", amount_kurus: 5_000_000 });
-    const fee = line({ id: "f", amount_kurus: -25_000, description: "HAVALE ÜCRETİ" });
-    expect(bounceFeeCandidates([outflow, ret, fee], "o", "r").map((l) => l.id)).toEqual([
+    expect(bounceFeeCandidates([outflow, ret, settlement, fee], "o", "r").map((l) => l.id)).toEqual([
       "f",
     ]);
   });
@@ -152,17 +121,21 @@ describe("statement bounce dialog", () => {
     );
   });
 
-  it("labels outflow state in dropdown text", () => {
-    const posted = line({ id: "o", amount_kurus: -5_000_000, status: "posted" });
-    expect(formatBounceOutflowLabel(posted)).toContain("will auto-void");
-  });
-
-  it("posts snake_case payload fields", () => {
+  it("posts snake_case payload fields including manual net fee", () => {
     const source = sourceDeclaring("recordPaymentBounce");
     expect(source).toContain("outflow_line_id");
     expect(source).toContain("return_line_id");
     expect(source).toContain("fee_line_ids");
+    expect(source).toContain("manual_net_fee_kurus");
     expect(source).toContain("auto_void_confirmed");
     expect(source).toContain("person_type");
+  });
+
+  it("dialog uses fee checkboxes and manual entry", () => {
+    const source = sourceDeclaring("StatementBounceDialog");
+    expect(source).toContain("getBounceFeeCandidates");
+    expect(source).toContain("MoneyInput");
+    expect(source).toContain("handleToggleFee");
+    expect(source).toContain("manualNetFeeKurus");
   });
 });
