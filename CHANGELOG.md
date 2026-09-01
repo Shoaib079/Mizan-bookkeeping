@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-01
 
+- **Bounce staff orphan lookup fix (`v0.statement-bounce-staff-orphan-fix`).** Staff bounce pairs no longer 500: orphan payment lookup uses `StaffLedgerEntry.amount_minor` (not `amount_kurus`). Regression test in `test_statement_bounce_payments.py`.
+
 - **Bounce fee selection + manual entry (`v0.statement-bounce-fee-selection`).** Bounce dialog: checkbox-select **unposted** fee/refund lines or enter net fee manually (mutual clear); API `manual_net_fee_kurus`; backend rejects posted fee lines and mixing both modes. `statement-bounce-fee-candidates.ts` + dialog rewrite; 6 pytest + vitest.
 
 - **Universal payment bounce (`v0.statement-bounce-universal`).** Bounce pairs work from any line state: never-posted lines pair directly; posted/linked lines and orphan ledger payments auto-void when `auto_void_confirmed` is set; voided journal refs are cleared automatically. `statement_bounce_prepare.py` + `statement_bounce_payments.py`; API `auto_void_confirmed`; frontend shows all matching outflows with state hints and confirmation checkbox. 7 new pytest + vitest.

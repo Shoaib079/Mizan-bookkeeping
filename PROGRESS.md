@@ -21,9 +21,9 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Bounce fee selection + manual entry (`v0.statement-bounce-fee-selection`) |
-| **Last tag** | `v0.statement-bounce-fee-selection` |
-| **Unpushed** | no |
+| **Last completed slice** | Bounce staff orphan lookup fix (`v0.statement-bounce-staff-orphan-fix`) |
+| **Last tag** | `v0.statement-bounce-staff-orphan-fix` |
+| **Unpushed** | yes (local) |
 | **Active slice** | — |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
 | **Exact next action** | Owner sign-off; push fee-selection tag |

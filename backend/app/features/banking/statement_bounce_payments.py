@@ -66,7 +66,7 @@ def find_active_payment_journal(
                 StaffLedgerEntry.employee_id == person_id,
                 StaffLedgerEntry.movement_type.in_(_STAFF_OUTFLOW_TYPES),
                 StaffLedgerEntry.movement_date == payment_date,
-                StaffLedgerEntry.amount_kurus == -amount_kurus,
+                StaffLedgerEntry.amount_minor == -amount_kurus,
             )
             .limit(1)
         )
