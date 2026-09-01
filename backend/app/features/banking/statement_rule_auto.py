@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +19,7 @@ from app.features.banking.statement_fee_auto import (
     route_or_auto_post_pos_commission,
     try_auto_post_detected_bank_fee,
 )
+from app.features.banking.statement_settlement_auto import auto_resolve_pos_settlement
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
@@ -30,7 +30,6 @@ from app.features.banking.statement_models import (
 from app.features.delivery import platform_service
 from app.features.delivery.settings import DeliveryNotEnabledError, require_delivery_enabled
 from app.features.banking.statement_classify_core import BANK_STATEMENT_LINE_REF
-from app.features.pos.models import PosSettlement
 
 RULE_AUTO_ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 
@@ -51,31 +50,6 @@ _AUTO_LINK_CLASSIFICATIONS = frozenset(
 )
 
 
-def _list_matching_pos_settlements(
-    session: Session,
-    *,
-    money_account_id: uuid.UUID,
-    amount_kurus: int,
-    settlement_date: date,
-    exclude_line_id: uuid.UUID | None = None,
-) -> list[PosSettlement]:
-    from app.features.banking.statements import _used_pos_settlement_ids
-
-    used_ids = _used_pos_settlement_ids(session, exclude_line_id=exclude_line_id)
-    filters = [
-        PosSettlement.money_account_id == money_account_id,
-        PosSettlement.settlement_date == settlement_date,
-        PosSettlement.amount_kurus == amount_kurus,
-    ]
-    if used_ids:
-        filters.append(PosSettlement.id.not_in(used_ids))
-    return list(
-        session.scalars(
-            select(PosSettlement).where(*filters).order_by(PosSettlement.created_at)
-        ).all()
-    )
-
-
 def _auto_link_settlement(
     session: Session,
     entity_id: uuid.UUID,
@@ -86,14 +60,22 @@ def _auto_link_settlement(
     actor_id: uuid.UUID,
     delivery_platform_id: uuid.UUID | None = None,
 ) -> bool:
-    """Link an inflow to an existing settlement, or create one when platform is known."""
+    """Link an inflow to an existing settlement, or create one when taught/known."""
     from app.core.delivery import posting as delivery_posting
     from app.features.banking.statements import (
         _find_matching_delivery_settlement,
-        _find_matching_pos_settlement,
         _link_delivery_settlement_to_line,
-        _link_pos_settlement_to_line,
     )
+
+    if classification == StatementLineClassification.POS_SETTLEMENT:
+        return auto_resolve_pos_settlement(
+            session,
+            entity_id,
+            statement=statement,
+            line=line,
+            actor_id=actor_id,
+            route_needs_review=_route_rule_needs_review,
+        )
 
     if line.amount_kurus <= 0:
         _route_rule_needs_review(
@@ -101,40 +83,6 @@ def _auto_link_settlement(
             classification=classification,
             supplier_id=None,
             review_reason="settlement requires an inflow",
-        )
-        return False
-
-    if classification == StatementLineClassification.POS_SETTLEMENT:
-        matches = _list_matching_pos_settlements(
-            session,
-            money_account_id=statement.money_account_id,
-            amount_kurus=line.amount_kurus,
-            settlement_date=line.transaction_date,
-            exclude_line_id=line.id,
-        )
-        if len(matches) == 1:
-            settlement = _find_matching_pos_settlement(
-                session,
-                money_account_id=statement.money_account_id,
-                amount_kurus=line.amount_kurus,
-                settlement_date=line.transaction_date,
-                exclude_line_id=line.id,
-            )
-            assert settlement is not None
-            _link_pos_settlement_to_line(line, settlement=settlement)
-            line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
-            return True
-        reason = (
-            "No POS settlement on file for this amount and date — "
-            "classify manually to record the card deposit"
-            if not matches
-            else "Multiple POS settlements match — pick the correct one manually"
-        )
-        _route_rule_needs_review(
-            line,
-            classification=classification,
-            supplier_id=None,
-            review_reason=reason,
         )
         return False
 

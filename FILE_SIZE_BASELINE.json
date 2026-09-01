@@ -19,7 +19,7 @@
   "backend/app/features/banking/classification_learning.py": 451,
   "backend/app/features/banking/schema.py": 413,
   "backend/app/features/banking/service.py": 429,
-  "backend/app/features/banking/statement_rule_auto.py": 614,
+  "backend/app/features/banking/statement_rule_auto.py": 561,
   "backend/app/features/banking/statements.py": 1939,
   "backend/app/features/banking/statements_api.py": 430,
   "backend/app/features/customers/api.py": 477,

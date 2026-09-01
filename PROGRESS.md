@@ -22,9 +22,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Statement card-commission learning (`v0.statement-pos-commission-learn`) |
-| **Last tag** | `v0.statement-pos-commission-learn` |
-| **Unpushed** | yes — `main` ahead 1 (`v0.statement-pos-commission-learn`) |
-| **Next up** | Optional deposit create-on-import for multi-bank patches; else owner pick |
-| **Exact next action** | Owner sign-off; push when ready |
+| **Last completed slice** | POS deposit auto-create (`v0.statement-pos-deposit-auto`) |
+| **Last tag** | `v0.statement-pos-deposit-auto` |
+| **Unpushed** | yes — commission-learn + deposit-auto (+ docs) ahead of origin |
+| **Next up** | Owner push when ready |
+| **Exact next action** | Push both tags together when owner says |
 | **Gate** | Idle |

@@ -445,11 +445,13 @@ def test_pos_settlement_auto_links_when_one_match(db_session, bank_setup) -> Non
         assert pos_count_after == pos_count_before
 
 
-def test_pos_settlement_auto_link_no_match_routes_to_needs_review(
-    db_session, bank_setup
-) -> None:
+def test_pos_settlement_auto_creates_when_no_match(db_session, bank_setup) -> None:
+    """HIGH learned deposit rule posts without a pre-made settlement row."""
     entity_id = bank_setup["entity_id"]
     bank_id = bank_setup["bank"].id
+
+    with entity_context(db_session, entity_id):
+        pos_count_before = db_session.scalar(select(func.count()).select_from(PosSettlement)) or 0
 
     _learn_rule(
         db_session,
@@ -464,15 +466,23 @@ def test_pos_settlement_auto_link_no_match_routes_to_needs_review(
         tx_date="2026-03-11",
         amount_lira="2.000,00",
         description=POS_TOKEN,
-        reference="POS-NOMATCH",
+        reference="POS-CREATE",
     )
 
     with entity_context(db_session, entity_id):
         line = db_session.get(BankStatementLine, statement.lines[0].id)
         assert line is not None
-        assert line.status == StatementLineStatus.NEEDS_REVIEW
-        assert line.pos_settlement_id is None
-        assert "classify manually" in (line.review_reason or "").lower()
+        assert line.status == StatementLineStatus.POSTED
+        assert line.classification == StatementLineClassification.POS_SETTLEMENT
+        assert line.classification_source == StatementLineClassificationSource.RULE_AUTO.value
+        assert line.pos_settlement_id is not None
+        assert line.journal_entry_id is not None
+        assert line.review_reason is None
+        pos_count_after = db_session.scalar(select(func.count()).select_from(PosSettlement)) or 0
+        assert pos_count_after == pos_count_before + 1
+        journal = db_session.get(JournalEntry, line.journal_entry_id)
+        assert journal is not None
+        assert journal.source == JournalEntrySource.POS_SETTLEMENT
 
 
 def test_pos_settlement_outflow_routes_to_needs_review(db_session, bank_setup) -> None:

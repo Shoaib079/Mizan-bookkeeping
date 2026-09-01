@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-01
 
+- **POS deposit auto-create from learned rules (`v0.statement-pos-deposit-auto`).** HIGH learned `pos_settlement` on import **creates and posts** the card deposit (reuse `post_pos_settlement`) when no unused settlement matches — no more “no settlement on file” gate. Still **links** if exactly one match; still Needs Review if several match or the line is an outflow. No new hardcoded deposit detectors — teaching stays in classification learning. Clear-commission path unchanged.
+
 - **Statement card-commission learning (`v0.statement-pos-commission-learn`).** Bank-fee auto-detect (BSF-1) no longer overrides a learned `pos_commission` rule on import. After you correct bank fee → card commission, matching lines go to Needs Review as card commission (or auto-post at HIGH under the fee ceiling) as Dr 5310 / Cr bank. Deterministic POS-komisyon wording still routes to review. **Clear commission** (1400 residual) unchanged — for banks that never print commission on the statement. Fee/commission helpers split into `statement_fee_auto.py` so `statement_rule_auto.py` shrinks under the ratchet.
 
 ## 2026-08-27
