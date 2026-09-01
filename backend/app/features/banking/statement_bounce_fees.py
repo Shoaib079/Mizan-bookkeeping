@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.banking.bank_fee_detect import (
+    is_bank_fee_description,
+    is_bank_fee_refund_description,
+    is_pos_commission_description,
+)
 from app.core.banking.statement_posting import (
     _validate_bank_gl_account,
     _validate_bank_money_account,
@@ -24,6 +30,49 @@ from app.features.banking.statement_models import (
     StatementLineClassification,
     StatementLineStatus,
 )
+
+# Bounce fee picker: ignore large settlements; fees/refunds on Turkish statements are small.
+BOUNCE_FEE_SMALL_KURUS = 100_000  # 1.000 ₺
+BOUNCE_FEE_TINY_KURUS = 5_000  # 50 ₺
+
+
+def is_bounce_fee_candidate_line(line: BankStatementLine) -> bool:
+    """True when a statement line could be a bank fee or fee refund for bounce pairing."""
+    if line.amount_kurus == 0:
+        return False
+
+    amount = abs(line.amount_kurus)
+
+    if line.classification in (
+        StatementLineClassification.BANK_FEE,
+        StatementLineClassification.POS_COMMISSION,
+    ):
+        return amount <= BOUNCE_FEE_SMALL_KURUS
+
+    if amount <= BOUNCE_FEE_TINY_KURUS:
+        return True
+
+    if amount > BOUNCE_FEE_SMALL_KURUS:
+        return False
+
+    description = line.description
+    if is_bank_fee_refund_description(description):
+        return True
+    if is_bank_fee_description(description):
+        return True
+    if is_pos_commission_description(description):
+        return True
+
+    if amount <= BOUNCE_FEE_SMALL_KURUS and re.search(
+        r"\b(?:fee|charge)\b", description, re.IGNORECASE
+    ):
+        return True
+
+    normalized = description.casefold()
+    if "iade" in normalized and amount <= BOUNCE_FEE_SMALL_KURUS:
+        return True
+
+    return False
 
 
 def net_fee_kurus(fee_lines: list[BankStatementLine]) -> int:

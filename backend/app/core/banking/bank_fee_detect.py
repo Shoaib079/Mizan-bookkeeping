@@ -86,3 +86,22 @@ def is_bank_fee_description(description: str) -> bool:
         return False
 
     return True
+
+
+_FEE_REFUND_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
+    re.compile(p, re.IGNORECASE)
+    for p in (
+        rf"\b{_FEE_WORD}\s+iades",
+        r"\bfee\s+refund",
+        rf"\b(?:fast|havale|eft)\s+.*\biades",
+        r"\biades.*\b(?:ucret|masraf|komisyon)\b",
+    )
+)
+
+
+def is_bank_fee_refund_description(description: str) -> bool:
+    """True when the bank line looks like a returned bank charge, not a payment return."""
+    normalized = _normalize_fee_text(description)
+    if not normalized:
+        return False
+    return any(pattern.search(normalized) for pattern in _FEE_REFUND_PATTERNS)

@@ -54,19 +54,45 @@ describe("statement bounce helpers", () => {
   it("includes both fee charges and refunds as fee candidates", () => {
     const outflow = line({ id: "o", amount_kurus: -5_000_000 });
     const ret = line({ id: "r", amount_kurus: 5_000_000 });
-    const fee = line({ id: "f", amount_kurus: -1_676 });
-    const refund = line({ id: "rf", amount_kurus: 1_526 });
+    const fee = line({ id: "f", amount_kurus: -1_676, description: "ÜCRET" });
+    const refund = line({ id: "rf", amount_kurus: 1_526, description: "Fast ücret iadesi" });
     expect(
       bounceFeeCandidates([outflow, ret, fee, refund], "o", "r").map((l) => l.id).sort(),
     ).toEqual(["f", "rf"]);
   });
 
+  it("excludes large settlements and unrelated payments from fee candidates", () => {
+    const outflow = line({ id: "o", amount_kurus: -5_000_000 });
+    const ret = line({ id: "r", amount_kurus: 5_000_000 });
+    const settlement = line({
+      id: "pos",
+      amount_kurus: 10_440_670,
+      description: "NET SATIŞ TUTARI",
+    });
+    const staff = line({
+      id: "staff",
+      amount_kurus: -2_807_500,
+      description: "LATIF COSGUN",
+    });
+    const fee = line({ id: "f", amount_kurus: -399, description: "BSMV" });
+    const refund = line({
+      id: "rf",
+      amount_kurus: 76,
+      description: "Fast ücret iadesi",
+    });
+    expect(
+      bounceFeeCandidates([outflow, ret, settlement, staff, fee, refund], "o", "r")
+        .map((l) => l.id)
+        .sort(),
+    ).toEqual(["f", "rf"]);
+  });
+
   it("nets fee charges and refunds to zero", () => {
     const candidates = [
-      line({ id: "f", amount_kurus: -1_676, description: "Fee charged" }),
-      line({ id: "r1", amount_kurus: 1_526, description: "Refund 1" }),
-      line({ id: "r2", amount_kurus: 74, description: "Refund 2" }),
-      line({ id: "r3", amount_kurus: 76, description: "Refund 3" }),
+      line({ id: "f", amount_kurus: -1_676, description: "ÜCRET" }),
+      line({ id: "r1", amount_kurus: 1_526, description: "Fast ücret iadesi" }),
+      line({ id: "r2", amount_kurus: 74, description: "Fast ücret iadesi" }),
+      line({ id: "r3", amount_kurus: 76, description: "Fast ücret iadesi" }),
     ];
     const netFee = buildBounceNetFee(candidates);
     expect(netFee?.netKurus).toBe(0);
@@ -77,7 +103,7 @@ describe("statement bounce helpers", () => {
   it("lists fee outflows excluding outflow and return", () => {
     const outflow = line({ id: "o", amount_kurus: -5_000_000 });
     const ret = line({ id: "r", amount_kurus: 5_000_000 });
-    const fee = line({ id: "f", amount_kurus: -250_00 });
+    const fee = line({ id: "f", amount_kurus: -25_000, description: "HAVALE ÜCRETİ" });
     expect(bounceFeeCandidates([outflow, ret, fee], "o", "r").map((l) => l.id)).toEqual([
       "f",
     ]);

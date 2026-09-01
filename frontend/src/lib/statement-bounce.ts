@@ -7,6 +7,10 @@ import type {
   StatementBouncePairResult,
 } from "@/lib/banking-types";
 import { formatTry } from "@/lib/money";
+import {
+  bounceFeeLineKind,
+  isBounceFeeCandidateLine,
+} from "@/lib/statement-bounce-fee-candidates";
 
 export type RecordPaymentBounceInput = {
   outflowLineId: string;
@@ -140,10 +144,12 @@ export function bounceFeeCandidates(
     (line) =>
       line.id !== outflowLineId &&
       line.id !== returnLineId &&
-      line.amount_kurus !== 0 &&
-      isBounceCandidateLine(line),
+      isBounceCandidateLine(line) &&
+      isBounceFeeCandidateLine(line),
   );
 }
+
+export { formatBounceFeeLineLabel } from "@/lib/statement-bounce-fee-candidates";
 
 export function formatBounceOutflowLabel(line: BankStatementLine): string {
   const hint = bounceOutflowStateHint(line);
@@ -156,13 +162,27 @@ export function buildBounceNetFee(
 ): BounceNetFee | null {
   if (candidates.length === 0) return null;
   const netKurus = candidates.reduce((sum, line) => sum + line.amount_kurus, 0);
+  const description =
+    netKurus === 0
+      ? "No net fee"
+      : candidates
+          .map((line) => {
+            const kind = bounceFeeLineKind(line);
+            const tag =
+              kind === "refund"
+                ? "refund"
+                : kind === "commission"
+                  ? "commission"
+                  : kind === "fee"
+                    ? "fee"
+                    : line.description;
+            return tag;
+          })
+          .join(" · ");
   return {
     lineIds: candidates.map((line) => line.id),
     netKurus,
-    description:
-      netKurus === 0
-        ? "No net fee"
-        : candidates.map((line) => line.description).join(" · "),
+    description,
   };
 }
 

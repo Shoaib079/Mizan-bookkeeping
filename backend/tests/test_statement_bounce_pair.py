@@ -418,6 +418,36 @@ def test_bounce_lines_count_as_settled(db_session, bounce_setup) -> None:
     assert closing == statement.closing_balance_kurus
 
 
+def test_bounce_rejects_non_fee_line_in_fee_ids(db_session, bounce_setup) -> None:
+    entity_id = bounce_setup["entity_id"]
+    supplier_id = bounce_setup["supplier_id"]
+
+    with entity_context(db_session, entity_id):
+        settlement = BankStatementLine(
+            statement_id=bounce_setup["statement_id"],
+            transaction_date=date(2026, 2, 2),
+            description="NET SATIŞ TUTARI",
+            amount_kurus=10_440_670,
+            dedup_key=uuid.uuid4().hex,
+        )
+        db_session.add(settlement)
+        db_session.commit()
+        settlement_id = settlement.id
+
+    with pytest.raises(BouncePairError, match="does not look like a bank fee"):
+        record_payment_bounce(
+            db_session,
+            entity_id,
+            bounce_setup["statement_id"],
+            outflow_line_id=bounce_setup["outflow_id"],
+            return_line_id=bounce_setup["return_id"],
+            person_type=BouncePersonType.SUPPLIER,
+            person_id=supplier_id,
+            fee_line_id=settlement_id,
+            actor_id=ACTOR_ID,
+        )
+
+
 def test_bounce_blocks_statement_discard(db_session, bounce_setup) -> None:
     record_payment_bounce(
         db_session,

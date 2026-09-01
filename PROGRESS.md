@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Statement rule auto-post conflict fix (`v0.statement-rule-auto-post-conflict`) |
-| **Last tag** | `v0.statement-rule-auto-post-conflict` |
+| **Last completed slice** | Bounce fee candidate filter (`v0.statement-bounce-fee-filter`) |
+| **Last tag** | `v0.statement-bounce-fee-filter` |
 | **Unpushed** | yes |
 | **Active slice** | — |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Owner sign-off on auto-post + universal bounce slices |
+| **Exact next action** | Owner sign-off; push fee-filter tag |
 | **Gate** | Idle |

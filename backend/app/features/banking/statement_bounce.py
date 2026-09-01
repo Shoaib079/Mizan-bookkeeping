@@ -8,6 +8,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 
 from app.features.banking.statement_bounce_fees import (
+    is_bounce_fee_candidate_line,
     primary_fee_line_id,
     settle_bounce_fee_lines,
 )
@@ -168,6 +169,10 @@ def record_payment_bounce(
         for index, fee in enumerate(fee_lines, start=1):
             if fee.amount_kurus == 0:
                 raise BouncePairError(f"Fee line {index} must be non-zero")
+            if not is_bounce_fee_candidate_line(fee):
+                raise BouncePairError(
+                    f"Fee line {index} does not look like a bank fee or fee refund"
+                )
 
         _assert_person_exists(
             session, entity_id, person_type=person_type, person_id=person_id
