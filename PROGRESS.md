@@ -23,7 +23,7 @@
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Last completed slice** | Bounce fee candidate filter (`v0.statement-bounce-fee-filter`) |
 | **Last tag** | `v0.statement-bounce-fee-filter` |
-| **Unpushed** | yes |
+| **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
 | **Exact next action** | Owner sign-off; push fee-filter tag |
