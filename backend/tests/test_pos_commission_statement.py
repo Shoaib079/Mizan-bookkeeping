@@ -24,6 +24,7 @@ from app.features.banking.models import MoneyAccountKind
 from app.features.banking.schema import MoneyAccountCreate
 from app.features.banking.statement_models import (
     StatementLineClassification,
+    StatementLineClassificationSource,
     StatementLineStatus,
 )
 
@@ -181,3 +182,87 @@ def test_pos_commission_import_routes_not_bank_fee_auto_post(db_session, setup) 
     assert line.status == StatementLineStatus.NEEDS_REVIEW
     assert line.classification == StatementLineClassification.POS_COMMISSION
     assert line.journal_entry_id is None
+
+
+def test_learned_pos_commission_blocks_bank_fee_auto_post(db_session, setup) -> None:
+    """Fee-like wording that the owner corrected to card commission must not
+    re-auto-post as bank fee on the next import (BSF-1 must yield to learning).
+
+    Uses a real bank-fee shaped description (no POS/kart keywords) so only the
+    learned rule — not deterministic POS detect — steers the line.
+    """
+    from app.core.learning import HIGH_CONFIDENCE_THRESHOLD
+    from app.features.banking.classification_learning import (
+        derive_statement_match_token,
+        learn_classification_rule,
+    )
+
+    entity_id = setup["entity_id"]
+    bank = setup["bank"]
+    description = "HESAP İŞLETİM ÜCRETİ 12,50"
+    token = derive_statement_match_token(description)
+    assert token  # fee-shaped lines must still yield a learnable token
+
+    with entity_context(db_session, entity_id):
+        learn_classification_rule(
+            db_session,
+            description=description,
+            classification=StatementLineClassification.POS_COMMISSION,
+            match_token=token,
+        )
+        db_session.commit()
+
+    statement = _import_outflow(
+        db_session,
+        entity_id,
+        bank,
+        description,
+        "-12,50",
+    )
+    line = statement.lines[0]
+    assert line.status == StatementLineStatus.NEEDS_REVIEW
+    assert line.classification == StatementLineClassification.POS_COMMISSION
+    assert line.journal_entry_id is None
+
+    with entity_context(db_session, entity_id):
+        for _ in range(HIGH_CONFIDENCE_THRESHOLD - 1):
+            learn_classification_rule(
+                db_session,
+                description=description,
+                classification=StatementLineClassification.POS_COMMISSION,
+                match_token=token,
+            )
+        db_session.commit()
+
+    statement2 = statement_service.import_bank_statement(
+        db_session,
+        entity_id,
+        bank.id,
+        (
+            "transaction_date,amount,description,reference\n"
+            f'2026-06-06,"-12,50",{description},REF-2\n'
+        ).encode(),
+        original_filename="commission-2.csv",
+    )
+    line2 = statement2.lines[0]
+    assert line2.status == StatementLineStatus.POSTED
+    assert line2.classification == StatementLineClassification.POS_COMMISSION
+    assert line2.classification_source == StatementLineClassificationSource.RULE_AUTO.value
+
+    with entity_context(db_session, entity_id):
+        entry = db_session.get(JournalEntry, line2.journal_entry_id)
+        assert entry is not None
+        assert entry.source == JournalEntrySource.POS_COMMISSION_STATEMENT
+def test_plain_bank_fee_still_auto_posts_when_not_learned_as_commission(
+    db_session, setup
+) -> None:
+    statement = _import_outflow(
+        db_session,
+        setup["entity_id"],
+        setup["bank"],
+        "HESAP İŞLETİM ÜCRETİ 8,00",
+        "-8,00",
+    )
+    line = statement.lines[0]
+    assert line.status == StatementLineStatus.POSTED
+    assert line.classification == StatementLineClassification.BANK_FEE

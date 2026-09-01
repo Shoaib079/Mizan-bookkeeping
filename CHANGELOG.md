@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-09-01
+
+- **Statement card-commission learning (`v0.statement-pos-commission-learn`).** Bank-fee auto-detect (BSF-1) no longer overrides a learned `pos_commission` rule on import. After you correct bank fee → card commission, matching lines go to Needs Review as card commission (or auto-post at HIGH under the fee ceiling) as Dr 5310 / Cr bank. Deterministic POS-komisyon wording still routes to review. **Clear commission** (1400 residual) unchanged — for banks that never print commission on the statement. Fee/commission helpers split into `statement_fee_auto.py` so `statement_rule_auto.py` shrinks under the ratchet.
+
 ## 2026-08-27
 
 - **Mobile UX gaps (`v0.mobile-ux-gaps`).** More menu: Review (always, with badge) + Split; Filter list + “Search the app…” opens command palette; top-bar Search on tab roots. Phone cards for bank activity (incl. book balance), statement lines ledger, delivery reports/settlements/commissions, split lists, cash sessions, FX hub ledger, expense items, team members, sealed-month / year-end tables. Review SectionTabs horizontal scroll tray. Desktop unchanged.

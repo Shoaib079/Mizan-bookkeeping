@@ -22,9 +22,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | Mobile UX gaps (`v0.mobile-ux-gaps`) |
-| **Last tag** | `v0.mobile-ux-gaps` |
-| **Unpushed** | no (after push) |
-| **Next up** | Pick next from live baseline / ratchet or FE audit cleanup |
-| **Exact next action** | Owner picks next slice |
+| **Last completed slice** | Statement card-commission learning (`v0.statement-pos-commission-learn`) |
+| **Last tag** | `v0.statement-pos-commission-learn` |
+| **Unpushed** | commit/tag pending push |
+| **Next up** | Optional deposit create-on-import for multi-bank patches; else owner pick |
+| **Exact next action** | Owner sign-off; push when ready |
 | **Gate** | Idle |

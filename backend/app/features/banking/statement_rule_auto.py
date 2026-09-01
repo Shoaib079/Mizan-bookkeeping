@@ -8,16 +8,18 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.banking import statement_posting
-from app.core.banking.bank_fee_detect import is_bank_fee_description, is_pos_commission_description
 from app.core.expenses.posting import InvalidExpensePostingError, post_expense_entry
 from app.core.ledger.models import JournalEntrySource
-from app.features.banking.bank_fee_settings import get_bank_fee_auto_post_ceiling_kurus
 from app.core.payables import posting as payables_posting
 from app.core.payables.ledger import AdvanceConfirmationRequiredError
 from app.features.banking.store_purchase_service import default_supplies_expense_account_id
 from app.db.session import entity_context, require_entity_context
 from app.features.banking.classification_learning import evaluate_rule_match
+from app.features.banking.statement_fee_auto import (
+    auto_post_bank_fee,
+    route_or_auto_post_pos_commission,
+    try_auto_post_detected_bank_fee,
+)
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
@@ -35,6 +37,7 @@ RULE_AUTO_ACTOR_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
 _AUTO_POST_CLASSIFICATIONS = frozenset(
     {
         StatementLineClassification.BANK_FEE,
+        StatementLineClassification.POS_COMMISSION,
         StatementLineClassification.SUPPLIER_PAYMENT,
         StatementLineClassification.STORE_PURCHASE,
     }
@@ -230,32 +233,6 @@ def _route_rule_needs_review(
     line.supplier_ledger_entry_id = None
 
 
-def _auto_post_bank_fee(
-    session: Session,
-    entity_id: uuid.UUID,
-    *,
-    statement: BankStatement,
-    line: BankStatementLine,
-    money_account_gl_id: uuid.UUID,
-    actor_id: uuid.UUID,
-) -> None:
-    fee_amount = abs(line.amount_kurus)
-    result = statement_posting.post_bank_fee(
-        session,
-        entity_id,
-        bank_money_account_id=statement.money_account_id,
-        fee_date=line.transaction_date,
-        amount_kurus=fee_amount,
-        description=line.description,
-        actor_id=actor_id,
-        source=JournalEntrySource.RULE_AUTO,
-    )
-    line.classification = StatementLineClassification.BANK_FEE
-    line.status = StatementLineStatus.POSTED
-    line.journal_entry_id = result.journal_entry.id
-    line.classification_source = StatementLineClassificationSource.RULE_AUTO.value
-
-
 def _auto_apply_supplier_payment(
     session: Session,
     entity_id: uuid.UUID,
@@ -407,54 +384,6 @@ def _auto_post_store_purchase(
     return True
 
 
-def try_auto_post_detected_bank_fee(
-    session: Session,
-    entity_id: uuid.UUID,
-    *,
-    statement: BankStatement,
-    line: BankStatementLine,
-    money_account_gl_id: uuid.UUID,
-    actor_id: uuid.UUID,
-) -> bool:
-    """Deterministic fee detect on import — no learned rule required."""
-    if line.amount_kurus >= 0:
-        return False
-    if is_pos_commission_description(line.description):
-        _route_rule_needs_review(
-            line,
-            classification=StatementLineClassification.POS_COMMISSION,
-            supplier_id=None,
-            review_reason=(
-                "Card acquirer commission — classify as card commission to clear "
-                "card sales clearing (1400), not bank charges"
-            ),
-        )
-        return True
-    if not is_bank_fee_description(line.description):
-        return False
-
-    fee_amount = abs(line.amount_kurus)
-    ceiling = get_bank_fee_auto_post_ceiling_kurus(session, entity_id)
-    if fee_amount > ceiling:
-        _route_rule_needs_review(
-            line,
-            classification=StatementLineClassification.BANK_FEE,
-            supplier_id=None,
-            review_reason="Bank charge exceeds auto-post ceiling",
-        )
-        return True
-
-    _auto_post_bank_fee(
-        session,
-        entity_id,
-        statement=statement,
-        line=line,
-        money_account_gl_id=money_account_gl_id,
-        actor_id=actor_id,
-    )
-    return True
-
-
 def try_auto_post_trusted_supplier_payment(
     session: Session,
     entity_id: uuid.UUID,
@@ -557,13 +486,23 @@ def try_auto_apply_line(
                 review_reason="Bank charges require an outflow",
             )
             return False
-        _auto_post_bank_fee(
+        auto_post_bank_fee(
             session,
             entity_id,
             statement=statement,
             line=line,
-            money_account_gl_id=money_account_gl_id,
             actor_id=actor_id,
+        )
+        return True
+
+    if rule.classification == StatementLineClassification.POS_COMMISSION:
+        route_or_auto_post_pos_commission(
+            session,
+            entity_id,
+            statement=statement,
+            line=line,
+            actor_id=actor_id,
+            high_confidence=True,
         )
         return True
 

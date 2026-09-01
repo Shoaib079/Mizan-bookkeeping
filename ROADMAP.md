@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Pick next from live baseline / ratchet, deferred per-menu period report, or remaining FE audit cleanup |
-| **Last completed slice** | **Mobile UX gaps** (`v0.mobile-ux-gaps`) |
-| **Last commit/tag**      | `v0.mobile-ux-gaps` |
+| **Next up**              | Optional: multi-bank POS deposit create-on-import; else live baseline / FE audit cleanup |
+| **Last completed slice** | **Statement card-commission learning** (`v0.statement-pos-commission-learn`) |
+| **Last commit/tag**      | `v0.statement-pos-commission-learn` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -1937,9 +1937,9 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 ## Slice log (recent completions)
 
-
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-01 | Statement card-commission learning              | `v0.statement-pos-commission-learn`                    | Learned `pos_commission` beats BSF-1 bank-fee auto-post; HIGH auto-posts Dr 5310; clear-commission sweep untouched; `statement_fee_auto.py` split; 2315 pytest |
 | 2026-08-27 | Mobile UX gaps                                  | `v0.mobile-ux-gaps`                                    | More: Review+Split+app search; cards for bank/statement/delivery/split/cash/FX/team; Review tab scroll |
 | 2026-08-27 | Card clearing mobile cards                      | `v0.cards-mobile-cards`                                | /cards batches + settlements → MobileCardList on phone |
 | 2026-08-27 | Mobile UX fixes (tabs + More)                   | `v0.mobile-ux-fixes`                                   | Sales replaces Review on bottom tabs; flat More list + search |
