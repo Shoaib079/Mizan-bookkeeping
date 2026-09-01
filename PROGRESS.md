@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Universal payment bounce (`v0.statement-bounce-universal`) |
-| **Last tag** | `v0.statement-bounce-universal` |
+| **Last completed slice** | Statement rule auto-post conflict fix (`v0.statement-rule-auto-post-conflict`) |
+| **Last tag** | `v0.statement-rule-auto-post-conflict` |
 | **Unpushed** | yes |
-| **Active slice** | Statement rule auto-post conflict fix (in progress) |
+| **Active slice** | — |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Green light → commit/tag auto-post fix |
+| **Exact next action** | Owner sign-off on auto-post + universal bounce slices |
 | **Gate** | Idle |

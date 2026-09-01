@@ -313,18 +313,21 @@ def test_correction_reverses_and_prevents_re_auto_apply(db_session, bank_setup) 
         assert line.journal_entry_id is None
 
 
-def test_conflicting_rules_never_auto_apply(db_session, bank_setup) -> None:
+def test_conflicting_rules_auto_apply_when_best_is_high_confidence(
+    db_session, bank_setup
+) -> None:
     entity_id = bank_setup["entity_id"]
     bank_id = bank_setup["bank"].id
 
     with entity_context(db_session, entity_id):
-        for _ in range(3):
+        for _ in range(5):
             learn_classification_rule(
                 db_session,
                 description="bank service",
                 classification=StatementLineClassification.BANK_FEE,
                 match_token="bank service",
             )
+        for _ in range(3):
             learn_classification_rule(
                 db_session,
                 description="service fee",
@@ -337,8 +340,9 @@ def test_conflicting_rules_never_auto_apply(db_session, bank_setup) -> None:
     with entity_context(db_session, entity_id):
         line = db_session.get(BankStatementLine, line_id)
         assert line is not None
-        assert line.status == StatementLineStatus.NEEDS_REVIEW
-        assert line.journal_entry_id is None
+        assert line.status == StatementLineStatus.POSTED
+        assert line.classification == StatementLineClassification.BANK_FEE
+        assert line.journal_entry_id is not None
 
 
 def test_entity_a_rule_never_auto_applies_in_entity_b(

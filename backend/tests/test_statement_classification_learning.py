@@ -239,7 +239,37 @@ def test_conflicting_rules_return_no_suggestion(db_session, restaurant_a) -> Non
         suggestion = suggest_classification(
             db_session, "Payment to Metro Gida fee adjustment"
         )
+        evaluation = evaluate_rule_match(
+            db_session, "Payment to Metro Gida fee adjustment"
+        )
     assert suggestion is None
+    assert evaluation.conflict is True
+    assert evaluation.best_rule is not None
+
+
+def test_conflicting_rules_still_mark_best_high_confidence(db_session, restaurant_a) -> None:
+    with entity_context(db_session, restaurant_a.id):
+        for _ in range(3):
+            learn_classification_rule(
+                db_session,
+                description="metro payment",
+                classification=StatementLineClassification.SUPPLIER_PAYMENT,
+                match_token="metro",
+            )
+        learn_classification_rule(
+            db_session,
+            description="fee",
+            classification=StatementLineClassification.BANK_FEE,
+            match_token="fee",
+        )
+        db_session.commit()
+        evaluation = evaluate_rule_match(
+            db_session, "Payment to Metro Gida fee adjustment"
+        )
+    assert evaluation.conflict is True
+    assert evaluation.best_rule is not None
+    assert evaluation.best_rule.classification == StatementLineClassification.SUPPLIER_PAYMENT
+    assert evaluation.high_confidence is True
 
 
 def test_classify_with_match_token_keys_rule_on_trimmed_token(

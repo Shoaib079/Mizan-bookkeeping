@@ -232,7 +232,7 @@ def evaluate_rule_match(session: Session, description: str) -> RuleMatchEvaluati
     return RuleMatchEvaluation(
         conflict=conflict,
         best_rule=best,
-        high_confidence=not conflict and is_high_confidence(best),
+        high_confidence=is_high_confidence(best),
         suggestion=suggestion,
     )
 

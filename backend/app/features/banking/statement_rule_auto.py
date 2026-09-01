@@ -391,17 +391,15 @@ def try_auto_apply_line(
         return False
 
     rule = evaluation.best_rule
-    if evaluation.conflict or not evaluation.high_confidence:
-        reason = (
-            "Conflicting learned classification rules"
-            if evaluation.conflict
-            else f"Learned rule confidence is {evaluation.suggestion.confidence if evaluation.suggestion else 'low'}"
-        )
+    if not evaluation.high_confidence:
         _route_rule_needs_review(
             line,
             classification=rule.classification,
             supplier_id=rule.supplier_id,
-            review_reason=reason,
+            review_reason=(
+                f"Learned rule confidence is "
+                f"{evaluation.suggestion.confidence if evaluation.suggestion else 'low'}"
+            ),
         )
         return False
 
