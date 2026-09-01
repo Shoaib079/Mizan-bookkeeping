@@ -24,7 +24,7 @@
 | **Active slice** | *(none)* |
 | **Last completed slice** | FE statement hint cleanup (`v0.statement-fe-hint-cleanup`) |
 | **Last tag** | `v0.statement-fe-hint-cleanup` |
-| **Unpushed** | yes — pending push |
-| **Next up** | Owner push when ready; else pick next |
-| **Exact next action** | Push tag when owner says |
+| **Unpushed** | no (after push) |
+| **Next up** | Owner pick — live baseline / FE audit cleanup |
+| **Exact next action** | Owner picks next slice |
 | **Gate** | Idle |
