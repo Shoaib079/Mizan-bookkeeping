@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  calendarMonthContaining,
   currentMonthRange,
   isoToday,
   lastFullMonthRange,
@@ -25,6 +26,13 @@ describe("date-range", () => {
     expect(lastFullMonthRange(new Date(2026, 7, 24))).toEqual({
       from: "2026-07-01",
       to: "2026-07-31",
+    });
+  });
+
+  it("calendarMonthContaining returns the full month for a date inside it", () => {
+    expect(calendarMonthContaining("2026-08-15")).toEqual({
+      from: "2026-08-01",
+      to: "2026-08-31",
     });
   });
 

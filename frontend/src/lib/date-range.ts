@@ -58,6 +58,19 @@ export function resolveReportRange(
   return { from, to };
 }
 
+/** Full calendar month containing `isoDate` (YYYY-MM-DD). */
+export function calendarMonthContaining(
+  isoDate: string,
+): { from: string; to: string } | null {
+  const parts = isoDate.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
+  const [year, month] = parts;
+  if (month < 1 || month > 12) return null;
+  const from = new Date(year, month - 1, 1);
+  const to = new Date(year, month, 0);
+  return { from: toIso(from), to: toIso(to) };
+}
+
 export function buildRangeQuery(from: string, to: string): string {
   return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }

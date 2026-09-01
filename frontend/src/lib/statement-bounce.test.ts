@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -10,6 +8,7 @@ import type { BankStatementLine } from "@/lib/banking-types";
 import { STATEMENT_CLASSIFICATION_OPTIONS } from "@/lib/statement-classification-catalog";
 import { classificationLabel } from "@/lib/statement-classification-options";
 import { isBouncedLine } from "@/lib/statement-line-filters";
+import { sourceDeclaring } from "@/test-support/source";
 
 function line(
   overrides: Partial<BankStatementLine> & Pick<BankStatementLine, "id" | "amount_kurus">,
@@ -71,10 +70,7 @@ describe("statement bounce helpers", () => {
 
 describe("statement bounce dialog", () => {
   it("posts snake_case payload fields", () => {
-    const source = readFileSync(
-      join(process.cwd(), "src/lib/statement-bounce.ts"),
-      "utf8",
-    );
+    const source = sourceDeclaring("recordPaymentBounce");
     expect(source).toContain("outflow_line_id");
     expect(source).toContain("return_line_id");
     expect(source).toContain("person_type");

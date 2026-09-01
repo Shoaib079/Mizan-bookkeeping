@@ -17,11 +17,15 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input, Label } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
 import { apiFetch, ApiError } from "@/lib/api";
+import {
+  commissionPeriodRangeFromTrDate,
+  fetchPeriodCardSalesKurus,
+} from "@/lib/clear-commission-period";
 import { useSubmitIdempotency } from "@/lib/use-submit-idempotency";
 import { useToast } from "@/lib/toast";
 import { useEntity } from "@/lib/entity-context";
+import { formatMonthYear, todayTrDate } from "@/lib/dates";
 import { formatTry, parseTrDate, parseTryToKurus } from "@/lib/money";
-import { todayTrDate } from "@/lib/dates";
 import {
   comparableRates,
   formatRatePercent,
@@ -48,6 +52,9 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
   const [description, setDescription] = useState("Card commission");
   const [history, setHistory] = useState<CommissionRateHistoryRead | null>(null);
   const [cardSalesKurus, setCardSalesKurus] = useState(0);
+  const [cardSalesPeriodLabel, setCardSalesPeriodLabel] = useState<string | null>(
+    null,
+  );
   const [clearingKurus, setClearingKurus] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [confirmWarning, setConfirmWarning] = useState<string | null>(null);
@@ -57,21 +64,44 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
     if (open) submitIdempotency.resetSubmit();
   }, [open, submitIdempotency]);
 
-  const loadContext = useCallback(async () => {
+  const loadClearingContext = useCallback(async () => {
     if (!entityId) return;
     const [rates, reconciliation] = await Promise.all([
       apiFetch<CommissionRateHistoryRead>(
         `/entities/${entityId}/pos/clearing-reconciliation/commission-rates?months=6`,
       ).catch(() => null),
       apiFetch<{
-        total_card_sales_kurus: number;
         clearing_balance_kurus: number;
       }>(`/entities/${entityId}/pos/clearing-reconciliation`).catch(() => null),
     ]);
     setHistory(rates);
-    setCardSalesKurus(reconciliation?.total_card_sales_kurus ?? 0);
     setClearingKurus(reconciliation?.clearing_balance_kurus ?? 0);
   }, [entityId]);
+
+  const loadPeriodCardSales = useCallback(
+    async (displayDate: string) => {
+      if (!entityId) return;
+      const range = commissionPeriodRangeFromTrDate(displayDate);
+      if (!range) {
+        setCardSalesKurus(0);
+        setCardSalesPeriodLabel(null);
+        return;
+      }
+      const [year, month] = range.from.split("-").map(Number);
+      setCardSalesPeriodLabel(formatMonthYear(year, month - 1));
+      try {
+        const total = await fetchPeriodCardSalesKurus(
+          entityId,
+          range.from,
+          range.to,
+        );
+        setCardSalesKurus(total);
+      } catch {
+        setCardSalesKurus(0);
+      }
+    },
+    [entityId],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -79,8 +109,13 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
     setAmountText("");
     setError(null);
     setConfirmWarning(null);
-    void loadContext();
-  }, [open, loadContext]);
+    void loadClearingContext();
+  }, [open, loadClearingContext]);
+
+  useEffect(() => {
+    if (!open || !entityId) return;
+    void loadPeriodCardSales(dateText);
+  }, [open, entityId, dateText, loadPeriodCardSales]);
 
   const amountKurus = parseTryToKurus(amountText);
   const impliedRate = impliedRatePercent(amountKurus, cardSalesKurus);
@@ -144,6 +179,11 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
     void submitClear(false);
   }
 
+  const cardSalesHint =
+    cardSalesPeriodLabel !== null
+      ? `${formatTry(cardSalesKurus)} ${cardSalesPeriodLabel} card sales`
+      : `${formatTry(cardSalesKurus)} card sales`;
+
   return (
     <Dialog open={open} title="Record card commission" onClose={onClose}>
       <form onSubmit={onSubmit} className="space-y-3">
@@ -168,7 +208,7 @@ export function ClearCommissionForm({ open, onClose, onCleared }: Props) {
               <span className="font-medium text-foreground">
                 {formatRatePercent(impliedRate)}
               </span>{" "}
-              of {formatTry(cardSalesKurus)} card sales.
+              of {cardSalesHint}.
             </p>
           )}
           {priorRates.length > 0 && (

@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice** | *(none)* |
 | **Last completed slice** | Payment bounce pair (`v0.statement-bounce-pair`) |
 | **Last tag** | `v0.statement-bounce-pair` |
-| **Unpushed** | yes |
+| **Unpushed** | no (after push) |
+| **Active slice** | Card commission period sales (in progress) |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Owner picks: bar slim-down or other |
+| **Exact next action** | Finish card-commission period slice → commit/tag |
 | **Gate** | Idle |
