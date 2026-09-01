@@ -5,7 +5,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { CardSalesForm } from "@/components/forms/card-sales-form";
 import { ClearCommissionForm } from "@/components/forms/clear-commission-form";
 import { PosSettlementForm } from "@/components/forms/pos-settlement-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
@@ -39,7 +38,6 @@ export function CardsPageContent() {
   const [recon, setRecon] = useState<ClearingReconciliation | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [cardFormOpen, setCardFormOpen] = useState(false);
   const [settleFormOpen, setSettleFormOpen] = useState(false);
   const [clearFormOpen, setClearFormOpen] = useState(false);
 
@@ -82,14 +80,15 @@ export function CardsPageContent() {
     <>
       <PageHeader
         title="Cards"
-        meta="Card clearing, bank settlements, and commission clearance. Batches and settlements are filtered by date; clearing balance is current."
+        meta="Card clearing, bank settlements, and commission. Batches and settlements are filtered by date; clearing balance is current."
         primaryAction={
           <Button
             type="button"
+            variant="primary"
             disabled={!entityId}
-            onClick={() => setSettleFormOpen(true)}
+            onClick={() => setClearFormOpen(true)}
           >
-            Record settlement
+            Record commission
           </Button>
         }
         actions={
@@ -97,17 +96,11 @@ export function CardsPageContent() {
             type="button"
             variant="secondary"
             disabled={!entityId}
-            onClick={() => setCardFormOpen(true)}
+            onClick={() => setSettleFormOpen(true)}
           >
-            New card batch
+            Record settlement
           </Button>
         }
-        overflowActions={[
-          {
-            label: "Record commission",
-            onSelect: () => setClearFormOpen(true),
-          },
-        ]}
       />
 
       <div className="mb-4">
@@ -138,10 +131,10 @@ export function CardsPageContent() {
             this much. Enter the missing daily sales and this clears itself.
           </p>
           <Link
-            href="/sales"
+            href="/record"
             className="mt-2 inline-block text-sm text-primary hover:underline"
           >
-            Open Daily sales
+            Open Record
           </Link>
         </section>
       )}
@@ -266,11 +259,6 @@ export function CardsPageContent() {
         />
       </section>
 
-      <CardSalesForm
-        open={cardFormOpen}
-        onClose={() => setCardFormOpen(false)}
-        onSaved={() => void reload()}
-      />
       <PosSettlementForm
         open={settleFormOpen}
         onClose={() => setSettleFormOpen(false)}

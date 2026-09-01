@@ -19,5 +19,10 @@ describe("cards page mobile cards", () => {
     expect(page).toContain("useIsMobileShell");
     expect(page).toContain("CardSalesBatchesTable");
     expect(page).toContain("PosSettlementsTable");
+    expect(page).toContain("Record commission");
+    expect(page).toContain("Record settlement");
+    expect(page).toContain("ClearCommissionForm");
+    expect(page).not.toContain("New card batch");
+    expect(page).not.toContain("CardSalesForm");
   });
 });

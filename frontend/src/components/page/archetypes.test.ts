@@ -312,7 +312,7 @@ describe("page archetypes", () => {
       source.indexOf("clearing_balance_kurus < 0"),
       source.indexOf("Clearing reconciliation"),
     );
-    expect(warning).toContain("Open Daily sales");
+    expect(warning).toContain("Open Record");
     expect(warning).not.toContain("disabled");
   });
 
