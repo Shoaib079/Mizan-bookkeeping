@@ -4,6 +4,8 @@ import {
   bounceFeeCandidates,
   bounceOutflowCandidates,
   bounceReturnCandidates,
+  buildBounceNetFee,
+  formatBounceNetFeeLabel,
 } from "@/lib/statement-bounce";
 import type { BankStatementLine } from "@/lib/banking-types";
 import { STATEMENT_CLASSIFICATION_OPTIONS } from "@/lib/statement-classification-catalog";
@@ -47,6 +49,29 @@ describe("statement bounce helpers", () => {
     ]);
   });
 
+  it("includes both fee charges and refunds as fee candidates", () => {
+    const outflow = line({ id: "o", amount_kurus: -5_000_000 });
+    const ret = line({ id: "r", amount_kurus: 5_000_000 });
+    const fee = line({ id: "f", amount_kurus: -1_676 });
+    const refund = line({ id: "rf", amount_kurus: 1_526 });
+    expect(
+      bounceFeeCandidates([outflow, ret, fee, refund], "o", "r").map((l) => l.id).sort(),
+    ).toEqual(["f", "rf"]);
+  });
+
+  it("nets fee charges and refunds to zero", () => {
+    const candidates = [
+      line({ id: "f", amount_kurus: -1_676, description: "Fee charged" }),
+      line({ id: "r1", amount_kurus: 1_526, description: "Refund 1" }),
+      line({ id: "r2", amount_kurus: 74, description: "Refund 2" }),
+      line({ id: "r3", amount_kurus: 76, description: "Refund 3" }),
+    ];
+    const netFee = buildBounceNetFee(candidates);
+    expect(netFee?.netKurus).toBe(0);
+    expect(formatBounceNetFeeLabel(netFee!)).toBe("Net fee: 0,00 ₺ · No net fee");
+    expect(netFee?.lineIds).toEqual(["f", "r1", "r2", "r3"]);
+  });
+
   it("lists fee outflows excluding outflow and return", () => {
     const outflow = line({ id: "o", amount_kurus: -5_000_000 });
     const ret = line({ id: "r", amount_kurus: 5_000_000 });
@@ -83,6 +108,7 @@ describe("statement bounce dialog", () => {
     const source = sourceDeclaring("recordPaymentBounce");
     expect(source).toContain("outflow_line_id");
     expect(source).toContain("return_line_id");
+    expect(source).toContain("fee_line_ids");
     expect(source).toContain("person_type");
   });
 });

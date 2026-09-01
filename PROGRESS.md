@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Bounce trigger from return lines (`v0.statement-bounce-return-trigger`) |
-| **Last tag** | `v0.statement-bounce-return-trigger` |
+| **Last completed slice** | Bounce net fee (`v0.statement-bounce-net-fee`) |
+| **Last tag** | `v0.statement-bounce-net-fee` |
 | **Unpushed** | yes |
 | **Active slice** | *(none)* |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Finish card-commission period slice → commit/tag |
+| **Exact next action** | Green light → commit/tag net fee slice |
 | **Gate** | Idle |

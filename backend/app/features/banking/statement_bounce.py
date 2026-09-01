@@ -8,15 +8,10 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.banking.statement_posting import (
-    build_bank_fee_posting_lines,
-    _validate_bank_gl_account,
-    _validate_bank_money_account,
+from app.features.banking.statement_bounce_fees import (
+    primary_fee_line_id,
+    settle_bounce_fee_lines,
 )
-from app.core.chart_of_accounts.default_chart import BANK_CHARGES_CODE
-from app.core.chart_of_accounts.models import Account
-from app.core.ledger.models import JournalEntrySource
-from app.core.ledger.posting import prepare_journal_entry
 from app.core.ledger.models import JournalEntry, JournalEntryStatus
 from app.core.partners.models import PartnerLedgerEntry
 from app.core.partners.types import PartnerMovementType
@@ -242,45 +237,15 @@ def _mark_bounced_line(
     _set_person_on_line(line, person_type=person_type, person_id=person_id)
 
 
-def _post_fee_line(
-    session: Session,
-    entity_id: uuid.UUID,
-    statement: BankStatement,
-    fee_line: BankStatementLine,
-    *,
-    actor_id: uuid.UUID,
-) -> uuid.UUID:
-    fee_amount = abs(fee_line.amount_kurus)
-    bank_account = _validate_bank_money_account(
-        session, entity_id, statement.money_account_id
-    )
-    _validate_bank_gl_account(session, entity_id, bank_account.gl_account_id)
-    bank_charges = session.scalar(
-        select(Account).where(Account.code == BANK_CHARGES_CODE)
-    )
-    if bank_charges is None:
-        raise BouncePairError("Bank charges account not found")
-
-    lines = build_bank_fee_posting_lines(
-        bank_gl_account_id=bank_account.gl_account_id,
-        bank_charges_account_id=bank_charges.id,
-        amount_kurus=fee_amount,
-    )
-    journal_entry = prepare_journal_entry(
-        session,
-        entity_id,
-        fee_line.transaction_date,
-        fee_line.description,
-        lines,
-        actor_id=actor_id,
-        source=JournalEntrySource.BANK_FEE,
-    )
-    journal_id = journal_entry.id
-    fee_line.classification = StatementLineClassification.BANK_FEE
-    fee_line.status = StatementLineStatus.POSTED
-    fee_line.journal_entry_id = journal_id
-    fee_line.review_reason = None
-    return journal_id
+def _resolve_fee_line_ids(
+    fee_line_id: uuid.UUID | None,
+    fee_line_ids: list[uuid.UUID] | None,
+) -> list[uuid.UUID]:
+    if fee_line_ids:
+        return list(dict.fromkeys(fee_line_ids))
+    if fee_line_id is not None:
+        return [fee_line_id]
+    return []
 
 
 def record_payment_bounce(
@@ -292,7 +257,8 @@ def record_payment_bounce(
     return_line_id: uuid.UUID,
     person_type: BouncePersonType,
     person_id: uuid.UUID,
-    fee_line_id: uuid.UUID | None,
+    fee_line_id: uuid.UUID | None = None,
+    fee_line_ids: list[uuid.UUID] | None = None,
     actor_id: uuid.UUID,
     reason: str | None = None,
 ) -> StatementBouncePairResult:
@@ -307,16 +273,17 @@ def record_payment_bounce(
 
         outflow = _get_line(session, statement_id, outflow_line_id, label="Outflow line")
         return_line = _get_line(session, statement_id, return_line_id, label="Return line")
-        fee = (
-            _get_line(session, statement_id, fee_line_id, label="Fee line")
-            if fee_line_id is not None
-            else None
-        )
+        resolved_fee_ids = _resolve_fee_line_ids(fee_line_id, fee_line_ids)
+        fee_lines = [
+            _get_line(session, statement_id, fee_id, label="Fee line")
+            for fee_id in resolved_fee_ids
+        ]
 
         if outflow.id == return_line.id:
             raise BouncePairError("Outflow and return must be different lines")
-        if fee is not None and fee.id in {outflow.id, return_line.id}:
-            raise BouncePairError("Fee line must differ from outflow and return")
+        fee_ids = {line.id for line in fee_lines}
+        if fee_ids & {outflow.id, return_line.id}:
+            raise BouncePairError("Fee lines must differ from outflow and return")
 
         if outflow.amount_kurus >= 0:
             raise BouncePairError("Outflow line must be negative")
@@ -328,10 +295,10 @@ def record_payment_bounce(
 
         _assert_bounceable(outflow, label="Outflow line")
         _assert_bounceable(return_line, label="Return line")
-        if fee is not None:
-            if fee.amount_kurus >= 0:
-                raise BouncePairError("Fee line must be an outflow")
-            _assert_bounceable(fee, label="Fee line")
+        for index, fee in enumerate(fee_lines, start=1):
+            if fee.amount_kurus == 0:
+                raise BouncePairError(f"Fee line {index} must be non-zero")
+            _assert_bounceable(fee, label=f"Fee line {index}")
 
         _assert_person_exists(
             session, entity_id, person_type=person_type, person_id=person_id
@@ -356,7 +323,7 @@ def record_payment_bounce(
             person_id=person_id,
             outflow_line_id=outflow.id,
             return_line_id=return_line.id,
-            fee_line_id=fee.id if fee is not None else None,
+            fee_line_id=primary_fee_line_id(fee_lines),
             voided_journal_entry_id=None,
             actor_id=actor_id,
             reason=reason.strip() if reason and reason.strip() else None,
@@ -378,24 +345,31 @@ def record_payment_bounce(
         )
 
         fee_journal_id: uuid.UUID | None = None
-        if fee is not None:
-            fee_journal_id = _post_fee_line(
-                session, entity_id, statement, fee, actor_id=actor_id
-            )
+        if fee_lines:
+            try:
+                fee_journal_id = settle_bounce_fee_lines(
+                    session,
+                    entity_id,
+                    statement,
+                    fee_lines,
+                    bounce_pair_id=pair.id,
+                    actor_id=actor_id,
+                )
+            except ValueError as exc:
+                raise BouncePairError(str(exc)) from exc
 
         session.commit()
         session.refresh(pair)
         session.refresh(outflow)
         session.refresh(return_line)
-        if fee is not None:
+        for fee in fee_lines:
             session.refresh(fee)
 
         updated_lines = [
             _to_line_read(outflow, session=session),
             _to_line_read(return_line, session=session),
         ]
-        if fee is not None:
-            updated_lines.append(_to_line_read(fee, session=session))
+        updated_lines.extend(_to_line_read(fee, session=session) for fee in fee_lines)
 
         return StatementBouncePairResult(
             pair=StatementBouncePairRead.model_validate(pair),

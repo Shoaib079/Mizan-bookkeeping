@@ -393,6 +393,7 @@ class StatementBouncePairRequest(BaseModel):
     person_type: Literal["supplier", "staff", "partner"]
     person_id: uuid.UUID
     fee_line_id: uuid.UUID | None = None
+    fee_line_ids: list[uuid.UUID] | None = None
     reason: str | None = Field(default=None, max_length=512)
     actor_id: OptionalActorId = None
 

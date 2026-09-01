@@ -15,8 +15,11 @@ import type {
 } from "@/lib/banking-types";
 import { formatTry } from "@/lib/money";
 import {
+  BOUNCE_NET_FEE_OPTION,
   bounceFeeCandidates,
   bounceOutflowCandidates,
+  buildBounceNetFee,
+  formatBounceNetFeeLabel,
   recordPaymentBounce,
 } from "@/lib/statement-bounce";
 import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
@@ -55,7 +58,7 @@ export function StatementBounceDialog({
   const [personType, setPersonType] = useState<BouncePersonType>("supplier");
   const [personId, setPersonId] = useState("");
   const [outflowLineId, setOutflowLineId] = useState("");
-  const [feeLineId, setFeeLineId] = useState("");
+  const [netFeeChoice, setNetFeeChoice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -71,6 +74,8 @@ export function StatementBounceDialog({
         : [],
     [lines, outflowLineId, returnLine.id],
   );
+
+  const netFee = useMemo(() => buildBounceNetFee(feeCandidates), [feeCandidates]);
 
   const personOptions = useMemo(() => {
     if (personType === "supplier") {
@@ -91,23 +96,20 @@ export function StatementBounceDialog({
     [outflowCandidates],
   );
 
-  const feeOptions = useMemo(
-    () => [
-      { value: "", label: "No fee line" },
-      ...feeCandidates.map((line) => ({
-        value: line.id,
-        label: `${formatTry(line.amount_kurus)} · ${line.description}`,
-      })),
-    ],
-    [feeCandidates],
-  );
+  const netFeeOptions = useMemo(() => {
+    if (!netFee) return [];
+    return [
+      { value: "", label: "Skip net fee" },
+      { value: BOUNCE_NET_FEE_OPTION, label: formatBounceNetFeeLabel(netFee) },
+    ];
+  }, [netFee]);
 
   useEffect(() => {
     if (!open) return;
     setPersonType("supplier");
     setPersonId("");
     setOutflowLineId(outflowCandidates[0]?.id ?? "");
-    setFeeLineId("");
+    setNetFeeChoice("");
     setError(null);
     submitIdempotency.resetSubmit();
   }, [open, returnLine.id, outflowCandidates, submitIdempotency]);
@@ -115,6 +117,14 @@ export function StatementBounceDialog({
   useEffect(() => {
     setPersonId("");
   }, [personType]);
+
+  useEffect(() => {
+    if (!netFee) {
+      setNetFeeChoice("");
+      return;
+    }
+    setNetFeeChoice(BOUNCE_NET_FEE_OPTION);
+  }, [netFee]);
 
   async function handleSubmit() {
     if (!personId || !outflowLineId || submitting) return;
@@ -126,7 +136,10 @@ export function StatementBounceDialog({
         returnLineId: returnLine.id,
         personType,
         personId,
-        feeLineId: feeLineId || null,
+        feeLineIds:
+          netFeeChoice === BOUNCE_NET_FEE_OPTION && netFee
+            ? netFee.lineIds
+            : null,
         actorId,
         idempotencyKey: submitIdempotency.beginSubmit(),
       });
@@ -187,15 +200,13 @@ export function StatementBounceDialog({
           />
         </div>
 
-        {feeCandidates.length > 0 ? (
+        {netFee ? (
           <div>
-            <Label className="text-xs text-muted-foreground">
-              Bank fee (optional)
-            </Label>
+            <Label className="text-xs text-muted-foreground">Bank fee (optional)</Label>
             <Combobox
-              value={feeLineId}
-              onValueChange={setFeeLineId}
-              options={feeOptions}
+              value={netFeeChoice}
+              onValueChange={setNetFeeChoice}
+              options={netFeeOptions}
               className="mt-1 h-9 w-full text-xs"
             />
           </div>

@@ -456,6 +456,7 @@ def record_statement_bounce_pair(
             person_type=BouncePersonType(payload.person_type),
             person_id=payload.person_id,
             fee_line_id=payload.fee_line_id,
+            fee_line_ids=payload.fee_line_ids,
             actor_id=actor_id,
             reason=payload.reason,
         )

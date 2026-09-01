@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-01
 
+- **Bounce net fee (`v0.statement-bounce-net-fee`).** Payment bounce combines fee charges and refunds into one **net fee** option; backend accepts `fee_line_ids`, posts a single bank-fee entry when net ≠ 0, settles all components when net is 0. `statement_bounce_fees.py` split; 3 pytest + vitest.
+
 - **Bounce trigger from return lines (`v0.statement-bounce-return-trigger`).** **Payment bounced…** appears on positive (return) inflows in the statement queue; dialog picks the matching outflow. `bounceOutflowCandidates` + vitest/page guard.
 
 - **Card commission period sales (`v0.card-commission-period-sales`).** Clear commission implied-rate hint loads card sales for the commission month via `GET …/pos/card-sales?from=&to=` instead of all-time reconciliation totals; refetches when clearance date changes. 7 vitest.
