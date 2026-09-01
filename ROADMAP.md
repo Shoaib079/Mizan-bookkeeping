@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Owner push when ready (`v0.statement-pos-commission-learn` + `v0.statement-pos-deposit-auto`); else FE audit cleanup |
+| **Next up**              | Pick next from live baseline / FE audit cleanup |
 | **Last completed slice** | **POS deposit auto-create from learned rules** (`v0.statement-pos-deposit-auto`) |
-| **Last commit/tag**      | `v0.statement-pos-deposit-auto` |
+| **Last commit/tag**      | `v0.statement-pos-deposit-auto` (also shipped `v0.statement-pos-commission-learn`) |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.

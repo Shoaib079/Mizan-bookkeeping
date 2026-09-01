@@ -24,7 +24,7 @@
 | **Active slice** | *(none)* |
 | **Last completed slice** | POS deposit auto-create (`v0.statement-pos-deposit-auto`) |
 | **Last tag** | `v0.statement-pos-deposit-auto` |
-| **Unpushed** | yes — commission-learn + deposit-auto (+ docs) ahead of origin |
-| **Next up** | Owner push when ready |
-| **Exact next action** | Push both tags together when owner says |
+| **Unpushed** | no (after push) |
+| **Next up** | Owner pick — FE audit cleanup or live baseline |
+| **Exact next action** | Owner picks next slice |
 | **Gate** | Idle |
