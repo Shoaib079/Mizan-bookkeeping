@@ -75,6 +75,7 @@ export function classificationOption(
 }
 
 export function classificationLabel(value: string): string {
+  if (value === "payment_bounced") return "Payment bounced";
   return (
     classificationOption(value as StatementLineClassification)?.label ??
     value.replace(/_/g, " ")

@@ -22,6 +22,8 @@ from app.core.auth.deps import member_read_guard, operations_write_guard, resolv
 from app.features.auth.models import User
 from app.features.banking import import_profiles as import_profile_service
 from app.features.banking import statements as statement_service
+from app.features.banking.statement_bounce import BouncePairError, record_payment_bounce
+from app.features.banking.statement_models import BouncePersonType
 from app.features.suppliers.service import DuplicateSupplierError
 from app.features.banking.schema import (
     BankImportProfileRead,
@@ -34,6 +36,8 @@ from app.features.banking.schema import (
     CorrectStatementLineRequest,
     CreateSupplierFromLineRequest,
     CreateSupplierFromLineResult,
+    StatementBouncePairRequest,
+    StatementBouncePairResult,
     DiscardBankStatementResult,
     NeedsReviewStatementLineRead,
 )
@@ -428,3 +432,34 @@ def correct_statement_line(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except AlreadyVoidedError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@statements_router.post(
+    "/{statement_id}/bounce-pair",
+    response_model=StatementBouncePairResult,
+)
+def record_statement_bounce_pair(
+    entity_id: uuid.UUID,
+    statement_id: uuid.UUID,
+    payload: StatementBouncePairRequest,
+    session: Session = Depends(get_session),
+    _guard: User | None = Depends(operations_write_guard),
+) -> StatementBouncePairResult:
+    actor_id = resolve_actor_id(_guard, payload.actor_id)
+    try:
+        return record_payment_bounce(
+            session,
+            entity_id,
+            statement_id,
+            outflow_line_id=payload.outflow_line_id,
+            return_line_id=payload.return_line_id,
+            person_type=BouncePersonType(payload.person_type),
+            person_id=payload.person_id,
+            fee_line_id=payload.fee_line_id,
+            actor_id=actor_id,
+            reason=payload.reason,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except BouncePairError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

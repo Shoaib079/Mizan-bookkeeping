@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-01
 
+- **Payment bounce pair (`v0.statement-bounce-pair`).** New **Payment bounced…** action on bank statements: pair an outflow with its return inflow (supplier / staff / partner — not customer). Void the payment first if it was posted; optional fee line posts as bank charges. Outflow + return settle as `payment_bounced` with no extra GL on the pair. Migration `098_statement_bounce_pairs`. API `POST …/bounce-pair`. 6 pytest + 5 vitest.
+
 - **FE statement hint cleanup (`v0.statement-fe-hint-cleanup`).** Removed hardcoded bank-text classification teachers from the frontend picker (`POS`/`BSMV`/`Migros`/… regexes). Queue lines use **API/learned suggestion** first; otherwise only a direction fallback (inflow → customer payment, outflow → supplier payment). Delivery platform match still uses the owner’s platform names (+ TYG→Trendyol alias). Backend BSF-1 / store detect / learning unchanged.
 
 - **POS deposit auto-create from learned rules (`v0.statement-pos-deposit-auto`).** HIGH learned `pos_settlement` on import **creates and posts** the card deposit (reuse `post_pos_settlement`) when no unused settlement matches — no more “no settlement on file” gate. Still **links** if exactly one match; still Needs Review if several match or the line is an outflow. No new hardcoded deposit detectors — teaching stays in classification learning. Clear-commission path unchanged.

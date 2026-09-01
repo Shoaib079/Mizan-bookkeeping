@@ -34,6 +34,10 @@ NOT_POSTED = {
     ),
     "UNCLASSIFIED": "the starting state of an imported line; nothing to post",
     "UNKNOWN": "a line the parser could not read; needs a person, not a rule",
+    "PAYMENT_BOUNCED": (
+        "settled by bounce-pair workflow — outflow+return linked; no GL on the "
+        "pair itself (optional fee posts separately)"
+    ),
 }
 
 

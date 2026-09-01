@@ -34,6 +34,11 @@ export function isSkippedLine(line: BankStatementLine): boolean {
   return line.status === "classified" && line.classification === "unknown";
 }
 
+/** Bounced payment pair — settled without income/payment GL on the pair. */
+export function isBouncedLine(line: BankStatementLine): boolean {
+  return line.classification === "payment_bounced" && line.bounce_pair_id != null;
+}
+
 export function hasLedgerEntry(line: BankStatementLine): boolean {
   return line.journal_entry_id != null;
 }
@@ -107,6 +112,7 @@ export type StatementLineSummary = {
   posted: number;
   linked: number;
   skipped: number;
+  bounced: number;
   needsReview: number;
   outflows: number;
   withLedger: number;
@@ -120,6 +126,7 @@ export function summarizeStatementLines(
   let posted = 0;
   let linked = 0;
   let skipped = 0;
+  let bounced = 0;
   let needsReview = 0;
   let outflows = 0;
   let withLedger = 0;
@@ -130,6 +137,7 @@ export function summarizeStatementLines(
     if (line.status === "posted") posted += 1;
     if (line.status === "linked") linked += 1;
     if (isSkippedLine(line)) skipped += 1;
+    if (isBouncedLine(line)) bounced += 1;
     if (line.status === "needs_review") needsReview += 1;
     if (line.amount_kurus < 0) outflows += 1;
     if (hasLedgerEntry(line)) withLedger += 1;
@@ -142,6 +150,7 @@ export function summarizeStatementLines(
     posted,
     linked,
     skipped,
+    bounced,
     needsReview,
     outflows,
     withLedger,

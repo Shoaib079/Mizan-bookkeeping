@@ -221,6 +221,7 @@ def _to_line_read(
         candidate_account_transfer_id=line.candidate_account_transfer_id,
         expense_entry_id=line.expense_entry_id,
         classification_source=line.classification_source,
+        bounce_pair_id=line.bounce_pair_id,
         suggestion=suggestion,
     )
 

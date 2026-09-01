@@ -37,7 +37,14 @@ class StatementLineClassification(str, enum.Enum):
     PARTNER_LOAN_PAYMENT = "partner_loan_payment"
     LOAN_PAYMENT = "loan_payment"
     LOAN_RECEIPT = "loan_receipt"
+    PAYMENT_BOUNCED = "payment_bounced"
     UNKNOWN = "unknown"
+
+
+class BouncePersonType(str, enum.Enum):
+    SUPPLIER = "supplier"
+    STAFF = "staff"
+    PARTNER = "partner"
 
 
 class StatementLineStatus(str, enum.Enum):
@@ -211,3 +218,46 @@ class BankStatementLine(EntityScopedMixin, Base):
         index=True,
     )
     classification_source: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    bounce_pair_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("statement_bounce_pairs.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+
+
+class StatementBouncePair(EntityScopedMixin, Base):
+    __tablename__ = "statement_bounce_pairs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    statement_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("bank_statements.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    person_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    person_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    outflow_line_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("bank_statement_lines.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    return_line_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("bank_statement_lines.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    fee_line_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("bank_statement_lines.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    voided_journal_entry_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("journal_entries.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    actor_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), nullable=False)
+    reason: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)

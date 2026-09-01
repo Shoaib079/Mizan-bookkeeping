@@ -78,7 +78,10 @@ export type StatementLineClassification =
   | "loan_payment"
   | "loan_receipt"
   | "other_income"
+  | "payment_bounced"
   | "unknown";
+
+export type BouncePersonType = "supplier" | "staff" | "partner";
 
 export type BankStatementLine = {
   id: string;
@@ -98,6 +101,7 @@ export type BankStatementLine = {
   candidate_supplier_ledger_entry_id?: string | null;
   candidate_account_transfer_id?: string | null;
   classification_source?: string | null;
+  bounce_pair_id?: string | null;
   suggestion?: ClassificationSuggestion | null;
 };
 
@@ -126,6 +130,27 @@ export type ClassifyStatementLineResult = {
   linked_existing_transfer?: boolean;
   routed_to_needs_review?: boolean;
   journal_entry_id: string | null;
+};
+
+export type StatementBouncePairRead = {
+  id: string;
+  entity_id: string;
+  statement_id: string;
+  person_type: BouncePersonType;
+  person_id: string;
+  outflow_line_id: string;
+  return_line_id: string;
+  fee_line_id: string | null;
+  voided_journal_entry_id: string | null;
+  actor_id: string;
+  reason: string | null;
+  created_at: string;
+};
+
+export type StatementBouncePairResult = {
+  pair: StatementBouncePairRead;
+  lines: BankStatementLine[];
+  fee_journal_entry_id: string | null;
 };
 
 export type CreateSupplierFromLineResult = {

@@ -18,6 +18,7 @@ RLS_TABLES = (
     "money_accounts",
     "bank_statements",
     "bank_statement_lines",
+    "statement_bounce_pairs",
     "statement_classification_rules",
     "bank_import_profiles",
     "account_transfers",

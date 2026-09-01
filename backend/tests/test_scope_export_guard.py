@@ -334,4 +334,4 @@ def test_alembic_single_head() -> None:
     script = ScriptDirectory.from_config(cfg)
     heads = script.get_heads()
     assert len(heads) == 1, f"expected one Alembic head, got {heads}"
-    assert heads[0] == "097_gs_fx_nullable_fx_journal"
+    assert heads[0] == "098_statement_bounce_pairs"

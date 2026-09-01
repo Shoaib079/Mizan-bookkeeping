@@ -8,16 +8,22 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { StatementClassifyBar } from "@/components/statement-classify-bar";
+import { StatementBounceDialog } from "@/components/statement-bounce-dialog";
 import { StatementBulkActionBar } from "@/components/statement-bulk-action-bar";
 import { StatementLinesLedger } from "@/components/statement-lines-ledger";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { apiFetch } from "@/lib/api";
-import type { BankStatementRead, ClassifyStatementLineResult } from "@/lib/banking-types";
+import type {
+  BankStatementRead,
+  ClassifyStatementLineResult,
+  StatementBouncePairResult,
+} from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
 import { formatTrDate } from "@/lib/money";
 import {
   defaultStatementLineFilter,
+  isQueueLine,
   queueLines,
   replaceStatementLine,
   statementDiscardBlockers,
@@ -32,7 +38,7 @@ export default function StatementDetailPage() {
   const params = useParams<{ id: string }>();
   const statementId = params.id;
   const router = useRouter();
-  const { entityId } = useEntity();
+  const { entityId, actorId } = useEntity();
   const pickers = useStatementClassificationPickers(entityId);
   const [statement, setStatement] = useState<BankStatementRead | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +48,7 @@ export default function StatementDetailPage() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const [discardError, setDiscardError] = useState<string | null>(null);
+  const [bounceOpen, setBounceOpen] = useState(false);
   const discardKeyRef = useRef<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -100,6 +107,22 @@ export default function StatementDetailPage() {
       };
     });
   }, []);
+
+  const handleBounceRecorded = useCallback((result: StatementBouncePairResult) => {
+    setSelectedLineId(null);
+    setSelectedLineIds(new Set());
+    setStatement((prev) => {
+      if (!prev) return prev;
+      let lines = prev.lines;
+      for (const updated of result.lines) {
+        lines = replaceStatementLine(lines, updated);
+      }
+      return { ...prev, lines };
+    });
+  }, []);
+
+  const bounceOutflow =
+    barLine && isQueueLine(barLine) && barLine.amount_kurus < 0 ? barLine : null;
 
   const bulkSelectedLines = useMemo(() => {
     if (!statement || selectedLineIds.size === 0) return [];
@@ -291,14 +314,41 @@ export default function StatementDetailPage() {
               }}
             />
           ) : (
-            <StatementClassifyBar
-              statementId={statementId}
-              line={barLine}
-              queueIndex={queueIndex >= 0 ? queueIndex : 0}
-              queueTotal={queue.length}
-              pickers={pickers}
-              onPosted={handlePosted}
-            />
+            <>
+              {bounceOutflow ? (
+                <div className="mb-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="text-xs"
+                    onClick={() => setBounceOpen(true)}
+                  >
+                    Payment bounced…
+                  </Button>
+                </div>
+              ) : null}
+              <StatementClassifyBar
+                statementId={statementId}
+                line={barLine}
+                queueIndex={queueIndex >= 0 ? queueIndex : 0}
+                queueTotal={queue.length}
+                pickers={pickers}
+                onPosted={handlePosted}
+              />
+              {bounceOutflow ? (
+                <StatementBounceDialog
+                  open={bounceOpen}
+                  onClose={() => setBounceOpen(false)}
+                  entityId={entityId}
+                  statementId={statementId}
+                  outflowLine={bounceOutflow}
+                  lines={statement.lines}
+                  pickers={pickers}
+                  actorId={actorId}
+                  onRecorded={handleBounceRecorded}
+                />
+              ) : null}
+            </>
           )}
 
           <StatementLinesLedger

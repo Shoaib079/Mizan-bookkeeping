@@ -843,6 +843,8 @@ def get_bank_statement(
 def _line_blocks_statement_discard(line: BankStatementLine) -> bool:
     if line.status in (StatementLineStatus.POSTED, StatementLineStatus.LINKED):
         return True
+    if line.bounce_pair_id is not None:
+        return True
     return any(
         (
             line.journal_entry_id,

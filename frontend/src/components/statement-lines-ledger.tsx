@@ -95,7 +95,8 @@ export function StatementLinesLedger({
           <h2 className="text-sm font-semibold">Statement ledger</h2>
           <p className="text-xs text-muted-foreground">
             {summary.total} lines · {summary.withLedger} in journal ·{" "}
-            {summary.skipped} skipped (no GL) · {summary.queue} to post
+            {summary.bounced} bounced · {summary.skipped} skipped (no GL) ·{" "}
+            {summary.queue} to post
             {skippedDuplicateCount > 0 &&
               ` · ${skippedDuplicateCount} duplicate rows skipped at import`}
             {selectedCount > 0 && (

@@ -22,9 +22,9 @@
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice** | *(none)* |
-| **Last completed slice** | FE statement hint cleanup (`v0.statement-fe-hint-cleanup`) |
-| **Last tag** | `v0.statement-fe-hint-cleanup` |
-| **Unpushed** | no (after push) |
-| **Next up** | Owner pick — live baseline / FE audit cleanup |
-| **Exact next action** | Owner picks next slice |
+| **Last completed slice** | Payment bounce pair (`v0.statement-bounce-pair`) |
+| **Last tag** | `v0.statement-bounce-pair` |
+| **Unpushed** | yes |
+| **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
+| **Exact next action** | Owner picks: bar slim-down or other |
 | **Gate** | Idle |

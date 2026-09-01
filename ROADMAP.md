@@ -25,7 +25,7 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Pick next from live baseline / FE audit cleanup |
+| **Next up**              | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
 | **Last completed slice** | **FE statement hint cleanup** (`v0.statement-fe-hint-cleanup`) |
 | **Last commit/tag**      | `v0.statement-fe-hint-cleanup` |
 
@@ -1902,6 +1902,8 @@ Take the tested app to a real, secure production environment and put real data i
 - **Recipe costing / food-cost %** — ingredient → recipe → menu item; the COGS world deliberately out of v1.
 - **Receipt AI learning store** — remember owner corrections to pre-fill future reads.
 - **Restore UI + configurable backup schedules**; **scheduled/emailed reports**; **custom report builder**.
+- **Payment returned / bounced (bounce pair)** — **DONE (`v0.statement-bounce-pair`).** See CHANGELOG 2026-09-01.
+- **Statement classify bar slim-down** — bar grown too big; empty target slot; dual Review vs Banking UIs. See `FUTURE_IDEAS.md` Banking.
 - **Tip treatment — Slice A DONE (`v0.48.0`) ✓ signed off.** See **Do not rebuild**.
 - **Tip treatment — original Slice B1 (`v0.49.0`) SUPERSEDED by `v0.57.0`.** Do not re-implement `card_sale_basis` / `POS_CARD_TIP` at confirm. Current model: Z match-or-review; tips expense-only.
 - **Tip treatment — Slice B2 DONE (`v0.50.0`) ✓ signed off.** Commission sweep done; **H1** in-transit guard done (`v0.58.0`).
@@ -1939,6 +1941,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-01 | Payment bounce pair                             | `v0.statement-bounce-pair`                             | Pair outflow+return (+ optional fee); supplier/staff/partner; `payment_bounced` settled; POST bounce-pair; migration 098; 6 pytest + 5 vitest |
 | 2026-09-01 | FE statement hint cleanup                       | `v0.statement-fe-hint-cleanup`                         | Drop FE bank-text classification regex teachers; API/learned suggestion first; direction-only fallback |
 | 2026-09-01 | POS deposit auto-create from learned rules      | `v0.statement-pos-deposit-auto`                        | HIGH learned pos_settlement creates+posts when no match; link if one; review if many; no new detectors |
 | 2026-09-01 | Statement card-commission learning              | `v0.statement-pos-commission-learn`                    | Learned `pos_commission` beats BSF-1 bank-fee auto-post; HIGH auto-posts Dr 5310; clear-commission sweep untouched; `statement_fee_auto.py` split; 2315 pytest |

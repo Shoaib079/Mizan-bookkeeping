@@ -6,7 +6,7 @@ import uuid
 
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.chart_of_accounts.models import Account
@@ -14,10 +14,24 @@ from app.core.ledger.balances import balance_as_of_kurus
 from app.features.banking.statement_models import (
     BankStatement,
     BankStatementLine,
+    StatementLineClassification,
     StatementLineStatus,
 )
 
 SETTLED_LINE_STATUSES = (StatementLineStatus.POSTED, StatementLineStatus.LINKED)
+
+_BOUNCED_SETTLED = and_(
+    BankStatementLine.status == StatementLineStatus.CLASSIFIED,
+    BankStatementLine.classification == StatementLineClassification.PAYMENT_BOUNCED,
+    BankStatementLine.bounce_pair_id.isnot(None),
+)
+
+
+def _line_is_settled_sql():
+    return or_(
+        BankStatementLine.status.in_(SETTLED_LINE_STATUSES),
+        _BOUNCED_SETTLED,
+    )
 
 
 def closing_from_book_chain(
@@ -52,7 +66,7 @@ def effective_stated_closing_balance_kurus(
         session.scalar(
             select(func.count()).where(
                 BankStatementLine.statement_id == latest.id,
-                BankStatementLine.status.not_in(SETTLED_LINE_STATUSES),
+                ~_line_is_settled_sql(),
             )
         )
         or 0

@@ -33,6 +33,7 @@ from app.features.banking.statement_models import (
     StatementLineStatus,
 )
 from app.features.banking.statements import NotBankAccountError
+from app.features.banking.statement_settled import statement_line_is_settled
 from app.features.entities import service as entity_service
 
 _SETTLED = (StatementLineStatus.POSTED, StatementLineStatus.LINKED)
@@ -62,6 +63,7 @@ _CLASSIFICATION_LABELS: dict[StatementLineClassification, str] = {
     StatementLineClassification.PARTNER_LOAN_PAYMENT: "Partner loan payment",
     StatementLineClassification.LOAN_PAYMENT: "Loan payment",
     StatementLineClassification.LOAN_RECEIPT: "Loan receipt",
+    StatementLineClassification.PAYMENT_BOUNCED: "Payment bounced",
     StatementLineClassification.UNKNOWN: "Unknown",
 }
 
@@ -260,7 +262,7 @@ def get_bank_account_activity(
             elif amount < 0:
                 total_out += abs(amount)
 
-            settled = line.status in _SETTLED
+            settled = statement_line_is_settled(line)
             if settled:
                 running_book += amount
                 if amount > 0:
