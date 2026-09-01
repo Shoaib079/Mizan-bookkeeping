@@ -97,6 +97,13 @@ describe("StatementDetailPage", () => {
     expect(source).toContain("key={statementId}");
   });
 
+  it("opens payment bounced from return inflows, not outflows", () => {
+    const source = sourceDeclaring("StatementDetailPage");
+    expect(source).toContain("barLine.amount_kurus > 0");
+    expect(source).not.toMatch(/bounceOutflow/);
+    expect(source).toContain("bounceReturn");
+  });
+
   it("patches one line after post instead of full reload with loading flash", () => {
     const source = sourceDeclaring("StatementDetailPage");
     const barSource = sourceDeclaringAll(

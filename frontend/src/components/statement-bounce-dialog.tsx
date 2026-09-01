@@ -16,7 +16,7 @@ import type {
 import { formatTry } from "@/lib/money";
 import {
   bounceFeeCandidates,
-  bounceReturnCandidates,
+  bounceOutflowCandidates,
   recordPaymentBounce,
 } from "@/lib/statement-bounce";
 import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
@@ -33,7 +33,7 @@ type Props = {
   onClose: () => void;
   entityId: string;
   statementId: string;
-  outflowLine: BankStatementLine;
+  returnLine: BankStatementLine;
   lines: BankStatementLine[];
   pickers: StatementClassificationPickers;
   actorId: string | null;
@@ -45,7 +45,7 @@ export function StatementBounceDialog({
   onClose,
   entityId,
   statementId,
-  outflowLine,
+  returnLine,
   lines,
   pickers,
   actorId,
@@ -54,22 +54,22 @@ export function StatementBounceDialog({
   const submitIdempotency = useSubmitIdempotency();
   const [personType, setPersonType] = useState<BouncePersonType>("supplier");
   const [personId, setPersonId] = useState("");
-  const [returnLineId, setReturnLineId] = useState("");
+  const [outflowLineId, setOutflowLineId] = useState("");
   const [feeLineId, setFeeLineId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const returnCandidates = useMemo(
-    () => bounceReturnCandidates(lines, outflowLine),
-    [lines, outflowLine],
+  const outflowCandidates = useMemo(
+    () => bounceOutflowCandidates(lines, returnLine),
+    [lines, returnLine],
   );
 
   const feeCandidates = useMemo(
     () =>
-      returnLineId
-        ? bounceFeeCandidates(lines, outflowLine, returnLineId)
+      outflowLineId
+        ? bounceFeeCandidates(lines, outflowLineId, returnLine.id)
         : [],
-    [lines, outflowLine, returnLineId],
+    [lines, outflowLineId, returnLine.id],
   );
 
   const personOptions = useMemo(() => {
@@ -82,13 +82,13 @@ export function StatementBounceDialog({
     return pickers.partners.map((p) => ({ value: p.id, label: p.name }));
   }, [personType, pickers.employees, pickers.partners, pickers.suppliers]);
 
-  const returnOptions = useMemo(
+  const outflowOptions = useMemo(
     () =>
-      returnCandidates.map((line) => ({
+      outflowCandidates.map((line) => ({
         value: line.id,
         label: `${formatTry(line.amount_kurus)} · ${line.description}`,
       })),
-    [returnCandidates],
+    [outflowCandidates],
   );
 
   const feeOptions = useMemo(
@@ -106,24 +106,24 @@ export function StatementBounceDialog({
     if (!open) return;
     setPersonType("supplier");
     setPersonId("");
-    setReturnLineId(returnCandidates[0]?.id ?? "");
+    setOutflowLineId(outflowCandidates[0]?.id ?? "");
     setFeeLineId("");
     setError(null);
     submitIdempotency.resetSubmit();
-  }, [open, outflowLine.id, returnCandidates, submitIdempotency]);
+  }, [open, returnLine.id, outflowCandidates, submitIdempotency]);
 
   useEffect(() => {
     setPersonId("");
   }, [personType]);
 
   async function handleSubmit() {
-    if (!personId || !returnLineId || submitting) return;
+    if (!personId || !outflowLineId || submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       const result = await recordPaymentBounce(entityId, statementId, {
-        outflowLineId: outflowLine.id,
-        returnLineId,
+        outflowLineId,
+        returnLineId: returnLine.id,
         personType,
         personId,
         feeLineId: feeLineId || null,
@@ -146,7 +146,7 @@ export function StatementBounceDialog({
         — this pairs the outflow and return without posting the payment again.
       </p>
       <p className="mt-2 text-sm font-medium">
-        {formatTry(outflowLine.amount_kurus)} · {outflowLine.description}
+        {formatTry(returnLine.amount_kurus)} · {returnLine.description}
       </p>
 
       <div className="mt-4 space-y-3">
@@ -172,17 +172,17 @@ export function StatementBounceDialog({
         </div>
 
         <div>
-          <Label className="text-xs text-muted-foreground">Return inflow</Label>
+          <Label className="text-xs text-muted-foreground">Original payment (outflow)</Label>
           <Combobox
-            value={returnLineId}
-            onValueChange={setReturnLineId}
-            options={returnOptions}
+            value={outflowLineId}
+            onValueChange={setOutflowLineId}
+            options={outflowOptions}
             placeholder={
-              returnCandidates.length
-                ? "Select matching return…"
-                : "No matching inflow on this statement"
+              outflowCandidates.length
+                ? "Select matching payment…"
+                : "No matching outflow on this statement"
             }
-            emptyMessage="No matching inflow"
+            emptyMessage="No matching outflow"
             className="mt-1 h-9 w-full text-xs"
           />
         </div>
@@ -214,9 +214,9 @@ export function StatementBounceDialog({
           disabled={
             submitting ||
             !personId ||
-            !returnLineId ||
+            !outflowLineId ||
             pickers.loading ||
-            returnCandidates.length === 0
+            outflowCandidates.length === 0
           }
           onClick={() => void handleSubmit()}
         >

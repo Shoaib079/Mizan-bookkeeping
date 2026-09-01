@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Payment bounce pair (`v0.statement-bounce-pair`) |
-| **Last tag** | `v0.statement-bounce-pair` |
-| **Unpushed** | no (after push) |
-| **Active slice** | Card commission period sales (in progress) |
+| **Last completed slice** | Bounce trigger from return lines (`v0.statement-bounce-return-trigger`) |
+| **Last tag** | `v0.statement-bounce-return-trigger` |
+| **Unpushed** | yes |
+| **Active slice** | *(none)* |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
 | **Exact next action** | Finish card-commission period slice → commit/tag |
 | **Gate** | Idle |

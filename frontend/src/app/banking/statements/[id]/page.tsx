@@ -121,8 +121,8 @@ export default function StatementDetailPage() {
     });
   }, []);
 
-  const bounceOutflow =
-    barLine && isQueueLine(barLine) && barLine.amount_kurus < 0 ? barLine : null;
+  const bounceReturn =
+    barLine && isQueueLine(barLine) && barLine.amount_kurus > 0 ? barLine : null;
 
   const bulkSelectedLines = useMemo(() => {
     if (!statement || selectedLineIds.size === 0) return [];
@@ -315,7 +315,7 @@ export default function StatementDetailPage() {
             />
           ) : (
             <>
-              {bounceOutflow ? (
+              {bounceReturn ? (
                 <div className="mb-2 flex justify-end">
                   <Button
                     type="button"
@@ -335,13 +335,13 @@ export default function StatementDetailPage() {
                 pickers={pickers}
                 onPosted={handlePosted}
               />
-              {bounceOutflow ? (
+              {bounceReturn ? (
                 <StatementBounceDialog
                   open={bounceOpen}
                   onClose={() => setBounceOpen(false)}
                   entityId={entityId}
                   statementId={statementId}
-                  outflowLine={bounceOutflow}
+                  returnLine={bounceReturn}
                   lines={statement.lines}
                   pickers={pickers}
                   actorId={actorId}

@@ -8,9 +8,9 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-01
 
-- **Card commission period sales (in progress).** Clear commission form implied-rate hint now loads **card sales for the commission month** (`GET …/pos/card-sales?from=&to=`) instead of all-time reconciliation totals. Refetches when the clearance date changes. Vitest coverage for period fetch + render.
+- **Bounce trigger from return lines (`v0.statement-bounce-return-trigger`).** **Payment bounced…** appears on positive (return) inflows in the statement queue; dialog picks the matching outflow. `bounceOutflowCandidates` + vitest/page guard.
 
-- **Payment bounce pair (`v0.statement-bounce-pair`).** New **Payment bounced…** action on bank statements: pair an outflow with its return inflow (supplier / staff / partner — not customer). Void the payment first if it was posted; optional fee line posts as bank charges. Outflow + return settle as `payment_bounced` with no extra GL on the pair. Migration `098_statement_bounce_pairs`. API `POST …/bounce-pair`. 6 pytest + 5 vitest.
+- **Card commission period sales (`v0.card-commission-period-sales`).** Clear commission implied-rate hint loads card sales for the commission month via `GET …/pos/card-sales?from=&to=` instead of all-time reconciliation totals; refetches when clearance date changes. 7 vitest.
 
 - **FE statement hint cleanup (`v0.statement-fe-hint-cleanup`).** Removed hardcoded bank-text classification teachers from the frontend picker (`POS`/`BSMV`/`Migros`/… regexes). Queue lines use **API/learned suggestion** first; otherwise only a direction fallback (inflow → customer payment, outflow → supplier payment). Delivery platform match still uses the owner’s platform names (+ TYG→Trendyol alias). Backend BSF-1 / store detect / learning unchanged.
 

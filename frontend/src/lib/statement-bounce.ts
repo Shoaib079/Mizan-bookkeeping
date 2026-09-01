@@ -57,14 +57,32 @@ export function bounceReturnCandidates(
   );
 }
 
+/** Matching payment outflows for a return inflow — bounce starts from the return. */
+export function bounceOutflowCandidates(
+  lines: BankStatementLine[],
+  returnLine: BankStatementLine,
+): BankStatementLine[] {
+  const amount = returnLine.amount_kurus;
+  if (amount <= 0) return [];
+  return lines.filter(
+    (line) =>
+      line.id !== returnLine.id &&
+      line.amount_kurus < 0 &&
+      Math.abs(line.amount_kurus) === amount &&
+      line.status !== "posted" &&
+      line.status !== "linked" &&
+      line.classification !== "payment_bounced",
+  );
+}
+
 export function bounceFeeCandidates(
   lines: BankStatementLine[],
-  outflow: BankStatementLine,
+  outflowLineId: string,
   returnLineId: string,
 ): BankStatementLine[] {
   return lines.filter(
     (line) =>
-      line.id !== outflow.id &&
+      line.id !== outflowLineId &&
       line.id !== returnLineId &&
       line.amount_kurus < 0 &&
       line.status !== "posted" &&

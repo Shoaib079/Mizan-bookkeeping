@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   bounceFeeCandidates,
+  bounceOutflowCandidates,
   bounceReturnCandidates,
 } from "@/lib/statement-bounce";
 import type { BankStatementLine } from "@/lib/banking-types";
@@ -37,11 +38,20 @@ describe("statement bounce helpers", () => {
     ]);
   });
 
+  it("finds outflow candidates matching return amount", () => {
+    const ret = line({ id: "r", amount_kurus: 5_000_000 });
+    const match = line({ id: "o", amount_kurus: -5_000_000 });
+    const other = line({ id: "x", amount_kurus: -1_000_000 });
+    expect(bounceOutflowCandidates([ret, match, other], ret).map((l) => l.id)).toEqual([
+      "o",
+    ]);
+  });
+
   it("lists fee outflows excluding outflow and return", () => {
     const outflow = line({ id: "o", amount_kurus: -5_000_000 });
     const ret = line({ id: "r", amount_kurus: 5_000_000 });
     const fee = line({ id: "f", amount_kurus: -250_00 });
-    expect(bounceFeeCandidates([outflow, ret, fee], outflow, "r").map((l) => l.id)).toEqual([
+    expect(bounceFeeCandidates([outflow, ret, fee], "o", "r").map((l) => l.id)).toEqual([
       "f",
     ]);
   });
