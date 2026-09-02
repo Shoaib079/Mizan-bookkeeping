@@ -16,7 +16,12 @@ from app.core.fx.spend_posting import InvalidFxSpendError
 from app.core.ledger.correction import CorrectionNotFoundError
 from app.core.ledger.posting import InvalidAccountError
 from app.db.session import get_session
-from app.core.auth.deps import member_read_guard, operations_write_guard, resolve_actor_id
+from app.core.auth.deps import (
+    export_scope_guard,
+    member_read_guard,
+    operations_write_guard,
+    resolve_actor_id,
+)
 from app.features.auth.models import User
 from app.features.ledger.schema import SubledgerVoidOut, VoidJournalEntryRequest
 from app.features.fx import service as fx_service
@@ -225,6 +230,68 @@ def get_fx_ledger(
         limit=list_params.limit,
         offset=list_params.offset,
     )
+
+
+@router.get("/ledger/export")
+def export_fx_hub_ledger(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    wallet: str | None = Query(default=None),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    _export: None = Depends(export_scope_guard),
+):
+    from app.features.reports.excel_export import xlsx_response
+
+    try:
+        from app.features.fx import hub_export
+
+        data, filename = hub_export.export_fx_hub_ledger(
+            session,
+            entity_id,
+            from_date=from_date,
+            to_date=to_date,
+            wallet_filter=wallet,
+            pdf=False,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return xlsx_response(data, filename)
+
+
+@router.get("/ledger/export/pdf")
+def export_fx_hub_ledger_pdf(
+    entity_id: uuid.UUID,
+    from_date: date = Query(..., alias="from"),
+    to_date: date = Query(..., alias="to"),
+    wallet: str | None = Query(default=None),
+    session: Session = Depends(get_session),
+    _: None = Depends(member_read_guard),
+    _export: None = Depends(export_scope_guard),
+):
+    from app.features.reports.pdf_export import PdfExportDependencyError, pdf_response
+
+    try:
+        from app.features.fx import hub_export
+
+        data, filename = hub_export.export_fx_hub_ledger(
+            session,
+            entity_id,
+            from_date=from_date,
+            to_date=to_date,
+            wallet_filter=wallet,
+            pdf=True,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except PdfExportDependencyError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return pdf_response(data, filename)
 
 
 @router.get("/accounts/{fx_money_account_id}/balance", response_model=FxBalanceRead)

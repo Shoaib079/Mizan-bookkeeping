@@ -7,12 +7,8 @@
  * could say 3 and the list show none, and the first thing anyone reaches for
  * is the date picker, and it is never the reason.
  *
- * That is how a supplier invoice misread as 16.09.2026 became invisible: the
- * money was in payables, the badge knew, and every screen that could have
- * shown it was scoped to this month.
- *
- * Written over the filter sets rather than per filter, so a queue added later
- * is covered on the day it is added rather than the day it goes wrong.
+ * Sales is a special case: All and Posted honour the period; Needs review
+ * still must not — that is the outstanding-work queue.
  */
 
 import { describe, expect, it } from "vitest";
@@ -45,15 +41,7 @@ const QUEUES: {
     usesRange: expenseFilterUsesRange as (view: never) => boolean,
   },
   {
-    name: "sales",
-    views: SALES_REVIEW_FILTERS.map((f) => f.id),
-    usesRange: salesFilterUsesRange as (view: never) => boolean,
-  },
-  {
     name: "invoices",
-    // Read from the exported list, not retyped here. A hardcoded copy would
-    // stop covering the tab someone adds next, which is the same staleness
-    // the rule below is about.
     views: INVOICE_REVIEW_TABS.map((t) => t.id),
     usesRange: invoiceReviewTabUsesRange as (view: never) => boolean,
   },
@@ -61,9 +49,7 @@ const QUEUES: {
 
 describe("review queues ignore dates", () => {
   it("covers every queue that has a date picker", () => {
-    // Guard the guard: over an empty list the assertions below prove nothing,
-    // which is the failure this whole file exists to stop.
-    expect(QUEUES.length).toBeGreaterThanOrEqual(3);
+    expect(QUEUES.length).toBeGreaterThanOrEqual(2);
     for (const queue of QUEUES) {
       expect(queue.views.length).toBeGreaterThan(1);
     }
@@ -78,8 +64,6 @@ describe("review queues ignore dates", () => {
     });
 
     it(`${queue.name}: settled views still honour the range`, () => {
-      // The other half. Without it, a `usesRange` that always returned false
-      // would satisfy the test above and quietly break every report period.
       const settled = queue.views.filter((view) => SETTLED.has(view));
       expect(settled.length).toBeGreaterThan(0);
       for (const view of settled) {
@@ -87,4 +71,23 @@ describe("review queues ignore dates", () => {
       }
     });
   }
+});
+
+describe("sales Needs review ignores dates", () => {
+  it("covers All / Needs review / Posted", () => {
+    expect(SALES_REVIEW_FILTERS.map((f) => f.id)).toEqual([
+      "all",
+      "pending",
+      "posted",
+    ]);
+  });
+
+  it("Needs review is not narrowed by date", () => {
+    expect(salesFilterUsesRange("pending")).toBe(false);
+  });
+
+  it("All and Posted honour the period", () => {
+    expect(salesFilterUsesRange("all")).toBe(true);
+    expect(salesFilterUsesRange("posted")).toBe(true);
+  });
 });

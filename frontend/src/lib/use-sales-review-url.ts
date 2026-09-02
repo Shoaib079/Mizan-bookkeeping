@@ -12,19 +12,12 @@ export type SalesReviewFilter = "all" | "pending" | "posted";
 
 /** Does this view honour the date range in the toolbar?
  *
- * Only settled ones. A view that includes work still waiting cannot be
- * narrowed by date, because the badge that sent you there counts by status
- * and ignores dates entirely — so the two disagree, the list looks empty,
- * and the date picker is the first thing anyone reaches for and never the
- * reason. A daily sales entry dated outside the current month was simply
- * invisible while the tab said there was one.
- *
- * `all` sits with the queues, not with `posted`: it contains outstanding
- * work, and outstanding work must never be hidden by a date default nobody
- * chose.
+ * All and Posted do — owners pick the period there. Needs review does not:
+ * the badge counts outstanding work across every date, so narrowing the
+ * queue by a month default can hide the very rows the tab sent you to find.
  */
 export function salesFilterUsesRange(filter: SalesReviewFilter): boolean {
-  return filter === "posted";
+  return filter !== "pending";
 }
 
 export const SALES_REVIEW_FILTERS: { id: SalesReviewFilter; label: string }[] = [

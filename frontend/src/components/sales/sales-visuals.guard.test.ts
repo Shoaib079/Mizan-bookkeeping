@@ -19,11 +19,11 @@ describe("Sales page visuals", () => {
     expect(table).toContain("sales-period-totals-row");
   });
 
-  it("SalesReviewPanel wires KPIs from sales-summary on Posted", () => {
+  it("SalesReviewPanel wires KPIs when the period applies", () => {
     const panel = sourceDeclaring("SalesReviewPanel");
     expect(panel).toContain("SalesPostedKpiCards");
     expect(panel).toContain("/reports/sales-summary?");
-    expect(panel).toContain("postedRange && periodTotals");
+    expect(panel).toContain("usesRange && periodTotals");
   });
 
   it("FilterChips active state is filled primary (Posted pill)", () => {

@@ -4,16 +4,37 @@ import { FxHubActions } from "@/components/banking/fx-hub-actions";
 import { FxHubDialogs } from "@/components/banking/fx-hub-dialogs";
 import { FxHubLedger } from "@/components/banking/fx-hub-ledger";
 import { FxHubWalletChips } from "@/components/banking/fx-hub-wallet-chips";
+import { FxLedgerDownloadMenu } from "@/components/banking/fx-ledger-download-menu";
 import { useFxHubPage } from "@/components/banking/use-fx-hub-page";
 import { PageHeader } from "@/components/page/page-header";
 import { PageSkeleton } from "@/components/ui/skeleton";
+import { canExportFiles } from "@/lib/entity-access";
+import { useEntityAccess } from "@/lib/use-entity-access";
 
 export function FxHubPageContent() {
   const hub = useFxHubPage();
+  const { grants } = useEntityAccess();
+  const showExport = canExportFiles(grants);
+  const exportQuery = new URLSearchParams({
+    from: hub.from,
+    to: hub.to,
+    ...(hub.walletFilter !== "all" ? { wallet: hub.walletFilter } : {}),
+  }).toString();
 
   return (
     <>
-      <PageHeader title="Foreign currency" />
+      <PageHeader
+        title="Foreign currency"
+        actions={
+          showExport && hub.entityId ? (
+            <FxLedgerDownloadMenu
+              entityId={hub.entityId}
+              exportQuery={exportQuery}
+              disabled={hub.loading || hub.ledgerLoading || hub.mergedLedger.length === 0}
+            />
+          ) : undefined
+        }
+      />
 
       {!hub.entityId && (
         <p className="text-sm text-muted-foreground">

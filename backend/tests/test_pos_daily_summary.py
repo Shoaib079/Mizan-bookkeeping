@@ -555,3 +555,23 @@ def test_export_daily_summaries_xlsx(client, restaurant_a, pos_summary_setup) ->
     assert sheet["A1"].value == "POS daily sales"
     assert sheet["A2"].value == "Entity: Restaurant A"
     assert sheet["A3"].value == f"Period: {display_date} – {display_date}"
+
+
+def test_export_daily_summaries_pdf(client, restaurant_a, pos_summary_setup) -> None:
+    content = SAMPLE_SUMMARY.read_bytes()
+    create = client.post(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries",
+        files={"file": ("summary.txt", content, "text/plain")},
+    )
+    assert create.status_code == 201
+    summary_date = create.json()["summary_date"]
+
+    export_resp = client.get(
+        f"/entities/{restaurant_a.id}/pos/daily-summaries/export/pdf",
+        params={"from": summary_date, "to": summary_date, "review": "pending"},
+    )
+    assert export_resp.status_code == 200
+    assert export_resp.headers["content-type"].startswith("application/pdf")
+    assert export_resp.content[:4] == b"%PDF"
+    disposition = export_resp.headers.get("content-disposition", "")
+    assert f"{summary_date}-{summary_date}.pdf" in disposition

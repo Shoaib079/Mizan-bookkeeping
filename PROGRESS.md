@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Cards page header simplify (`v0.cards-page-header`) |
-| **Last tag** | `v0.cards-page-header` |
+| **Last completed slice** | Sales + FX export downloads (`v0.sales-fx-export-downloads`) |
+| **Last tag** | `v0.sales-fx-export-downloads` |
 | **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Owner sign-off; push cards-header tag |
+| **Exact next action** | Owner sign-off; next slice from queue |
 | **Gate** | Idle |

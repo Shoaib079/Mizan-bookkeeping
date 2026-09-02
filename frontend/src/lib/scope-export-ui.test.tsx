@@ -103,7 +103,7 @@ describe("generated-export triggers reference canExportFiles", () => {
     const paths = generatedExportTriggerFiles().map((f) => f.path).sort();
     expect(paths.length).toBeGreaterThanOrEqual(8);
     expect(paths.some((p) => p.includes("month-pack-button"))).toBe(true);
-    expect(paths.some((p) => p.includes("sales-review-panel"))).toBe(true);
+    expect(paths.some((p) => p.includes("sales-review-export-menu"))).toBe(true);
     expect(paths.some((p) => p.includes("supplier-activity-export"))).toBe(
       true,
     );

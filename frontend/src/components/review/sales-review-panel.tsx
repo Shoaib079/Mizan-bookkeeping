@@ -9,23 +9,16 @@ import { ManualDailySalesForm } from "@/components/forms/manual-daily-sales-form
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { FilterChips } from "@/components/page/filter-chips";
 import { ListPage } from "@/components/page/list-page";
-import {
-  SalesPeriodChips,
-  SalesPostedKpiCards,
-} from "@/components/sales/sales-period-chips";
+import { SalesReviewExportMenu } from "@/components/review/sales-review-export-menu";
+import { SalesPostedKpiCards } from "@/components/sales/sales-period-chips";
 import {
   SalesReviewMobileList,
   SalesReviewTable,
 } from "@/components/sales/sales-review-table";
+import { ReportDateRange } from "@/components/reports/report-date-range";
 import { Button } from "@/components/ui/button";
-import { DownloadIcon } from "@/components/ui/download-icon";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  apiDownload,
-  ApiError,
-  apiFetch,
-  triggerBlobDownload,
-} from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import { useEntity } from "@/lib/entity-context";
 import { canExportFiles } from "@/lib/entity-access";
 import type { PosDailySummary } from "@/lib/pos-delivery-types";
@@ -66,7 +59,7 @@ export function SalesReviewPanel({
     setOffset,
     pageSize,
   } = useSalesReviewUrl(defaultFilter);
-  const postedRange = salesFilterUsesRange(review);
+  const usesRange = salesFilterUsesRange(review);
   const [createOpen, setCreateOpen] = useState(false);
   const [items, setItems] = useState<PosDailySummary[]>([]);
   const [total, setTotal] = useState(0);
@@ -74,7 +67,6 @@ export function SalesReviewPanel({
     null,
   );
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [voidSummary, setVoidSummary] = useState<PosDailySummary | null>(null);
   const [correctSummary, setCorrectSummary] = useState<PosDailySummary | null>(
@@ -110,7 +102,7 @@ export function SalesReviewPanel({
       const listPromise = apiFetch<PaginatedResponse<PosDailySummary>>(
         `/entities/${entityId}/pos/daily-summaries?${listQuery}`,
       );
-      const summaryPromise = postedRange
+      const summaryPromise = usesRange
         ? apiFetch<SalesSummaryRead>(
             `/entities/${entityId}/reports/sales-summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
           )
@@ -131,27 +123,11 @@ export function SalesReviewPanel({
     } finally {
       setLoading(false);
     }
-  }, [entityId, from, listQuery, postedRange, to]);
+  }, [entityId, from, listQuery, to, usesRange]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  async function onExport() {
-    if (!entityId) return;
-    setExporting(true);
-    setError(null);
-    try {
-      const { blob, filename } = await apiDownload(
-        `/entities/${entityId}/pos/daily-summaries/export?${exportQuery}`,
-      );
-      triggerBlobDownload(blob, filename);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Export failed");
-    } finally {
-      setExporting(false);
-    }
-  }
 
   if (!entityId) {
     return (
@@ -187,21 +163,16 @@ export function SalesReviewPanel({
             </Link>
           )}
           {showExport && (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={loading || exporting || total === 0}
-              className="gap-1.5"
-              onClick={() => void onExport()}
-            >
-              <DownloadIcon className="size-4" />
-              {exporting ? "Downloading…" : "Download Excel"}
-            </Button>
+            <SalesReviewExportMenu
+              entityId={entityId}
+              exportQuery={exportQuery}
+              disabled={loading || total === 0}
+            />
           )}
         </>
       }
       summary={
-        postedRange && periodTotals ? (
+        usesRange && periodTotals ? (
           <SalesPostedKpiCards
             cashKurus={cashTotal}
             cardKurus={cardTotal}
@@ -217,11 +188,11 @@ export function SalesReviewPanel({
             onChange={setReview}
             ariaLabel="Filter daily sales"
           />
-          {postedRange && (
-            <SalesPeriodChips
+          {usesRange && (
+            <ReportDateRange
               from={from}
               to={to}
-              disabled={loading || exporting}
+              disabled={loading}
               onChange={setRange}
             />
           )}
@@ -231,16 +202,16 @@ export function SalesReviewPanel({
         loading
           ? "Loading…"
           : `${total} daily sale${total === 1 ? "" : "s"}` +
-            (postedRange ? " in this period" : "")
+            (usesRange ? " in this period" : "")
       }
       skeletonColumns={6}
       isEmpty={items.length === 0}
       empty={
         <EmptyState
           icon={ShoppingBag}
-          title={postedRange ? "No sales in this period" : "No sales"}
+          title={usesRange ? "No sales in this period" : "No sales"}
           hint={
-            postedRange
+            usesRange
               ? "Change the dates or filter, or upload sales via Record."
               : "Change the filter, or upload sales via Record."
           }
@@ -250,7 +221,7 @@ export function SalesReviewPanel({
         <SalesReviewTable
           items={items}
           grants={grants}
-          showPeriodTotals={Boolean(postedRange && periodTotals)}
+          showPeriodTotals={Boolean(usesRange && periodTotals)}
           cashTotal={cashTotal}
           cardTotal={cardTotal}
           salesTotal={salesTotal}

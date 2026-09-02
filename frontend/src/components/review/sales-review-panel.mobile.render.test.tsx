@@ -103,6 +103,30 @@ beforeEach(() => {
   completeSubmit.mockClear();
   accessState.grants = grantsForRole("owner");
   apiFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url.includes("/reports/sales-summary?")) {
+      return {
+        entity_id: "ent-1",
+        delivery_enabled: false,
+        current: {
+          from_date: "2026-08-01",
+          to_date: "2026-08-31",
+          full_month: false,
+          cash_kurus: 800_00,
+          card_kurus: 1_200_00,
+          delivery_kurus: 0,
+          total_kurus: 2_000_00,
+        },
+        prior: {
+          from_date: "2026-07-01",
+          to_date: "2026-07-31",
+          full_month: true,
+          cash_kurus: 0,
+          card_kurus: 0,
+          delivery_kurus: 0,
+          total_kurus: 0,
+        },
+      };
+    }
     if (url.includes("/pos/daily-summaries?") && !init?.method) {
       return { items: [POSTED_SUMMARY], total: 1 };
     }

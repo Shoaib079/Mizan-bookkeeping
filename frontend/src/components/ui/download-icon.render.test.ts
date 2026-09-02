@@ -26,7 +26,7 @@ describe("DownloadIcon shared across triggers", () => {
     expect(icon).toContain("ArrowDownToLine");
     expect(sourceDeclaring("DownloadMenu")).toContain("DownloadIcon");
     expect(sourceDeclaring("MonthPackButton")).toContain("DownloadIcon");
-    expect(sourceDeclaring("SalesReviewPanel")).toContain("DownloadIcon");
+    expect(sourceDeclaring("SalesReviewExportMenu")).toContain("DownloadMenu");
   });
 
   it("mutation: DownloadMenu back on lucide Download tray → red", () => {

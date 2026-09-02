@@ -6,6 +6,10 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 **Companions:** `ROADMAP.md` (phase/slice + Companion files table) · `PROGRESS.md` (resume point) · `HARDENING_PLAN.md` (bug classes + owed) · `BUGLOG.md` · `FINANCIAL_AUDIT.md` · `POST_LAUNCH_PLAN.md`
 
+## 2026-09-02
+
+- **Sales + FX export downloads (`v0.sales-fx-export-downloads`).** FX hub: Excel + PDF via `GET …/fx/ledger/export` (+ `/pdf`), wallet + date filters, `FxLedgerDownloadMenu` on page header. Sales: PDF export alongside Excel; plain `ReportDateRange` + Cash/Card/Total KPI on **All** and **Posted** (Needs review stays date-free; no This month / Last month / Custom chips). Backend: `fx/hub_export.py`, `fx/ledger_export.py`, `pos/pdf_export.py`; pytest + vitest.
+
 ## 2026-09-01
 
 - **Cards page header simplify (`v0.cards-page-header`).** Drop **New card batch** (sales via Record); **Record commission** primary + **Record settlement** secondary in header; negative-clearing link → Record. Vitest.
