@@ -5,8 +5,13 @@
 import { MoreHorizontal } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
-import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import {
+  DROPDOWN_VIEWPORT_MAX_W,
+  dropdownHAlignClass,
+} from "@/lib/dropdown-align";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
+import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import { useDropdownHAlign } from "@/lib/use-dropdown-align";
 import { cn } from "@/lib/utils";
 
 export type OverflowMenuItem = {
@@ -23,11 +28,15 @@ type Props = {
   className?: string;
 };
 
+/** ~13rem — matches min-w on the panel. */
+const MENU_MIN_WIDTH_PX = 208;
+
 export function OverflowMenu({ items, label = "More actions", className }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismissOnOutsideClick(ref, open, close);
+  const hAlign = useDropdownHAlign(open, ref, MENU_MIN_WIDTH_PX);
 
   const visible = items.filter((item) => item.show !== false);
   if (visible.length === 0) return null;
@@ -51,12 +60,11 @@ export function OverflowMenu({ items, label = "More actions", className }: Props
       {open && (
         <div
           role="menu"
-          // Opens rightward on a phone, leftward above it. `right-0` alone
-          // anchors the menu's right edge to the trigger's, so it extends
-          // left by its own 13rem — correct when the trigger sits at the far
-          // right of a desktop header, and off the screen entirely once the
-          // actions wrap and the trigger ends up on the left.
-          className="absolute left-0 z-20 mt-1 min-w-[13rem] rounded-md border border-border bg-card p-1 shadow-[var(--shadow-pop)] sm:left-auto sm:right-0"
+          className={cn(
+            "absolute z-20 mt-1 min-w-[13rem] rounded-md border border-border bg-card p-1 shadow-[var(--shadow-pop)]",
+            DROPDOWN_VIEWPORT_MAX_W,
+            dropdownHAlignClass(hAlign),
+          )}
         >
           {visible.map((item) => (
             <button

@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Dropdown viewport align (`v0.dropdown-viewport-align`).** Header "…" / Download / Month pack menus measure the trigger and open left or right so the panel stays on screen (fixes horizontal page scroll when "…" sat on the right). Shared `dropdown-align` + `useDropdownHAlign`; viewport max-width clamp on all three. Vitest + tsc + eslint + next build green.
+
 - **Statement import wizard mobile (`v0.statement-import-mobile`).** Phone (&lt;820): column mapping above file preview; sticky Other file / Import above the tab bar; panel H1 hidden (PageHeader / top bar only); 44px touch targets on mapping fields and assign chips; shorter preview max-height. Desktop sidebar + Import footer unchanged. Vitest + tsc + eslint + next build green.
 
 - **Mobile date pick (`v0.mobile-date-pick`).** Phone: DateInput is read-only (`inputMode=none`) so the keypad does not open with the calendar; tap opens the picker, pick a day closes it. Mobile calendar always anchors **below** the field (scrollable if near the bottom) instead of flipping above. Desktop still type-or-pick. Vitest + tsc + eslint + next build green.

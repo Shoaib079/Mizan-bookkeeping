@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
+import { sourceAt, sourceDeclaring, sourceDeclaringAll } from "@/test-support/source";
 
 import { MOBILE_SHELL_MAX_WIDTH_PX, MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 
@@ -48,46 +48,33 @@ describe("mobile touch targets", () => {
 });
 
 describe("dropdowns stay on screen", () => {
-  /** `absolute right-0` anchors a menu's right edge to its trigger's, so the
-   * menu extends left by its own width. That is correct when the trigger sits
-   * at the far right of a desktop header. On a phone the action rows wrap and
-   * the trigger lands on the left, so a 13rem menu opened 110px off the edge —
-   * visible only as a sliver, which is how it looked empty. */
+  /** Menus measure the trigger and pick left vs right so a panel never
+   * forces horizontal page scroll — whether the trigger sits on the right
+   * edge (header "…") or wrapped onto the left. */
   const MENUS = [
     "OverflowMenu",
-    // Was three separate entries — the subledger, report and delivery download
-    // menus each owned a copy of the dropdown. They share `DownloadMenu` now,
-    // so this list shrank because the duplication went, not because the rule
-    // was loosened.
     "DownloadMenu",
     "MonthPackButton",
   ];
 
-  it("opens rightward on a phone and rightward-anchored above it", () => {
+  it("uses shared viewport align + width clamp", () => {
     for (const file of MENUS) {
       const s = sourceDeclaring(file);
-      expect(s, `${file} still anchors right on mobile`).not.toMatch(
-        /absolute right-0 z-\d/,
-      );
-      expect(s, `${file} has no desktop anchor`).toContain("sm:right-0");
+      expect(s, `${file} missing align helper`).toContain("useDropdownHAlign");
+      expect(s, `${file} missing align class`).toContain("dropdownHAlignClass");
+      expect(s, `${file} missing width clamp`).toContain("DROPDOWN_VIEWPORT_MAX_W");
+      expect(s, `${file} still hard-codes sm:right-0`).not.toContain("sm:right-0");
     }
   });
 
-  it("never exceeds the viewport width", () => {
-    // Belt and braces: even anchored left, a wide menu on a narrow phone
-    // would run off the other edge.
-    for (const file of MENUS.filter((f) => f !== "OverflowMenu")) {
-      expect(sourceDeclaring(file), file).toContain("max-w-[calc(100vw-1.75rem)]");
-    }
+  it("never exceeds the viewport width (token)", () => {
+    const alignSrc = sourceAt("lib/dropdown-align.ts");
+    expect(alignSrc).toContain("DROPDOWN_VIEWPORT_MAX_W");
+    expect(alignSrc).toContain("max-w-[calc(100vw-1.75rem)]");
+    expect(alignSrc).toContain("viewportWidth");
   });
 
   it("gives the items in them a thumb-sized row", () => {
-    /* This is the gap that let the defect sit there.
-     *
-     * The two checks above ask where a menu opens. Neither asks how tall its
-     * rows are — so `MOBILE_TOUCH_TARGET` was on the subledger menu's items
-     * and on neither of the other two, and all three passed. A menu that opens
-     * in the right place and cannot be tapped is not a menu that works. */
     for (const file of MENUS) {
       const s = sourceDeclaring(file);
       expect(s, `${file}'s items are not thumb-sized`).toContain(

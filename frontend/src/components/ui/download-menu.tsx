@@ -29,8 +29,13 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { DownloadIcon } from "@/components/ui/download-icon";
+import {
+  DROPDOWN_VIEWPORT_MAX_W,
+  dropdownHAlignClass,
+} from "@/lib/dropdown-align";
 import { canExportFiles } from "@/lib/entity-access";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
+import { useDropdownHAlign } from "@/lib/use-dropdown-align";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +79,7 @@ function DownloadMenuInner({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const hAlign = useDropdownHAlign(open, menuRef, 160);
 
   useEffect(() => {
     if (!open) return;
@@ -115,12 +121,11 @@ function DownloadMenuInner({
           <ChevronDown className="size-4 opacity-70" />
         </Button>
         {open && (
-          // Anchored left on a phone: the action rows wrap there, so the
-          // trigger lands on the left and a right-anchored menu opened off the
-          // edge of the screen.
           <div
             className={cn(
-              "absolute left-0 z-20 mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-md max-w-[calc(100vw-1.75rem)] sm:left-auto sm:right-0",
+              "absolute z-20 mt-1 min-w-[10rem] rounded-md border border-border bg-card py-1 shadow-md",
+              DROPDOWN_VIEWPORT_MAX_W,
+              dropdownHAlignClass(hAlign),
             )}
           >
             {items.map((item) => (

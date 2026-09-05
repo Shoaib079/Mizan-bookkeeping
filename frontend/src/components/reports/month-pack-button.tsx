@@ -8,9 +8,14 @@ import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DownloadIcon } from "@/components/ui/download-icon";
 import { apiDownload, triggerBlobDownload } from "@/lib/api";
+import {
+  DROPDOWN_VIEWPORT_MAX_W,
+  dropdownHAlignClass,
+} from "@/lib/dropdown-align";
 import { canExportFiles } from "@/lib/entity-access";
 import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { useDismissOnOutsideClick } from "@/lib/use-dismiss-on-outside-click";
+import { useDropdownHAlign } from "@/lib/use-dropdown-align";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +38,7 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
   const menuRef = useRef<HTMLDivElement | null>(null);
   const close = useCallback(() => setOpen(false), []);
   useDismissOnOutsideClick(menuRef, open, close);
+  const hAlign = useDropdownHAlign(open, menuRef, 224);
 
   if (!canExportFiles(grants)) return null;
 
@@ -87,7 +93,11 @@ export function MonthPackButton({ entityId, queryString, disabled, compact }: Pr
       {open && (
         <div
           role="menu"
-          className="absolute left-0 top-full z-20 mt-1 min-w-[14rem] max-w-[calc(100vw-1.75rem)] overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[var(--shadow-pop)] sm:left-auto sm:right-0"
+          className={cn(
+            "absolute top-full z-20 mt-1 min-w-[14rem] overflow-hidden rounded-lg border border-border bg-card py-1 shadow-[var(--shadow-pop)]",
+            DROPDOWN_VIEWPORT_MAX_W,
+            dropdownHAlignClass(hAlign),
+          )}
         >
           <p className="px-3 pb-1 pt-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
             Choose format

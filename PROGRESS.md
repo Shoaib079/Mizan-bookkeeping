@@ -24,7 +24,7 @@
 | **Last completed slice** | Statement import wizard mobile (`v0.statement-import-mobile`) |
 | **Last tag** | `v0.statement-import-mobile` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | Optional: full-screen command search; leftover tables |
-| **Exact next action** | Owner decide next UX slice |
-| **Gate** | Idle |
+| **Active slice** | Dropdown viewport align (`v0.dropdown-viewport-align`) — green light done; awaiting owner commit/tag |
+| **Next up** | Optional: full-screen command search; leftover tables (group-sale lines, OB preview, partner profit preview) |
+| **Exact next action** | Commit + tag `v0.dropdown-viewport-align` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |
