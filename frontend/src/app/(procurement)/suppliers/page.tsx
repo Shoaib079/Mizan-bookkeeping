@@ -181,6 +181,7 @@ export default function SuppliersPage() {
   return (
     <ListPage
       title="Supplier directory"
+      hideTitleOnDesktop
       loading={loading}
       error={error}
       forbidden={

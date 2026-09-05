@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Drop shell section crumbs (`v0.drop-shell-trail`) |
-| **Last tag** | `v0.drop-shell-trail` |
+| **Last completed slice** | Hide redundant section titles on desktop (`v0.hide-title-desktop`) |
+| **Last tag** | `v0.hide-title-desktop` |
 | **Unpushed** | no |
 | **Active slice** | — |
-| **Next up** | Audit section-tab vs page H1 doubles (Customer directory etc.) |
-| **Exact next action** | Owner: next slice after push |
+| **Next up** | Optional: full-screen command search |
+| **Exact next action** | Owner decide next UX slice |
 | **Gate** | Idle |

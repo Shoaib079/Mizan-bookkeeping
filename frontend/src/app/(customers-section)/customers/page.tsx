@@ -142,6 +142,7 @@ export default function CustomersPage() {
   return (
     <ListPage
       title="Customer directory"
+      hideTitleOnDesktop
       loading={loading}
       error={error}
       forbidden={

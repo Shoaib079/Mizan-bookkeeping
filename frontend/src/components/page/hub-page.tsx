@@ -111,6 +111,8 @@ type Props = {
   children?: React.ReactNode;
   error?: string | null;
   className?: string;
+  /** Section tabs already name this hub — hide H1 on desktop only. */
+  hideTitleOnDesktop?: boolean;
 };
 
 function TileGrid({ tiles }: { tiles: HubTile[] }) {
@@ -135,6 +137,7 @@ export function HubPage({
   children,
   error,
   className,
+  hideTitleOnDesktop = false,
 }: Props) {
   return (
     <div className={className}>
@@ -144,6 +147,7 @@ export function HubPage({
         primaryAction={primaryAction}
         actions={actions}
         overflowActions={overflowActions}
+        hideTitleOnDesktop={hideTitleOnDesktop}
       />
 
       {error && <p className="mb-4 text-sm text-destructive">{error}</p>}

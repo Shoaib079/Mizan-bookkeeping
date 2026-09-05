@@ -144,6 +144,7 @@ export function SalesReviewPanel({
   return (
     <ListPage
       title={title}
+      hideTitleOnDesktop
       loading={loading}
       error={error}
       primaryAction={

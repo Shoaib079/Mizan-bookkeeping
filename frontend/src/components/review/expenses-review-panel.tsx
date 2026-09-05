@@ -153,7 +153,7 @@ export function ExpensesReviewPanel() {
 
   return (
     <>
-      <PageHeader title="Expenses to review" />
+      <PageHeader title="Expenses to review" hideTitleOnDesktop />
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <ExpensesScopeNote />
         <Button type="button" onClick={() => setRecordOpen(true)}>

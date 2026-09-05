@@ -79,6 +79,7 @@ export default function GroupSalesPage() {
   return (
     <ListPage
       title="Group sale records"
+      hideTitleOnDesktop
       loading={loading}
       error={error}
       primaryAction={

@@ -21,6 +21,7 @@ export default function CashDrawerPage() {
     <>
       <PageHeader
         title="Cash"
+        hideTitleOnDesktop
         {...cashPageWriteHeader({
           entityId: s.entityId,
           showOpsWrite: s.showOpsWrite,

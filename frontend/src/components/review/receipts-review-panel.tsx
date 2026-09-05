@@ -47,6 +47,7 @@ export function ReceiptsReviewPanel() {
   return (
     <ListPage
       title="Receipts to review"
+      hideTitleOnDesktop
       meta="Confirm extracted line items from receipt photos before posting."
       loading={loading}
       error={error}

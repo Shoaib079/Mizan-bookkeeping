@@ -80,6 +80,7 @@ export function CardsPageContent() {
     <>
       <PageHeader
         title="Cards"
+        hideTitleOnDesktop
         meta="Card clearing, bank settlements, and commission. Batches and settlements are filtered by date; clearing balance is current."
         primaryAction={
           <Button

@@ -71,6 +71,7 @@ export default function TransfersPage() {
   return (
     <ListPage
       title="Account transfers"
+      hideTitleOnDesktop
       loading={loading}
       error={error}
       primaryAction={

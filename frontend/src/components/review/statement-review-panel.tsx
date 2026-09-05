@@ -101,6 +101,7 @@ export function StatementReviewPanel() {
     <>
       <PageHeader
         title="Bank lines to review"
+        hideTitleOnDesktop
         meta="Tick the box next to the date on each line to post or correct a batch with the same classification. Expand a row for one-at-a-time actions."
       />
 

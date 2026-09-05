@@ -273,6 +273,7 @@ export function InvoicesReviewPanel() {
   return (
     <ListPage
       title="Invoices to review"
+      hideTitleOnDesktop
       meta={
         isPostedTab
           ? "Browse posted supplier and commission e-Faturas. These are read-only — open a row to preview the document and jump to the ledger entry."

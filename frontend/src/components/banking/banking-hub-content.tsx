@@ -57,6 +57,7 @@ export function BankingHubContent() {
     <HubPage
       title="Account overview"
       meta="Choose an area to view accounts, balances, and history."
+      hideTitleOnDesktop
       error={error}
       primaryAction={
         <Button

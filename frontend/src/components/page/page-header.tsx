@@ -35,6 +35,11 @@ type Props = {
   overflowActions?: OverflowMenuItem[];
   /** Compact balance sticker — right of actions on desktop; under the name on mobile. */
   aside?: React.ReactNode;
+  /**
+   * Hide the visible H1 on desktop when section tabs (or the sidebar) already
+   * name this page. Phone keeps the existing sr-only H1 + top-bar registration.
+   */
+  hideTitleOnDesktop?: boolean;
   className?: string;
 };
 
@@ -46,6 +51,7 @@ export function PageHeader({
   actions,
   overflowActions,
   aside,
+  hideTitleOnDesktop = false,
   className,
 }: Props) {
   // Phone top bar shows this string once — do not paint a second H1 under it.
@@ -62,20 +68,31 @@ export function PageHeader({
   return (
     <header
       data-testid="page-header"
+      data-hide-title-desktop={hideTitleOnDesktop ? "true" : undefined}
       className={cn(
         "mb-5 border-b border-border pb-4",
-        chromeOnly && "max-[819px]:hidden",
+        chromeOnly &&
+          (hideTitleOnDesktop ? "hidden" : "max-[819px]:hidden"),
         className,
       )}
     >
       <div className="flex flex-col gap-3 min-[820px]:flex-row min-[820px]:items-start min-[820px]:justify-between min-[820px]:gap-4">
         <div className="min-w-0 flex-1">
           {/* One bold title only — no muted eyebrow above the H1 (accepted-live).
-           * On phone the visible title lives in MobileTopBar; keep H1 for a11y. */}
-          <div className="flex min-w-0 items-center gap-2">
+           * On phone the visible title lives in MobileTopBar; keep H1 for a11y.
+           * Under section tabs, desktop also skips painting the H1. */}
+          <div
+            className={cn(
+              "flex min-w-0 items-center gap-2",
+              hideTitleOnDesktop && !titleAction && "max-[819px]:flex min-[820px]:hidden",
+            )}
+          >
             <h1
               data-testid="page-header-title"
-              className="truncate text-xl font-semibold max-[819px]:sr-only"
+              className={cn(
+                "truncate text-xl font-semibold",
+                hideTitleOnDesktop ? "sr-only" : "max-[819px]:sr-only",
+              )}
             >
               {title}
             </h1>

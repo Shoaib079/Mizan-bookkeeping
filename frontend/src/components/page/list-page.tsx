@@ -19,6 +19,8 @@ type Props = {
   primaryAction?: React.ReactNode;
   actions?: React.ReactNode;
   overflowActions?: OverflowMenuItem[];
+  /** When section tabs already name this list — hide the H1 on desktop only. */
+  hideTitleOnDesktop?: boolean;
 
   /** Search box, filter chips, date range — laid out on one line. */
   toolbar?: React.ReactNode;
@@ -70,6 +72,7 @@ export function ListPage({
   primaryAction,
   actions,
   overflowActions,
+  hideTitleOnDesktop = false,
   toolbar,
   countLabel,
   summary,
@@ -98,6 +101,7 @@ export function ListPage({
         primaryAction={primaryAction}
         actions={actions}
         overflowActions={overflowActions}
+        hideTitleOnDesktop={hideTitleOnDesktop}
       />
 
       {(toolbar || countLabel) && (

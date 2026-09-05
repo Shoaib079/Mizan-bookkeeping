@@ -124,6 +124,7 @@ export function ManualJournalsPanel() {
   return (
     <ListPage
       title="Posted journals"
+      hideTitleOnDesktop
       meta="Posted manual journals — void with audit trail (accountant access)."
       primaryAction={
         <Link href="/review/manual-journals/new">

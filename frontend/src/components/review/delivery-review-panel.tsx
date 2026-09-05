@@ -52,6 +52,7 @@ export function DeliveryReviewPanel() {
   return (
     <ListPage
       title="Delivery to review"
+      hideTitleOnDesktop
       meta="Confirm platform sales before posting."
       loading={loading}
       error={error}

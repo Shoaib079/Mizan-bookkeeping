@@ -239,6 +239,7 @@ export default function PartnersPage() {
     <AppShell title="Partners">
       <ListPage
         title="Partner directory"
+      hideTitleOnDesktop
         loading={loading}
         error={error}
         primaryAction={

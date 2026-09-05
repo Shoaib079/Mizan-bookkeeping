@@ -87,6 +87,7 @@ export function GroupMenusPanel() {
   return (
     <ListPage
       title="Menu catalogue"
+      hideTitleOnDesktop
       meta="Catalog of menus tour agencies can book. Used when recording group sales."
       loading={loading}
       error={error}
