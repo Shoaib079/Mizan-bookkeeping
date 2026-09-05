@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Sales + FX export downloads (`v0.sales-fx-export-downloads`) |
-| **Last tag** | `v0.sales-fx-export-downloads` |
+| **Last completed slice** | Mobile one-title (`v0.mobile-one-title`) |
+| **Last tag** | `v0.mobile-one-title` |
 | **Unpushed** | no |
-| **Active slice** | Mobile one-title (`v0.mobile-one-title`) — green light done; awaiting owner commit/tag |
-| **Next up** | Statement classify-bar mobile stack (after one-title ships) |
-| **Exact next action** | Commit + tag `v0.mobile-one-title` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Active slice** | — |
+| **Next up** | Statement classify-bar mobile stack |
+| **Exact next action** | Owner sign-off; next mobile UX slice |
+| **Gate** | Idle |
