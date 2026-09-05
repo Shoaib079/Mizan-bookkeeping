@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sourceDeclaring } from "@/test-support/source";
+import { sourceAt, sourceDeclaring } from "@/test-support/source";
 
 /** Phone shell: mapping first, sticky Import, no double title, touch targets. */
 describe("statement import mobile", () => {
@@ -10,7 +10,15 @@ describe("statement import mobile", () => {
     expect(panel).toContain("max-[819px]:order-2");
     expect(panel).toContain("MOBILE_TAB_BAR_OFFSET");
     expect(panel).toContain("MOBILE_SHELL_ONLY");
-    expect(panel).toContain("DESKTOP_SHELL_ONLY");
+  });
+
+  it("does not draw a second H1 — FormPage owns the title", () => {
+    const panel = sourceDeclaring("StatementImportPanel");
+    expect(panel).not.toContain("<h1");
+    expect(panel).not.toContain("Import bank statement");
+    const page = sourceAt("app/banking/accounts/[id]/import/page.tsx");
+    expect(page).toContain('title="Import statement"');
+    expect(page).toContain("FormPage");
   });
 
   it("keeps Import in the sidebar on desktop only", () => {

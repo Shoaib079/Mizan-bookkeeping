@@ -9,7 +9,6 @@ import { useStatementImport } from "@/components/banking/use-statement-import";
 import { Button } from "@/components/ui/button";
 import { formatTry } from "@/lib/money";
 import {
-  DESKTOP_SHELL_ONLY,
   MOBILE_SHELL_ONLY,
   MOBILE_TAB_BAR_OFFSET,
   MOBILE_TOUCH_TARGET,
@@ -18,13 +17,9 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   moneyAccountId: string;
-  accountName?: string;
 };
 
-export function StatementImportPanel({
-  moneyAccountId,
-  accountName,
-}: Props) {
+export function StatementImportPanel({ moneyAccountId }: Props) {
   const {
     entityId,
     file,
@@ -60,13 +55,7 @@ export function StatementImportPanel({
 
   return (
     <div className="space-y-6">
-      {/* Phone title lives in MobileTopBar via FormPage PageHeader. */}
-      <div className={DESKTOP_SHELL_ONLY}>
-        <h1 className="text-lg font-semibold">
-          Import bank statement
-          {accountName ? ` — ${accountName}` : ""}
-        </h1>
-      </div>
+      {/* Title: FormPage PageHeader only — do not draw a second H1. */}
 
       {step === "pick" ? (
         <StatementImportPickStep

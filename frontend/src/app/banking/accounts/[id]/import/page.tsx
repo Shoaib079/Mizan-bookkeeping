@@ -116,10 +116,7 @@ export default function StatementImportPage() {
         width="full"
         loading={phase === "wait-account"}
       >
-        <StatementImportPanel
-          moneyAccountId={accountId}
-          accountName={account?.name}
-        />
+        <StatementImportPanel moneyAccountId={accountId} />
       </FormPage>
     );
   }

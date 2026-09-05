@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Record mobile full form (`v0.record-mobile-full-form`) |
-| **Last tag** | `v0.record-mobile-full-form` |
-| **Unpushed** | no |
-| **Active slice** | — |
+| **Last completed slice** | Import statement one title (`v0.import-one-title`) |
+| **Last tag** | `v0.import-one-title` |
+| **Unpushed** | yes (push pending) |
+| **Active slice** | Prominent tabs & filter chips (`v0.prominent-tabs`) — green light done; awaiting commit/tag |
 | **Next up** | Optional: full-screen command search |
-| **Exact next action** | Owner decide next UX slice |
-| **Gate** | Idle |
+| **Exact next action** | Commit + tag `v0.prominent-tabs` |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |
