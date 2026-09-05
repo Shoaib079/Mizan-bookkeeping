@@ -250,19 +250,24 @@ export function DateInput({
           ref={inputRef}
           id={id}
           type="text"
-          inputMode="numeric"
+          inputMode={isMobile ? "none" : "numeric"}
+          readOnly={isMobile}
           autoComplete="off"
           disabled={disabled}
           required={required}
           placeholder={placeholder}
           value={value}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={clampTypedValue}
+          onChange={(event) => {
+            if (isMobile) return;
+            onChange(event.target.value);
+          }}
+          onBlur={isMobile ? undefined : clampTypedValue}
           onClick={showCalendar}
-          onKeyDown={handleInputKeyDown}
+          onKeyDown={isMobile ? undefined : handleInputKeyDown}
           className={cn(
             "h-9 w-full rounded-md border border-border bg-background py-2 pl-3 pr-9 text-base touch-manipulation md:text-sm",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            isMobile && "cursor-pointer caret-transparent",
             disabled && "cursor-not-allowed opacity-50",
           )}
         />

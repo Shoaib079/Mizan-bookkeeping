@@ -24,8 +24,8 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | Optional: mobile date pick without keypad; full-screen search; leftover tables / import |
+| **Active slice**         | Mobile date pick without keypad (awaiting commit/tag) |
+| **Next up**              | Optional: full-screen command search; leftover tables / import wizard |
 | **Last completed slice** | **819 shell layout alignment** (`v0.shell-layout-819`) |
 | **Last commit/tag**      | `v0.shell-layout-819` |
 
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Mobile date pick (no keypad; calendar below field)                               | `v0.mobile-date-pick`                             | pending tag    | Re-open numeric keypad with calendar on phone; flip mobile calendar above the field |
 | 819 shell layout alignment (report period + KPI grids + header)                  | `v0.shell-layout-819`                             | done           | Re-fork ReportDateRange / PageHeader aside at sm (640); KPI `sm:grid-cols-3` under mobile shell |
 | More search cleanup (drop Filter list; keep Search the app)                      | `v0.more-search-cleanup`                          | done           | Re-add Filter list on More; restore matchesMoreNavSearch list filter |
 | Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | done           | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
@@ -1947,6 +1948,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Mobile date pick (no keypad; below field)           | `v0.mobile-date-pick`                             | Phone DateInput readOnly + inputMode none; calendar always below with maxHeight scroll |
 | 2026-09-05 | 819 shell layout alignment                          | `v0.shell-layout-819`                             | Report period + PageHeader aside + report/sales KPIs + entity panels use 820px shell, not sm/640 |
 | 2026-09-05 | More search cleanup                                 | `v0.more-search-cleanup`                          | Drop Filter list on More; keep Search the app + top-bar search only |
 | 2026-09-05 | Home recent entries mobile cards                    | `v0.home-recent-entries-mobile`                   | Phone: MobileCardList for RecentEntriesCard; desktop table split; Record desk shares same component |

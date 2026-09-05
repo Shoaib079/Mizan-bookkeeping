@@ -7,6 +7,10 @@ import { isFutureDay, parseDisplayToDate } from "@/lib/dates";
 export const CALENDAR_WIDTH_PX = 280;
 export const CALENDAR_HEIGHT_EST_PX = 340;
 export const VIEWPORT_PAD_PX = 8;
+/** Gap between the field bottom and the calendar top. */
+export const CALENDAR_BELOW_GAP_PX = 4;
+/** Keep the popover usable when the field sits near the bottom edge. */
+export const CALENDAR_MIN_HEIGHT_PX = 220;
 
 export function viewFromValue(
   value: string,
@@ -26,6 +30,10 @@ export function viewFromValue(
   return null;
 }
 
+/**
+ * Anchor the mobile calendar **below** the field (modern pick-date UX).
+ * If space below is tight, shrink with maxHeight + scroll — do not flip above.
+ */
 export function computeMobileCalendarStyle(anchor: DOMRect): CSSProperties {
   const width = Math.min(
     CALENDAR_WIDTH_PX,
@@ -37,18 +45,20 @@ export function computeMobileCalendarStyle(anchor: DOMRect): CSSProperties {
     Math.min(left, window.innerWidth - width - VIEWPORT_PAD_PX),
   );
 
-  let top = anchor.bottom + 4;
-  if (top + CALENDAR_HEIGHT_EST_PX > window.innerHeight - VIEWPORT_PAD_PX) {
-    const above = anchor.top - CALENDAR_HEIGHT_EST_PX - 4;
-    if (above >= VIEWPORT_PAD_PX) {
-      top = above;
-    } else {
-      top = Math.max(
-        VIEWPORT_PAD_PX,
-        window.innerHeight - CALENDAR_HEIGHT_EST_PX - VIEWPORT_PAD_PX,
-      );
-    }
-  }
+  const top = anchor.bottom + CALENDAR_BELOW_GAP_PX;
+  const spaceBelow = window.innerHeight - VIEWPORT_PAD_PX - top;
+  const maxHeight = Math.max(
+    Math.min(CALENDAR_HEIGHT_EST_PX, spaceBelow),
+    Math.min(CALENDAR_MIN_HEIGHT_PX, spaceBelow),
+  );
 
-  return { position: "fixed", left, top, width, zIndex: 60 };
+  return {
+    position: "fixed",
+    left,
+    top,
+    width,
+    zIndex: 60,
+    maxHeight,
+    overflowY: "auto",
+  };
 }

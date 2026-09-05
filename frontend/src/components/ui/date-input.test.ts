@@ -26,6 +26,8 @@ describe("DateInput future dates", () => {
     expect(SOURCE).toContain("computeMobileCalendarStyle");
     expect(SOURCE).toContain('isMobile ? "p-3" : "w-[17.5rem] p-4"');
     expect(SOURCE).toContain("isMobile={isMobile}");
+    expect(SOURCE).toContain("readOnly={isMobile}");
+    expect(SOURCE).toContain("overflowY: \"auto\"");
   });
 
   it("keeps the calendar icon anchored to the input when the late-night hint shows", () => {
