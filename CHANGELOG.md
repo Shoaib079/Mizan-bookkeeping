@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **819 shell layout alignment (`v0.shell-layout-819`).** Shared `MOBILE_SHELL_ONLY` / `DESKTOP_SHELL_ONLY` (820px, not Tailwind `sm`/640). Report date range chip vs fields, PageHeader balance sticker, P&L/BS/cash-flow/KDV KPI bands, sales KPIs, and entity detail panels stay single-column / stacked for the whole mobile shell. Vitest + tsc + eslint + next build green.
+
 - **More search cleanup (`v0.more-search-cleanup`).** More tab: removed **Filter list…**; kept a single **Search the app…** row (same command palette as the top-bar Search). Dead `matchesMoreNavSearch` / query state gone. Vitest + tsc + eslint + next build green.
 
 - **Home recent entries mobile cards (`v0.home-recent-entries-mobile`).** Phone: `RecentEntriesCard` uses `MobileCardList` (date · type · amount · tap opens peek). Desktop keeps the fixed table. Split into `recent-entries-table` + `recent-entries-mobile-list`; Record desk shares the same component. Vitest + tsc + eslint + next build green.

@@ -44,6 +44,21 @@ export const MOBILE_TOUCH_TARGET = "max-[819px]:min-h-11";
  */
 export const DESKTOP_CHROME_ONLY = "max-[819px]:hidden";
 
+/** Show only in the mobile shell viewport (&lt;820px). Inverse of desktop chrome.
+ *
+ * Use for period chips, stacked stickers, etc. — not bare `sm:hidden` (640px),
+ * which flips while the shell is still mobile up to 819px.
+ */
+export const MOBILE_SHELL_ONLY = "min-[820px]:hidden";
+
+/** Show only from the desktop shell breakpoint (≥820px). Prefer this over
+ * `hidden sm:block` so report/toolbars match `useIsMobileShell`. */
+export const DESKTOP_SHELL_ONLY = "hidden min-[820px]:block";
+
+/** Multi-column grids that must stay single-column on the phone shell. */
+export const SHELL_GRID_COLS_2 = "min-[820px]:grid-cols-2";
+export const SHELL_GRID_COLS_3 = "min-[820px]:grid-cols-3";
+
 /** Offset that lifts a bottom-pinned element above the tabs (`FormPage`).
  *
  * Written out in full rather than composed from a raw measurement: Tailwind

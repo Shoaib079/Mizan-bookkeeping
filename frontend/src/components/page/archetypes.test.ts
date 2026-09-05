@@ -477,7 +477,9 @@ describe("mobile: detail pages", () => {
     // the width rather than wrapping — a headline and two summary cards came
     // out around 110px each on a 375px screen.
     const source = sourceDeclaring("DetailSection");
-    expect(source).toContain("flex flex-col gap-3 sm:flex-row sm:flex-wrap");
+    expect(source).toContain(
+      "flex flex-col gap-3 min-[820px]:flex-row min-[820px]:flex-wrap",
+    );
   });
 });
 

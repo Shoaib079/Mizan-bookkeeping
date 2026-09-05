@@ -7,6 +7,10 @@ import { DateInput } from "@/components/ui/date-input";
 import { Dialog } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/input";
 import { currentMonthRange, resolveReportRange } from "@/lib/date-range";
+import {
+  DESKTOP_SHELL_ONLY,
+  MOBILE_SHELL_ONLY,
+} from "@/lib/mobile-shell";
 import { formatTrDate, parseTrDate } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -61,13 +65,13 @@ export function ReportDateRangeFields({
   return (
     <div
       data-testid="report-date-range-fields"
-      className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start sm:gap-x-3 sm:gap-y-4"
+      className="flex flex-col gap-4 min-[820px]:flex-row min-[820px]:flex-wrap min-[820px]:items-start min-[820px]:gap-x-3 min-[820px]:gap-y-4"
     >
-      <div className="min-w-0 flex-1 sm:flex-none">
+      <div className="min-w-0 flex-1 min-[820px]:flex-none">
         <Label htmlFor="report-from">From</Label>
         <DateInput
           id="report-from"
-          className="mt-1 w-full min-w-0 sm:w-36"
+          className="mt-1 w-full min-w-0 min-[820px]:w-36"
           value={fromDisplay}
           disabled={disabled}
           showLateNightHint={false}
@@ -77,11 +81,11 @@ export function ReportDateRangeFields({
           }}
         />
       </div>
-      <div className="min-w-0 flex-1 sm:flex-none">
+      <div className="min-w-0 flex-1 min-[820px]:flex-none">
         <Label htmlFor="report-to">To</Label>
         <DateInput
           id="report-to"
-          className="mt-1 w-full min-w-0 sm:w-36"
+          className="mt-1 w-full min-w-0 min-[820px]:w-36"
           value={toDisplay}
           disabled={disabled}
           showLateNightHint={false}
@@ -91,7 +95,7 @@ export function ReportDateRangeFields({
           }}
         />
       </div>
-      <div className="flex flex-wrap items-stretch gap-2 sm:items-end sm:pt-6">
+      <div className="flex flex-wrap items-stretch gap-2 min-[820px]:items-end min-[820px]:pt-6">
         {/* Primary, not secondary. This is the action the whole control exists
             for, and `secondary` is `bg-background` — the page's own colour with
             a hairline border — so beside two filled date inputs it read as
@@ -164,14 +168,17 @@ export function ReportPeriodTrigger({
   );
 }
 
-/** Desktop: full fields. Mobile (&lt;sm): one chip opening the period sheet. */
+/** Desktop (≥820): full fields. Mobile shell: one chip opening the period sheet. */
 export function ReportDateRange(props: Props) {
   return (
     <div data-testid="report-date-range">
-      <div className="sm:hidden" data-testid="report-date-range-mobile">
+      <div className={MOBILE_SHELL_ONLY} data-testid="report-date-range-mobile">
         <ReportPeriodTrigger {...props} />
       </div>
-      <div className="hidden sm:block" data-testid="report-date-range-desktop">
+      <div
+        className={DESKTOP_SHELL_ONLY}
+        data-testid="report-date-range-desktop"
+      >
         <ReportDateRangeFields {...props} />
       </div>
     </div>

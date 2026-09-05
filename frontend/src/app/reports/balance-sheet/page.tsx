@@ -141,7 +141,7 @@ function BalanceSheetContent() {
         }
         kpis={
           report && (
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 min-[820px]:grid-cols-3">
               <StatCard label="Assets" amountKurus={report.total_assets_kurus} />
               <StatCard
                 label="Liabilities"

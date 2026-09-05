@@ -69,8 +69,10 @@ describe("detail pages share one sticker", () => {
   it("PageHeader places the aside under actions on desktop and under the name on mobile", () => {
     const header = sourceDeclaring("PageHeader");
     expect(header).toContain("aside?: React.ReactNode");
-    expect(header).toContain("sm:hidden");
-    expect(header).toContain("hidden sm:block");
-    expect(header).toContain("sm:items-end");
+    expect(header).toContain("MOBILE_SHELL_ONLY");
+    expect(header).toContain("DESKTOP_SHELL_ONLY");
+    expect(header).toContain("min-[820px]:items-end");
+    expect(header).not.toContain("sm:hidden");
+    expect(header).not.toContain("hidden sm:block");
   });
 });

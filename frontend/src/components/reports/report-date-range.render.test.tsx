@@ -53,9 +53,11 @@ describe("ReportDateRange mobile vs desktop", () => {
     const src = sourceDeclaring("ReportDateRange");
     expect(src).toContain("report-date-range-mobile");
     expect(src).toContain("ReportPeriodTrigger");
-    expect(src).toContain("sm:hidden");
-    expect(src).toContain("hidden sm:block");
+    expect(src).toContain("MOBILE_SHELL_ONLY");
+    expect(src).toContain("DESKTOP_SHELL_ONLY");
     expect(src).toContain("report-date-range-desktop");
+    expect(src).not.toContain("sm:hidden");
+    expect(src).not.toContain("hidden sm:block");
     expect(src).not.toMatch(
       /export function ReportDateRange[\s\S]*?return \(\s*<ReportDateRangeFields/,
     );

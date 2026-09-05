@@ -85,7 +85,7 @@ function KdvInputContent() {
       >
         {report && (
           <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 min-[820px]:grid-cols-3">
               <StatCard label="Total base" amountKurus={report.total_base_kurus} />
               <StatCard label="Total VAT" amountKurus={report.total_vat_kurus} />
               <StatCard label="Invoices" value={String(report.invoice_count)} />

@@ -24,8 +24,8 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | Optional: full-screen command search; leftover tables / import; 819 alignment |
+| **Active slice**         | 819 shell layout alignment (awaiting commit/tag) |
+| **Next up**              | Optional: full-screen command search; leftover tables / import wizard |
 | **Last completed slice** | **More search cleanup** (`v0.more-search-cleanup`) |
 | **Last commit/tag**      | `v0.more-search-cleanup` |
 
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 819 shell layout alignment (report period + KPI grids + header)                  | `v0.shell-layout-819`                             | pending tag    | Re-fork ReportDateRange / PageHeader aside at sm (640); KPI `sm:grid-cols-3` under mobile shell |
 | More search cleanup (drop Filter list; keep Search the app)                      | `v0.more-search-cleanup`                          | done           | Re-add Filter list on More; restore matchesMoreNavSearch list filter |
 | Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | done           | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
 | Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
@@ -1946,6 +1947,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | 819 shell layout alignment                          | `v0.shell-layout-819`                             | Report period + PageHeader aside + report/sales KPIs + entity panels use 820px shell, not sm/640 |
 | 2026-09-05 | More search cleanup                                 | `v0.more-search-cleanup`                          | Drop Filter list on More; keep Search the app + top-bar search only |
 | 2026-09-05 | Home recent entries mobile cards                    | `v0.home-recent-entries-mobile`                   | Phone: MobileCardList for RecentEntriesCard; desktop table split; Record desk shares same component |
 | 2026-09-05 | Statement classify mobile stack                     | `v0.statement-classify-mobile`                     | Phone: stacked type/who/Post; hide empty target; hide bank-fee tip; bulk same; Post→salary unchanged |

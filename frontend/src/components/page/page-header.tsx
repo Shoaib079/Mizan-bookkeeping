@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/overflow-menu";
 import { useRegisterMobileShellTitle } from "@/lib/mobile-shell-title";
 import { cn } from "@/lib/utils";
+import { DESKTOP_SHELL_ONLY, MOBILE_SHELL_ONLY } from "@/lib/mobile-shell";
 
 type Props = {
   title: string;
@@ -67,7 +68,7 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="flex flex-col gap-3 min-[820px]:flex-row min-[820px]:items-start min-[820px]:justify-between min-[820px]:gap-4">
         <div className="min-w-0 flex-1">
           {/* One bold title only — no muted eyebrow above the H1 (accepted-live).
            * On phone the visible title lives in MobileTopBar; keep H1 for a11y. */}
@@ -85,11 +86,13 @@ export function PageHeader({
               {meta}
             </div>
           )}
-          {/* Mobile: sticker stacks under the name. */}
-          {aside ? <div className="mt-3 sm:hidden">{aside}</div> : null}
+          {/* Mobile shell: sticker stacks under the name. */}
+          {aside ? (
+            <div className={cn("mt-3", MOBILE_SHELL_ONLY)}>{aside}</div>
+          ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+        <div className="flex shrink-0 flex-col gap-2 min-[820px]:items-end">
           {hasActions && (
             <div className="flex flex-wrap items-center gap-2">
               {actions}
@@ -99,8 +102,10 @@ export function PageHeader({
               )}
             </div>
           )}
-          {/* Desktop: sticker sits under the action row, right-aligned. */}
-          {aside ? <div className="hidden sm:block">{aside}</div> : null}
+          {/* Desktop shell: sticker under the action row, right-aligned. */}
+          {aside ? (
+            <div className={DESKTOP_SHELL_ONLY}>{aside}</div>
+          ) : null}
         </div>
       </div>
     </header>

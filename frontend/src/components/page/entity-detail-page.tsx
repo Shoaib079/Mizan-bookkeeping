@@ -90,7 +90,7 @@ export function EntityDetailPage({
             // width rather than wrap — on a 375px screen a headline and two
             // summary cards came out around 110px each, too narrow for the
             // label-and-figure rows inside them.
-            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mb-6 flex flex-col gap-3 min-[820px]:flex-row min-[820px]:flex-wrap">
               {headline}
               {panels}
             </div>

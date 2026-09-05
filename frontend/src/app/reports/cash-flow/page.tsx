@@ -89,7 +89,7 @@ function CashFlowContent() {
       >
         {report && (
           <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 min-[820px]:grid-cols-3">
               <StatCard label="Opening cash" amountKurus={report.opening_cash_kurus} />
               <StatCard label="Net change" amountKurus={report.net_change_kurus} />
               <StatCard label="Closing cash" amountKurus={report.closing_cash_kurus} />

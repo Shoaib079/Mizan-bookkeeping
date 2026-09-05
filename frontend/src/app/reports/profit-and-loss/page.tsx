@@ -101,7 +101,7 @@ function ProfitAndLossContent() {
         }
         kpis={
           report && (
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 min-[820px]:grid-cols-3">
               <StatCard label="Revenue" amountKurus={report.total_revenue_kurus} />
               <StatCard
                 label="Expenses"

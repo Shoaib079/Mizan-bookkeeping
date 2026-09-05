@@ -24,7 +24,7 @@
 | **Last completed slice** | More search cleanup (`v0.more-search-cleanup`) |
 | **Last tag** | `v0.more-search-cleanup` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | Optional: full-screen command search; leftover tables / import; 819 alignment |
-| **Exact next action** | Owner pick next mobile UX slice |
-| **Gate** | Idle |
+| **Active slice** | 819 shell layout alignment (`v0.shell-layout-819`) — green light done; awaiting owner commit/tag |
+| **Next up** | Optional: full-screen command search; leftover tables / import wizard |
+| **Exact next action** | Commit + tag `v0.shell-layout-819` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

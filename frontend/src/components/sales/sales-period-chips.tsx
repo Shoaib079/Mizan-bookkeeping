@@ -18,7 +18,7 @@ export function SalesPostedKpiCards({
   return (
     <div
       data-testid="sales-posted-kpis"
-      className="grid w-full gap-3 sm:grid-cols-3"
+      className="grid w-full gap-3 min-[820px]:grid-cols-3"
     >
       <StatCard
         label="Cash Sales"
