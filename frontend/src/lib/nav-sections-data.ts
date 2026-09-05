@@ -47,26 +47,19 @@ export const NAV_SECTIONS: NavSection[] = [
     sidebarHref: "/banking",
     tabs: [
       {
+        // One hub — Banks / cards / cash / FX / transfers are stickers, not tabs.
         href: "/banking",
-        label: "Accounts",
+        label: "Banking",
         match: (path) =>
           path === "/banking" ||
           path === "/banking/banks" ||
           path === "/banking/cards" ||
           path === "/banking/fx" ||
+          path === "/banking/transfers" ||
+          path === "/banking/cash" ||
           path.startsWith("/banking/fx/") ||
           path.startsWith("/banking/accounts/") ||
           path.startsWith("/banking/statements/"),
-      },
-      {
-        href: "/banking/transfers",
-        label: "Transfers",
-        match: (path) => path === "/banking/transfers",
-      },
-      {
-        href: "/banking/cash",
-        label: "Cash drawer",
-        match: (path) => path === "/banking/cash",
       },
     ],
   },

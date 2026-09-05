@@ -64,7 +64,7 @@ function entryPointForStaticRoute(
   return null;
 }
 
-/** Tab routes that must not also appear as their own sidebar row. */
+/** Routes reached from a section hub/tabs — must not also be their own sidebar row. */
 const TAB_ONLY_HREFS = [
   "/cards",
   "/payables",
@@ -238,8 +238,8 @@ describe("backLinkForPathname", () => {
   it("returns null on section hubs and tabs", () => {
     expect(backLinkForPathname("/record")).toBeNull();
     expect(backLinkForPathname("/review/invoices")).toBeNull();
-    expect(backLinkForPathname("/banking/transfers")).toBeNull();
   });
+
 
   it("maps drill-down routes to their parent list", () => {
     expect(backLinkForPathname("/sales/abc")).toEqual({
@@ -287,7 +287,16 @@ describe("backLinkForPathname", () => {
       href: "/banking",
       label: "Banking",
     });
+    expect(backLinkForPathname("/banking/cash")).toEqual({
+      href: "/banking",
+      label: "Banking",
+    });
+    expect(backLinkForPathname("/banking/transfers")).toEqual({
+      href: "/banking",
+      label: "Banking",
+    });
   });
+
 
   it("maps opening balances back to Settings (M6)", () => {
     expect(backLinkForPathname("/onboarding/opening-balances")).toEqual({

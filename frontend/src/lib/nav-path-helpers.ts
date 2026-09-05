@@ -92,6 +92,8 @@ export function pageTitleForPathname(pathname: string): string {
     "/banking/banks": "Banks",
     "/banking/cards": "Credit cards",
     "/banking/fx": "Foreign currency",
+    "/banking/transfers": "Account transfers",
+    "/banking/cash": "Cash",
     "/reports": "Reports",
     "/settings/restaurant": "Restaurant settings",
     "/settings/profile": "Your profile",
@@ -205,7 +207,7 @@ export function backLinkForPathname(pathname: string): PageBackLink | null {
       label: "Banking",
     },
     {
-      test: (path) => path === "/banking/cash",
+      test: (path) => path === "/banking/cash" || path === "/banking/transfers",
       href: "/banking",
       label: "Banking",
     },

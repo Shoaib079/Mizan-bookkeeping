@@ -21,8 +21,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Single-tab section chrome (`v0.single-tab-section`) |
-| **Last tag** | `v0.single-tab-section` |
+| **Last completed slice** | Banking hub stickers (`v0.banking-hub-stickers`) |
+| **Last tag** | `v0.banking-hub-stickers` |
 | **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Optional: full-screen command search |

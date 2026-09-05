@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Coins, CreditCard, Wallet } from "lucide-react";
+import { ArrowLeftRight, Building2, Coins, CreditCard, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
@@ -57,7 +57,6 @@ export function BankingHubContent() {
     <HubPage
       title="Account overview"
       meta="Choose an area to view accounts, balances, and history."
-      hideTitleOnDesktop
       error={error}
       primaryAction={
         <Button
@@ -104,6 +103,13 @@ export function BankingHubContent() {
                 title: "Foreign currency",
                 amount: formatFxTileSummary(fxAccounts),
                 subtitle: `${accountCountLabel(fxAccounts.length, "wallet", "wallets")} · ${accountSubtitle(fxAccounts)}`,
+              },
+              {
+                key: "transfers",
+                href: "/banking/transfers",
+                icon: ArrowLeftRight,
+                title: "Transfers",
+                subtitle: "Move money between bank and cash accounts",
               },
             ]
           : undefined

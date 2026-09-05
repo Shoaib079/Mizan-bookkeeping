@@ -32,11 +32,6 @@ describe("hideTitleOnDesktop — section list doubles", () => {
         needle: 'title="Menu catalogue"',
       },
       {
-        label: "BankingHubContent",
-        src: sourceDeclaring("BankingHubContent"),
-        needle: 'title="Account overview"',
-      },
-      {
         label: "SalesReviewPanel",
         src: sourceDeclaring("SalesReviewPanel"),
         needle: 'title = "Sales activity"',
@@ -52,6 +47,15 @@ describe("hideTitleOnDesktop — section list doubles", () => {
       expect(src, label).toContain("hideTitleOnDesktop");
     }
   });
+
+  it("banking hub keeps a visible title (no section tab bar)", () => {
+    const src = sourceDeclaring("BankingHubContent");
+    expect(src).toContain('title="Account overview"');
+    expect(src).not.toContain("hideTitleOnDesktop");
+    expect(src).toContain('key: "transfers"');
+    expect(src).toContain('href: "/banking/transfers"');
+  });
+
 
   it("mutation: customers list without hideTitleOnDesktop → red", () => {
     const src = sourceDeclaring("CustomersPage");

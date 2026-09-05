@@ -11,13 +11,22 @@ describe("single-tab section chrome", () => {
     expect(src).toContain("if (tabs.length <= 1) return null");
   });
 
-  it("suppliers is the one-tab section that used SectionShell", () => {
+  it("suppliers and banking are one-tab sections (no tab track)", () => {
     const suppliers = NAV_SECTIONS.find((s) => s.id === "suppliers");
     expect(suppliers?.tabs).toHaveLength(1);
     expect(sourceDeclaring("ProcurementSectionLayout")).toContain(
       'sectionId="suppliers"',
     );
+
+    const banking = NAV_SECTIONS.find((s) => s.id === "banking");
+    expect(banking?.tabs).toHaveLength(1);
+    expect(banking?.tabs[0]?.href).toBe("/banking");
+    expect(banking?.tabs.some((t) => t.href === "/banking/cash")).toBe(false);
+    expect(banking?.tabs.some((t) => t.href === "/banking/transfers")).toBe(
+      false,
+    );
   });
+
 
   it("directory pages without multi-tab chrome keep a visible desktop title", () => {
     for (const { symbol, title } of [
