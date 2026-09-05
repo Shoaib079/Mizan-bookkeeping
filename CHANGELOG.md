@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Banking hub drop New transfer (`v0.banking-hub-no-new-transfer`).** Account overview is stickers only; New transfer lives on Transfers (and account detail). Vitest green for hub guard.
+
 - **Banking hub stickers (`v0.banking-hub-stickers`).** Dropped Accounts / Transfers / Cash drawer tab bar (one banking section tab → SectionTabs hides). Cash drawer stays a hub sticker only; Transfers is a fifth hub sticker. Transfer/cash pages show their H1 again; hub keeps “Account overview”. Vitest + tsc + eslint + next build green.
 
 - **Single-tab section chrome (`v0.single-tab-section`).** SectionTabs renders nothing when only one tab is visible (Suppliers). Restored desktop titles on Supplier / Team / Partner directories — no lonely tab track and no need for a fake second tab. Multi-tab sections unchanged. Vitest + tsc + eslint + next build green.

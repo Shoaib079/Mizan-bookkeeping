@@ -21,8 +21,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Banking hub stickers (`v0.banking-hub-stickers`) |
-| **Last tag** | `v0.banking-hub-stickers` |
+| **Last completed slice** | Banking hub drop New transfer (`v0.banking-hub-no-new-transfer`) |
+| **Last tag** | `v0.banking-hub-no-new-transfer` |
 | **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Optional: full-screen command search |

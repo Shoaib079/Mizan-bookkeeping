@@ -54,6 +54,8 @@ describe("hideTitleOnDesktop — section list doubles", () => {
     expect(src).not.toContain("hideTitleOnDesktop");
     expect(src).toContain('key: "transfers"');
     expect(src).toContain('href: "/banking/transfers"');
+    expect(src).not.toContain("New transfer");
+    expect(src).not.toContain("TransferForm");
   });
 
 

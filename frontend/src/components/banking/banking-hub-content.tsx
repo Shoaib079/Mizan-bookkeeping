@@ -4,9 +4,7 @@ import { ArrowLeftRight, Building2, Coins, CreditCard, Wallet } from "lucide-rea
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { TransferForm } from "@/components/forms/transfer-form";
 import { HubPage } from "@/components/page/hub-page";
-import { Button } from "@/components/ui/button";
 import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import type { MoneyAccountTree } from "@/lib/banking-types";
@@ -25,7 +23,6 @@ export function BankingHubContent() {
   const [tree, setTree] = useState<MoneyAccountTree | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [transferOpen, setTransferOpen] = useState(false);
 
   const reload = useCallback(async () => {
     if (!entityId) {
@@ -58,15 +55,6 @@ export function BankingHubContent() {
       title="Account overview"
       meta="Choose an area to view accounts, balances, and history."
       error={error}
-      primaryAction={
-        <Button
-          type="button"
-          disabled={!entityId}
-          onClick={() => setTransferOpen(true)}
-        >
-          New transfer
-        </Button>
-      }
       tiles={
         tree
           ? [
@@ -132,12 +120,6 @@ export function BankingHubContent() {
           and use Add cash drawer.
         </p>
       )}
-
-      <TransferForm
-        open={transferOpen}
-        onClose={() => setTransferOpen(false)}
-        onTransferred={() => void reload()}
-      />
     </HubPage>
   );
 }
