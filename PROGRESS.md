@@ -24,7 +24,7 @@
 | **Last completed slice** | Mobile date pick (`v0.mobile-date-pick`) |
 | **Last tag** | `v0.mobile-date-pick` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | Optional: full-screen command search; leftover tables / import wizard |
-| **Exact next action** | Owner decide next UX slice |
-| **Gate** | Idle |
+| **Active slice** | Statement import wizard mobile (`v0.statement-import-mobile`) — green light done; awaiting owner commit/tag |
+| **Next up** | Optional: full-screen command search; leftover tables |
+| **Exact next action** | Commit + tag `v0.statement-import-mobile` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

@@ -6,7 +6,15 @@ import { StatementImportMapPreview } from "@/components/banking/statement-import
 import { StatementImportMapSidebar } from "@/components/banking/statement-import-map-sidebar";
 import { StatementImportPickStep } from "@/components/banking/statement-import-pick-step";
 import { useStatementImport } from "@/components/banking/use-statement-import";
+import { Button } from "@/components/ui/button";
 import { formatTry } from "@/lib/money";
+import {
+  DESKTOP_SHELL_ONLY,
+  MOBILE_SHELL_ONLY,
+  MOBILE_TAB_BAR_OFFSET,
+  MOBILE_TOUCH_TARGET,
+} from "@/lib/mobile-shell";
+import { cn } from "@/lib/utils";
 
 type Props = {
   moneyAccountId: string;
@@ -48,9 +56,12 @@ export function StatementImportPanel({
     );
   }
 
+  const importDisabled = submitting || !file || loadingPreview;
+
   return (
     <div className="space-y-6">
-      <div>
+      {/* Phone title lives in MobileTopBar via FormPage PageHeader. */}
+      <div className={DESKTOP_SHELL_ONLY}>
         <h1 className="text-lg font-semibold">
           Import bank statement
           {accountName ? ` — ${accountName}` : ""}
@@ -84,29 +95,59 @@ export function StatementImportPanel({
             </p>
           )}
 
+          {/* Phone: mapping first, preview below. Desktop xl: preview | sidebar. */}
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)]">
-            <StatementImportMapPreview
-              fileName={file?.name}
-              preview={preview}
-              mapping={mapping}
-              maxCol={maxCol}
-              assignTarget={assignTarget}
-              onAssignTargetChange={setAssignTarget}
-              onAssignColumn={handleAssignColumn}
-            />
-            <StatementImportMapSidebar
-              file={file}
-              expectedFileName={expectedFileName}
-              loadingPreview={loadingPreview}
-              preview={preview}
-              mapping={mapping}
-              setMapping={setMapping}
-              maxCol={maxCol}
-              error={error}
-              submitting={submitting}
-              onLoadPreview={(selected) => void loadPreview(selected)}
-              onBackToPick={backToPick}
-            />
+            <div className="min-w-0 max-[819px]:order-2 min-[820px]:order-none">
+              <StatementImportMapPreview
+                fileName={file?.name}
+                preview={preview}
+                mapping={mapping}
+                maxCol={maxCol}
+                assignTarget={assignTarget}
+                onAssignTargetChange={setAssignTarget}
+                onAssignColumn={handleAssignColumn}
+              />
+            </div>
+            <div className="min-w-0 max-[819px]:order-1 min-[820px]:order-none">
+              <StatementImportMapSidebar
+                file={file}
+                expectedFileName={expectedFileName}
+                loadingPreview={loadingPreview}
+                preview={preview}
+                mapping={mapping}
+                setMapping={setMapping}
+                maxCol={maxCol}
+                error={error}
+                submitting={submitting}
+                onLoadPreview={(selected) => void loadPreview(selected)}
+                onBackToPick={backToPick}
+              />
+            </div>
+          </div>
+
+          {/* Phone sticky Import — desktop keeps actions in the sidebar footer. */}
+          <div
+            className={cn(
+              MOBILE_SHELL_ONLY,
+              "sticky z-10 -mx-3.5 flex flex-wrap gap-2 border-t border-border bg-background/95 px-3.5 py-3 backdrop-blur",
+              MOBILE_TAB_BAR_OFFSET,
+            )}
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              className={cn("flex-1", MOBILE_TOUCH_TARGET)}
+              onClick={backToPick}
+            >
+              Other file
+            </Button>
+            <Button
+              type="submit"
+              disabled={importDisabled}
+              className={cn("flex-1", MOBILE_TOUCH_TARGET)}
+            >
+              {submitting ? "Importing…" : "Import"}
+            </Button>
           </div>
         </form>
       )}

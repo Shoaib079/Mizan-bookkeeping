@@ -12,6 +12,7 @@ import { useMemo } from "react";
 
 import { Label } from "@/components/ui/input";
 import type { BankStatementPreview } from "@/lib/banking-types";
+import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import {
   colLetter,
   columnOptionLabel,
@@ -73,7 +74,10 @@ export function ColumnSelect({
     <div className="space-y-0.5">
       <Label className="text-xs font-medium">{label}</Label>
       <select
-        className="block h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+        className={cn(
+          "block h-8 w-full rounded-md border border-input bg-background px-2 text-xs",
+          MOBILE_TOUCH_TARGET,
+        )}
         value={value === null ? "" : String(value)}
         onChange={(e) => {
           const raw = e.target.value;
@@ -187,7 +191,7 @@ export function StatementPreviewTable({
   const headerCells = preview.rows[mapping.headerRow - 1] ?? [];
 
   return (
-    <div className="overflow-auto rounded-md border text-xs max-h-[min(60vh,520px)]">
+    <div className="overflow-auto rounded-md border text-xs max-h-[min(40vh,280px)] min-[820px]:max-h-[min(60vh,520px)]">
       <table className="min-w-full border-collapse">
         <thead className="sticky top-0 z-20 bg-muted">
           <tr className="border-b">

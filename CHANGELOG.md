@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Statement import wizard mobile (`v0.statement-import-mobile`).** Phone (&lt;820): column mapping above file preview; sticky Other file / Import above the tab bar; panel H1 hidden (PageHeader / top bar only); 44px touch targets on mapping fields and assign chips; shorter preview max-height. Desktop sidebar + Import footer unchanged. Vitest + tsc + eslint + next build green.
+
 - **Mobile date pick (`v0.mobile-date-pick`).** Phone: DateInput is read-only (`inputMode=none`) so the keypad does not open with the calendar; tap opens the picker, pick a day closes it. Mobile calendar always anchors **below** the field (scrollable if near the bottom) instead of flipping above. Desktop still type-or-pick. Vitest + tsc + eslint + next build green.
 
 - **819 shell layout alignment (`v0.shell-layout-819`).** Shared `MOBILE_SHELL_ONLY` / `DESKTOP_SHELL_ONLY` (820px, not Tailwind `sm`/640). Report date range chip vs fields, PageHeader balance sticker, P&L/BS/cash-flow/KDV KPI bands, sales KPIs, and entity detail panels stay single-column / stacked for the whole mobile shell. Vitest + tsc + eslint + next build green.

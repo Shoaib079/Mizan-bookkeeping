@@ -4,6 +4,7 @@
 
 import { StatementPreviewTable } from "@/components/banking/statement-import-mapping-view";
 import type { BankStatementPreview } from "@/lib/banking-types";
+import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import {
   COLUMN_ASSIGN_ROLES,
   type ColumnAssignRole,
@@ -60,7 +61,9 @@ export function StatementImportMapPreview({
               key={role.id}
               type="button"
               className={cn(
-                "rounded border px-2 py-0.5 text-[11px] transition-colors",
+                "rounded border px-2.5 py-0.5 text-[11px] transition-colors",
+                MOBILE_TOUCH_TARGET,
+                "max-[819px]:inline-flex max-[819px]:items-center",
                 assignTarget === role.id
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-background hover:bg-muted",

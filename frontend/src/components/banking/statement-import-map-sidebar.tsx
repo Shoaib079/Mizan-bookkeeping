@@ -11,6 +11,9 @@ import { FileUpload } from "@/components/ui/file-upload";
 import { Label } from "@/components/ui/input";
 import type { BankStatementPreview } from "@/lib/banking-types";
 import {
+  MOBILE_TOUCH_TARGET,
+} from "@/lib/mobile-shell";
+import {
   DATE_FORMATS,
   STATEMENT_FILE_ACCEPT,
   sanitizeStatementMapping,
@@ -21,7 +24,13 @@ import {
   type DecimalFormat,
   type MappingState,
 } from "@/lib/statement-import-helpers";
+import { cn } from "@/lib/utils";
 import type { Dispatch, SetStateAction } from "react";
+
+const fieldControlClass = cn(
+  "block h-8 w-full rounded-md border border-input bg-background px-2 text-xs",
+  MOBILE_TOUCH_TARGET,
+);
 
 type Props = {
   file: File | null;
@@ -51,7 +60,13 @@ export function StatementImportMapSidebar({
   onBackToPick,
 }: Props) {
   return (
-    <aside className="flex max-h-[min(85vh,720px)] flex-col rounded-lg border border-border bg-card xl:sticky xl:top-4 xl:self-start">
+    <aside
+      className={cn(
+        "flex flex-col rounded-lg border border-border bg-card",
+        "max-[819px]:max-h-none",
+        "min-[820px]:max-h-[min(85vh,720px)] xl:sticky xl:top-4 xl:self-start",
+      )}
+    >
       <div className="flex-1 space-y-3 overflow-y-auto p-3">
         <h2 className="text-sm font-semibold">Column mapping</h2>
 
@@ -95,7 +110,7 @@ export function StatementImportMapSidebar({
             <input
               type="number"
               min={1}
-              className="block h-8 w-full rounded-md border border-input px-2 text-xs"
+              className={fieldControlClass}
               value={mapping.headerRow}
               onChange={(e) =>
                 setMapping((m) => ({ ...m, headerRow: Number(e.target.value) }))
@@ -107,7 +122,7 @@ export function StatementImportMapSidebar({
             <input
               type="number"
               min={1}
-              className="block h-8 w-full rounded-md border border-input px-2 text-xs"
+              className={fieldControlClass}
               value={mapping.dataStartRow}
               onChange={(e) =>
                 setMapping((m) => ({
@@ -123,7 +138,7 @@ export function StatementImportMapSidebar({
               type="number"
               min={1}
               placeholder="All rows to end of file"
-              className="block h-8 w-full rounded-md border border-input px-2 text-xs"
+              className={fieldControlClass}
               value={mapping.dataEndRow ?? ""}
               onChange={(e) => {
                 const raw = e.target.value.trim();
@@ -199,7 +214,7 @@ export function StatementImportMapSidebar({
             <div className="space-y-0.5">
               <Label className="text-xs">Amount layout</Label>
               <select
-                className="block h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                className={fieldControlClass}
                 value={mapping.amountMode}
                 onChange={(e) =>
                   setMapping((m) => ({
@@ -269,7 +284,7 @@ export function StatementImportMapSidebar({
             <div className="col-span-2 space-y-0.5">
               <Label className="text-xs">Date format</Label>
               <select
-                className="block h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                className={fieldControlClass}
                 value={mapping.dateFormat}
                 onChange={(e) =>
                   setMapping((m) => ({
@@ -288,7 +303,7 @@ export function StatementImportMapSidebar({
             <div className="space-y-0.5">
               <Label className="text-xs">Decimals</Label>
               <select
-                className="block h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                className={fieldControlClass}
                 value={mapping.decimalFormat}
                 onChange={(e) =>
                   setMapping((m) => ({
@@ -304,7 +319,7 @@ export function StatementImportMapSidebar({
             <div className="space-y-0.5">
               <Label className="text-xs">Encoding</Label>
               <select
-                className="block h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                className={fieldControlClass}
                 value={mapping.csvEncoding}
                 onChange={(e) =>
                   setMapping((m) => ({
@@ -322,7 +337,7 @@ export function StatementImportMapSidebar({
             <div className="col-span-2 space-y-0.5">
               <Label className="text-xs">Delimiter</Label>
               <select
-                className="block h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                className={fieldControlClass}
                 value={mapping.csvDelimiter}
                 onChange={(e) =>
                   setMapping((m) => ({
@@ -354,7 +369,9 @@ export function StatementImportMapSidebar({
         {error && <p className="text-xs text-destructive">{error}</p>}
       </div>
 
-      <div className="flex flex-wrap gap-2 border-t border-border p-3">
+      {/* Desktop only — phone uses the sticky bar in StatementImportPanel.
+       * Prefer flex (not DESKTOP_SHELL_ONLY's block) so the button row stays. */}
+      <div className="hidden flex-wrap gap-2 border-t border-border p-3 min-[820px]:flex">
         <Button type="button" variant="secondary" onClick={onBackToPick}>
           Other file
         </Button>
