@@ -24,7 +24,7 @@
 | **Last completed slice** | Statement classify mobile stack (`v0.statement-classify-mobile`) |
 | **Last tag** | `v0.statement-classify-mobile` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | Remaining mobile UX gaps (command palette / home cards) |
-| **Exact next action** | Owner sign-off; next mobile UX slice |
-| **Gate** | Idle |
+| **Active slice** | Home recent entries mobile cards (`v0.home-recent-entries-mobile`) — green light done; awaiting owner commit/tag |
+| **Next up** | Remaining mobile UX gaps (command palette / 819 alignment) |
+| **Exact next action** | Commit + tag `v0.home-recent-entries-mobile` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

@@ -57,6 +57,15 @@ describe("mobile UX gaps — card list forks", () => {
     expect(source).toContain("useIsMobileShell");
   });
 
+  it("RecentEntriesCard forks to MobileCardList on phone", () => {
+    const card = sourceDeclaring("RecentEntriesCard");
+    expect(card).toContain("useIsMobileShell");
+    expect(card).toContain("RecentEntriesMobileList");
+    expect(sourceDeclaring("RecentEntriesMobileList")).toContain(
+      "MobileCardList",
+    );
+  });
+
   it("MORE lists Review and Split and opens the command palette", () => {
     const source = sourceDeclaring("MobileMoreMenu");
     expect(source).toContain('href: "/review"');

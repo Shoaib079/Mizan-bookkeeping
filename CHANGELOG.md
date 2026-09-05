@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Home recent entries mobile cards (`v0.home-recent-entries-mobile`).** Phone: `RecentEntriesCard` uses `MobileCardList` (date · type · amount · tap opens peek). Desktop keeps the fixed table. Split into `recent-entries-table` + `recent-entries-mobile-list`; Record desk shares the same component. Vitest + tsc + eslint + next build green.
+
 - **Statement classify mobile stack (`v0.statement-classify-mobile`).** Phone (&lt;819px): classify bar stacks amount → type → who → full-width Post; mobile labels; hide target when type needs none; hide bank-fee tip (Learn as field stays). Bulk bar same stack. Target comboboxes get 44px min height. Desktop row layout unchanged. **Post → salary dialog unchanged.** Vitest + tsc + eslint + next build green.
 
 - **Mobile one-title (`v0.mobile-one-title`).** Phone shows the page title once in the top bar: `PageHeader` registers via `MobileShellTitleProvider`; the in-page H1 is `sr-only` under 819px; title-only headers (e.g. More) collapse so there is no empty border. Bottom tabs stay. Desktop unchanged. Vitest + tsc + eslint + next build green.

@@ -87,3 +87,8 @@ export function journalEntryTotalKurus(lines: RecentEntryLine[]): number {
 export function journalSourceLabel(source: string): string {
   return sourceLabel(source);
 }
+
+export function recentEntryStatusLabel(entry: RecentEntryRow): string {
+  if (entry.status === "voided") return "Voided";
+  return "Posted";
+}

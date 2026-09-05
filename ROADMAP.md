@@ -24,8 +24,8 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | Remaining mobile UX gaps (command palette / home cards / 819 alignment) |
+| **Active slice**         | Home recent entries mobile cards (awaiting commit/tag) |
+| **Next up**              | Remaining mobile UX gaps (command palette / 819 alignment) |
 | **Last completed slice** | **Statement classify mobile stack** (`v0.statement-classify-mobile`) |
 | **Last commit/tag**      | `v0.statement-classify-mobile` |
 
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | pending tag    | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
 | Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
 | Mobile one-title (PageHeader → top bar; no second H1 on phone)                   | `v0.mobile-one-title`                             | done           | Paint PageHeader H1 again under MobileTopBar; drop MobileShellTitleProvider / useRegisterMobileShellTitle |
 | Mobile UX gaps (Review/Split/Search + remaining money cards)                     | `v0.mobile-ux-gaps`                               | done           | Drop Review/Split from More; re-table-only bank activity / statement / delivery / split |
@@ -1944,6 +1945,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Home recent entries mobile cards                    | `v0.home-recent-entries-mobile`                   | Phone: MobileCardList for RecentEntriesCard; desktop table split; Record desk shares same component |
 | 2026-09-05 | Statement classify mobile stack                     | `v0.statement-classify-mobile`                     | Phone: stacked type/who/Post; hide empty target; hide bank-fee tip; bulk same; Post→salary unchanged |
 | 2026-09-05 | Mobile one-title                                    | `v0.mobile-one-title`                                | PageHeader registers title into MobileTopBar; phone H1 sr-only; title-only headers collapse; bottom tabs unchanged |
 | 2026-09-02 | Sales + FX export downloads                         | `v0.sales-fx-export-downloads`                       | FX hub Excel/PDF; sales PDF; ReportDateRange + KPI on All/Posted (no period chips; Needs review date-free) |
