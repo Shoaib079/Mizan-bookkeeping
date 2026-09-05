@@ -36,4 +36,12 @@ describe("PageHeader — one bold title", () => {
       /eyebrow[\s\S]{0,80}\{title\}/,
     );
   });
+
+  it("phone: registers title into the top bar and does not paint a second H1", () => {
+    const src = sourceDeclaring("PageHeader");
+    expect(src).toContain("useRegisterMobileShellTitle");
+    expect(src).toContain("max-[819px]:sr-only");
+    expect(src).toContain("max-[819px]:hidden");
+    expect(src).toContain("chromeOnly");
+  });
 });

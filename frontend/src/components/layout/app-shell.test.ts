@@ -52,8 +52,11 @@ describe("AppShell mobile shell (C4)", () => {
   it("always renders bottom tabs on mobile (including drill-in pages)", () => {
     // Tabs must depend on `isMobile` alone. Gating them on "is this a tab
     // root" once stranded users on drill-in pages with no way back.
-    expect(source()).toMatch(/\{isMobile && \(\s*<MobileBottomTabs/);
-    expect(source()).not.toContain("onMobileTabRoot");
+    // Mobile branch is a dedicated return — tabs are unconditional there.
+    const text = source();
+    expect(text).toContain("MobileShellTitleProvider");
+    expect(text).toContain("<MobileBottomTabs showRecord={showRecordFab} />");
+    expect(text).not.toContain("onMobileTabRoot");
   });
 
   it("the desktop sidebar cannot move — the window does not scroll at all", () => {

@@ -24,6 +24,7 @@ import { useEntity } from "@/lib/entity-context";
 import { pushNavHistory } from "@/lib/nav-history";
 import { useEntityAccess } from "@/lib/use-entity-access";
 import { DESKTOP_CHROME_ONLY, MOBILE_TAB_BAR_PADDING } from "@/lib/mobile-shell";
+import { MobileShellTitleProvider } from "@/lib/mobile-shell-title";
 import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { ReviewCountsProvider } from "@/lib/review-counts-context";
 import { useReviewCounts } from "@/lib/use-review-counts";
@@ -105,9 +106,9 @@ function AppShellInner({
       ? "Dashboard"
       : title;
 
-  // Every page carries its own PageHeader (bold H1). The shell may show a
-  // section crumb *above* that title — never the title again. Appending
-  // `title` here used to print "Dashboard" twice (muted trail + H1).
+  // Desktop: section crumb above PageHeader — never append `title` again
+  // (that used to print "Dashboard" twice). Phone: PageHeader registers its
+  // title into MobileTopBar; the in-page H1 is sr-only so it is not painted twice.
   const trail = breadcrumb;
 
   const mainChrome = (
@@ -135,27 +136,27 @@ function AppShellInner({
 
   if (isMobile) {
     return (
-      <div className="flex min-h-dvh flex-col bg-background">
-        <MobileTopBar
-          title={mobileTitle}
-          reviewTotal={reviewCounts.total}
-          onReviewPage={onReviewPage}
-        />
-        <main
-          key={entityId}
-          className={cn(
-            "flex-1 overflow-y-auto overscroll-y-contain px-3.5 py-3",
-            isMobile && MOBILE_TAB_BAR_PADDING,
-            mobileGroupedShell && "bg-muted px-4",
-          )}
-        >
-          {mainChrome}
-        </main>
-        {isMobile && (
+      <MobileShellTitleProvider>
+        <div className="flex min-h-dvh flex-col bg-background">
+          <MobileTopBar
+            title={mobileTitle}
+            reviewTotal={reviewCounts.total}
+            onReviewPage={onReviewPage}
+          />
+          <main
+            key={entityId}
+            className={cn(
+              "flex-1 overflow-y-auto overscroll-y-contain px-3.5 py-3",
+              isMobile && MOBILE_TAB_BAR_PADDING,
+              mobileGroupedShell && "bg-muted px-4",
+            )}
+          >
+            {mainChrome}
+          </main>
           <MobileBottomTabs showRecord={showRecordFab} />
-        )}
-        <CommandPalette deliveryEnabled={deliveryEnabled} />
-      </div>
+          <CommandPalette deliveryEnabled={deliveryEnabled} />
+        </div>
+      </MobileShellTitleProvider>
     );
   }
 

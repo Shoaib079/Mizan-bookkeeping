@@ -76,9 +76,10 @@ describe("sample pages — single page title", () => {
     expect(header).not.toContain("page-eyebrow");
   });
 
-  it("mobile top bar title + restaurant subtitle pattern unchanged", () => {
+  it("mobile top bar prefers PageHeader-registered title over shell fallback", () => {
     const bar = sourceDeclaring("MobileTopBar");
-    expect(bar).toContain("{title}");
+    expect(bar).toContain("useMobileShellTitle");
+    expect(bar).toContain("displayTitle");
     expect(bar).toContain("entityName");
     expect(bar).toContain('pathname === "/"');
   });

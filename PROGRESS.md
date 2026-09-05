@@ -24,7 +24,7 @@
 | **Last completed slice** | Sales + FX export downloads (`v0.sales-fx-export-downloads`) |
 | **Last tag** | `v0.sales-fx-export-downloads` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Exact next action** | Owner sign-off; next slice from queue |
-| **Gate** | Idle |
+| **Active slice** | Mobile one-title (`v0.mobile-one-title`) — green light done; awaiting owner commit/tag |
+| **Next up** | Statement classify-bar mobile stack (after one-title ships) |
+| **Exact next action** | Commit + tag `v0.mobile-one-title` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

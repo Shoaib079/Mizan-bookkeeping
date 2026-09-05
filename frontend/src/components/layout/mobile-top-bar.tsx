@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/ui/logo";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import { isMobileTabRoot, mobileBackDestination } from "@/lib/mobile-shell";
+import { useMobileShellTitle } from "@/lib/mobile-shell-title";
 import { previousNavPath } from "@/lib/nav-history";
 import { backLinkForPathname } from "@/lib/nav-sections";
 import { useEntity } from "@/lib/entity-context";
@@ -54,6 +55,8 @@ export function MobileTopBar({
   const { requestLeave } = useUnsavedWork();
   const { entities, entityId, userProfile } = useEntity();
   const onTabRoot = isMobileTabRoot(pathname);
+  const registeredTitle = useMobileShellTitle();
+  const displayTitle = registeredTitle ?? title;
   const entityName =
     entities.find((e) => e.id === entityId)?.name ?? "Restaurant";
 
@@ -106,7 +109,7 @@ export function MobileTopBar({
 
       <div className="min-w-0 flex-1 px-1">
         <p className="truncate text-[17px] font-semibold leading-tight">
-          {title}
+          {displayTitle}
         </p>
         {onTabRoot && pathname === "/" && (
           <p className="truncate text-[11px] text-muted-foreground">

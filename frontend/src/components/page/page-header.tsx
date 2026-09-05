@@ -12,6 +12,7 @@ import {
   OverflowMenu,
   type OverflowMenuItem,
 } from "@/components/ui/overflow-menu";
+import { useRegisterMobileShellTitle } from "@/lib/mobile-shell-title";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -46,24 +47,35 @@ export function PageHeader({
   aside,
   className,
 }: Props) {
+  // Phone top bar shows this string once — do not paint a second H1 under it.
+  useRegisterMobileShellTitle(title);
+
   const hasActions =
     Boolean(primaryAction) ||
     Boolean(actions) ||
     Boolean(overflowActions?.length);
+  /** Title-only headers collapse on phone; meta / actions / sticker stay. */
+  const chromeOnly =
+    !meta && !hasActions && !aside && !titleAction;
 
   return (
     <header
       data-testid="page-header"
       className={cn(
         "mb-5 border-b border-border pb-4",
+        chromeOnly && "max-[819px]:hidden",
         className,
       )}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
-          {/* One bold title only — no muted eyebrow above the H1 (accepted-live). */}
+          {/* One bold title only — no muted eyebrow above the H1 (accepted-live).
+           * On phone the visible title lives in MobileTopBar; keep H1 for a11y. */}
           <div className="flex min-w-0 items-center gap-2">
-            <h1 data-testid="page-header-title" className="truncate text-xl font-semibold">
+            <h1
+              data-testid="page-header-title"
+              className="truncate text-xl font-semibold max-[819px]:sr-only"
+            >
               {title}
             </h1>
             {titleAction}

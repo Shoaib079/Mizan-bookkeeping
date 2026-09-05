@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | Statement classify-bar slim-down (`FUTURE_IDEAS` Banking) |
-| **Last completed slice** | **FE statement hint cleanup** (`v0.statement-fe-hint-cleanup`) |
-| **Last commit/tag**      | `v0.statement-fe-hint-cleanup` |
+| **Active slice**         | Mobile one-title (awaiting commit/tag) |
+| **Next up**              | Statement classify-bar mobile stack (next mobile UX gap) |
+| **Last completed slice** | **Sales + FX export downloads** (`v0.sales-fx-export-downloads`) |
+| **Last commit/tag**      | `v0.sales-fx-export-downloads` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Mobile one-title (PageHeader → top bar; no second H1 on phone)                   | `v0.mobile-one-title`                             | pending tag    | Paint PageHeader H1 again under MobileTopBar; drop MobileShellTitleProvider / useRegisterMobileShellTitle |
 | Mobile UX gaps (Review/Split/Search + remaining money cards)                     | `v0.mobile-ux-gaps`                               | done           | Drop Review/Split from More; re-table-only bank activity / statement / delivery / split |
 | Sales + FX export downloads (Excel/PDF; sales period on All/Posted)              | `v0.sales-fx-export-downloads`                    | done           | Remove FX ledger export endpoints; sales Excel-only; hide period chips on All/Needs review |
 | Card clearing mobile cards (batches + POS settlements)                           | `v0.cards-mobile-cards`                           | done           | Re-table-only /cards on phone; duplicate card list components |
@@ -1942,6 +1943,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Mobile one-title                                    | `v0.mobile-one-title`                                | PageHeader registers title into MobileTopBar; phone H1 sr-only; title-only headers collapse; bottom tabs unchanged |
 | 2026-09-02 | Sales + FX export downloads                         | `v0.sales-fx-export-downloads`                       | FX hub Excel/PDF; sales PDF; ReportDateRange + KPI on All/Posted (no period chips; Needs review date-free) |
 | 2026-09-01 | Cards page header simplify                          | `v0.cards-page-header`                                 | Record commission primary; settlement secondary; remove New card batch; Record link on warning |
 | 2026-09-01 | Bounce staff orphan lookup fix                     | `v0.statement-bounce-staff-orphan-fix`                 | Staff bounce 500 fix — `amount_minor` not `amount_kurus` on orphan payment lookup |
