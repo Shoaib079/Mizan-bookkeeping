@@ -2,6 +2,8 @@
 
 /** Right panel — embedded form for the selected Record desk tile. */
 
+import { ChevronLeft } from "lucide-react";
+
 import {
   AddDocumentDialog,
   type DetectedDocumentType,
@@ -18,6 +20,7 @@ import type {
   RecordDeskTile,
   RecordDeskTileId,
 } from "@/components/record/record-desk-tiles";
+import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -29,6 +32,8 @@ type Props = {
   onContinueToCloseDay: () => void;
   onDraftChange: (pending: boolean) => void;
   mobileQuick?: boolean;
+  /** Phone full-form drill-in — back returns to the tile grid. */
+  onBack?: () => void;
 };
 
 export function RecordDeskFormPanel({
@@ -40,43 +45,81 @@ export function RecordDeskFormPanel({
   onContinueToCloseDay,
   onDraftChange,
   mobileQuick = false,
+  onBack,
 }: Props) {
   const modeId: RecordDeskTileId | null = tile?.id ?? null;
   const title = tile?.formTitle ?? "Record";
   const hint = tile?.hint ?? "";
   const ActiveIcon = tile?.icon;
+  const showDrillInHeader = Boolean(onBack);
 
   return (
-    <section className="min-w-0 flex-1">
+    <section className="min-w-0 flex-1" data-testid="record-desk-form-panel">
       <div
         className={cn(
           "rounded-lg border border-border bg-card shadow-sm",
-          mobileQuick && "border-0 shadow-none",
+          mobileQuick && !showDrillInHeader && "border-0 shadow-none",
+          showDrillInHeader && "border-0 shadow-none",
         )}
-        data-testid="record-desk-form-panel"
       >
-        <header
+        {showDrillInHeader ? (
+          <header className="mb-3 space-y-1">
+            <button
+              type="button"
+              onClick={onBack}
+              className={cn(
+                "inline-flex items-center gap-0.5 -ml-1 rounded-md px-1 text-sm font-medium text-primary",
+                MOBILE_TOUCH_TARGET,
+              )}
+              data-testid="record-desk-form-back"
+            >
+              <ChevronLeft className="size-5 shrink-0" aria-hidden />
+              Back
+            </button>
+            <div className="flex items-center gap-2.5">
+              {ActiveIcon && tile && (
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <ActiveIcon className="size-4" aria-hidden />
+                </span>
+              )}
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold leading-tight">{title}</h2>
+                {hint && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+                )}
+              </div>
+            </div>
+          </header>
+        ) : (
+          <header
+            className={cn(
+              "border-b border-border px-4 py-3",
+              mobileQuick && "hidden",
+            )}
+          >
+            <div className="flex items-center gap-2.5">
+              {ActiveIcon && tile && (
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                  <ActiveIcon className="size-4" aria-hidden />
+                </span>
+              )}
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold leading-tight">{title}</h2>
+                {hint && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
+                )}
+              </div>
+            </div>
+          </header>
+        )}
+
+        <div
           className={cn(
-            "border-b border-border px-4 py-3",
-            mobileQuick && "hidden",
+            "p-4",
+            mobileQuick && "px-0 pt-2",
+            showDrillInHeader && "px-0 pt-0",
           )}
         >
-          <div className="flex items-center gap-2.5">
-            {ActiveIcon && tile && (
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-                <ActiveIcon className="size-4" aria-hidden />
-              </span>
-            )}
-            <div className="min-w-0">
-              <h2 className="text-base font-semibold leading-tight">{title}</h2>
-              {hint && (
-                <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
-              )}
-            </div>
-          </div>
-        </header>
-
-        <div className={cn("p-4", mobileQuick && "px-0 pt-2")}>
           {modeId === "expense" && (
             <ManualExpenseForm
               embedded

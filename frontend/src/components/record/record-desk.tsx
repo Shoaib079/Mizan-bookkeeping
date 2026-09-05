@@ -48,6 +48,8 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
   );
 
   const [mode, setMode] = useState<RecordDeskTileId>("sales");
+  /** Phone: grid first; tap a tile opens the form full-screen. Desktop ignores. */
+  const [mobileFormOpen, setMobileFormOpen] = useState(false);
   const [cashCountDraftPending, setCashCountDraftPending] = useState(false);
 
   useEffect(() => {
@@ -61,6 +63,10 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
     setCashCountDraftPending(hasCashCountDraft(entityId));
   }, [entityId, mode]);
 
+  useEffect(() => {
+    setMobileFormOpen(false);
+  }, [entityId]);
+
   const onRecorded = useCallback(() => {
     emitLedgerChanged();
     setCashCountDraftPending(hasCashCountDraft(entityId));
@@ -73,7 +79,17 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
     [openRecordActionWithFile],
   );
 
+  const selectTile = useCallback(
+    (id: RecordDeskTileId) => {
+      setMode(id);
+      if (mobileQuick) setMobileFormOpen(true);
+    },
+    [mobileQuick],
+  );
+
   const activeTile = tiles.find((t) => t.id === mode) ?? tiles[0] ?? null;
+  const showMobileForm = mobileQuick && mobileFormOpen;
+  const showGrid = !mobileQuick || !mobileFormOpen;
 
   if (!shouldShowNewMenu(grants)) {
     return (
@@ -100,26 +116,36 @@ export function RecordDesk({ mobileQuick = false }: { mobileQuick?: boolean }) {
           !mobileQuick && "lg:flex-row lg:items-start lg:gap-5",
         )}
       >
-        <RecordDeskIconGrid
-          tiles={tiles}
-          activeId={mode}
-          cashCountDraftPending={cashCountDraftPending}
-          onSelect={setMode}
-        />
+        {showGrid && (
+          <RecordDeskIconGrid
+            tiles={tiles}
+            activeId={showMobileForm ? mode : mobileQuick ? "" : mode}
+            cashCountDraftPending={cashCountDraftPending}
+            onSelect={selectTile}
+          />
+        )}
 
-        <RecordDeskFormPanel
-          tile={activeTile}
-          deliveryEnabled={deliveryEnabled}
-          onRecorded={onRecorded}
-          onDocumentConfirm={handleDocumentConfirm}
-          onOpenDeliveryReport={() => openRecordAction("deliveryReport")}
-          onContinueToCloseDay={() => setMode("closeDay")}
-          onDraftChange={setCashCountDraftPending}
-          mobileQuick={mobileQuick}
-        />
+        {(!mobileQuick || showMobileForm) && (
+          <RecordDeskFormPanel
+            tile={activeTile}
+            deliveryEnabled={deliveryEnabled}
+            onRecorded={onRecorded}
+            onDocumentConfirm={handleDocumentConfirm}
+            onOpenDeliveryReport={() => openRecordAction("deliveryReport")}
+            onContinueToCloseDay={() => {
+              setMode("closeDay");
+              if (mobileQuick) setMobileFormOpen(true);
+            }}
+            onDraftChange={setCashCountDraftPending}
+            mobileQuick={mobileQuick}
+            onBack={
+              showMobileForm ? () => setMobileFormOpen(false) : undefined
+            }
+          />
+        )}
       </div>
 
-      {entityId && <RecentlyRecordedCard entityId={entityId} />}
+      {entityId && showGrid && <RecentlyRecordedCard entityId={entityId} />}
     </div>
   );
 }

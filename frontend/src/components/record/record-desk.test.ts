@@ -14,9 +14,15 @@ describe("RecordDesk", () => {
     expect(source()).not.toContain("RECORD_DESK_EXTRA_ACTION_IDS");
   });
 
-  it("routes confirmed uploads through openRecordActionWithFile", () => {
-    expect(source()).toContain("openRecordActionWithFile");
-    expect(source()).toContain("handleDocumentConfirm");
+  it("on phone opens the form full-screen after a tile tap (not under the grid)", () => {
+    const desk = source();
+    expect(desk).toContain("mobileFormOpen");
+    expect(desk).toContain("setMobileFormOpen(true)");
+    expect(desk).toContain("showMobileForm");
+    expect(desk).toContain("onBack=");
+    const panel = sourceDeclaring("RecordDeskFormPanel");
+    expect(panel).toContain("record-desk-form-back");
+    expect(panel).toContain("onBack");
   });
 });
 

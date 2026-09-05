@@ -24,7 +24,7 @@
 | **Last completed slice** | Leftover tables → mobile cards (`v0.leftover-tables-mobile`) |
 | **Last tag** | `v0.leftover-tables-mobile` |
 | **Unpushed** | no |
-| **Active slice** | — |
+| **Active slice** | Record mobile full form (`v0.record-mobile-full-form`) — green light done; awaiting owner commit/tag |
 | **Next up** | Optional: full-screen command search |
-| **Exact next action** | Owner decide next UX slice |
-| **Gate** | Idle |
+| **Exact next action** | Commit + tag `v0.record-mobile-full-form` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

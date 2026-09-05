@@ -24,7 +24,7 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
+| **Active slice**         | Record mobile full form (awaiting commit/tag) |
 | **Next up**              | Optional: full-screen command search |
 | **Last completed slice** | **Leftover tables → mobile cards** (`v0.leftover-tables-mobile`) |
 | **Last commit/tag**      | `v0.leftover-tables-mobile` |
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Record mobile full form (tap tile → form; same grid)                             | `v0.record-mobile-full-form`                      | pending tag    | Keep form under the 3×3 grid on phone; remove Back drill-in |
 | Leftover tables → mobile cards (GS lines, OB preview, partner profit)             | `v0.leftover-tables-mobile`                       | done           | Force wide DataTables on phone for group-sale lines / OB journal / partner profit preview |
 | Dropdown viewport align (… / Download / month pack)                              | `v0.dropdown-viewport-align`                      | done           | Hard-code left-0 on mobile for header menus; force horizontal page scroll when "…" opens |
 | Statement import wizard mobile (mapping first; sticky Import)                    | `v0.statement-import-mobile`                      | done           | Preview-above-mapping on phone; bury Import after the table; tiny assign chips under 819 |
@@ -1951,6 +1952,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Record mobile full form                             | `v0.record-mobile-full-form`                      | Phone: same tile grid; tap opens full form + Back; desktop unchanged |
 | 2026-09-05 | Leftover tables → mobile cards                      | `v0.leftover-tables-mobile`                       | Phone cards for group-sale menu lines, OB journal preview, partner profit preview; desktop tables unchanged |
 | 2026-09-05 | Dropdown viewport align                             | `v0.dropdown-viewport-align`                      | Measure trigger; OverflowMenu/Download/MonthPack pick left vs right + max-w clamp; no sm:right-0 hard-code |
 | 2026-09-05 | Statement import wizard mobile                      | `v0.statement-import-mobile`                      | Phone: mapping above preview; sticky Import above tabs; hide panel H1; touch targets; capped preview height |
