@@ -10,10 +10,15 @@ import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 
 import { PageHeader } from "@/components/page/page-header";
-import { IconSquare } from "@/components/ui/icon-square";
+import {
+  IconSquare,
+  type IconStroke,
+  type IconTint,
+} from "@/components/ui/icon-square";
 import {
   ACCENT_BAR,
   MeaningCardAccentBar,
+  type AccentBarTone,
 } from "@/components/ui/meaning-card";
 import type { OverflowMenuItem } from "@/components/ui/overflow-menu";
 import { cn } from "@/lib/utils";
@@ -30,15 +35,22 @@ export type HubTile = {
   /** Amber count badge (review queues). */
   badge?: number;
   disabled?: boolean;
+  /** Muted left bar (default blue). */
+  accent?: AccentBarTone;
+  iconTint?: IconTint;
+  iconStroke?: IconStroke;
 };
 
 export function HubTileCard({ tile }: { tile: HubTile }) {
   const { icon: Icon } = tile;
+  const tint = tile.iconTint ?? "sky";
+  const stroke = tile.iconStroke ?? "blue";
+  const accent = tile.accent ?? "blue";
   const body = (
     <>
       <MeaningCardAccentBar />
       <div className="flex items-start justify-between gap-3">
-        <IconSquare icon={Icon} tint="sky" stroke="blue" size="lg" />
+        <IconSquare icon={Icon} tint={tint} stroke={stroke} size="lg" />
         {tile.badge !== undefined && tile.badge > 0 && (
           <span className="rounded-full border border-warning/30 bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
             {tile.badge}
@@ -62,7 +74,7 @@ export function HubTileCard({ tile }: { tile: HubTile }) {
       : "hover:border-primary/40 hover:bg-muted/30",
   );
 
-  const shellStyle = { ["--accent-bar" as string]: ACCENT_BAR.blue };
+  const shellStyle = { ["--accent-bar" as string]: ACCENT_BAR[accent] };
 
   if (tile.disabled) {
     return (

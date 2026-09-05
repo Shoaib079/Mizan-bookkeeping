@@ -21,8 +21,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Prominent tabs & filter chips (`v0.prominent-tabs`) |
-| **Last tag** | `v0.prominent-tabs` |
+| **Last completed slice** | Money-account stickers (`v0.money-account-stickers`) |
+| **Last tag** | `v0.money-account-stickers` |
 | **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Optional: full-screen command search |

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { BankAccountBalanceRow } from "@/components/banking/bank-account-balance-rows";
+
+import { MoneyAccountStickerGrid } from "@/components/banking/money-account-sticker-grid";
 import { MoneyAccountForm } from "@/components/forms/money-account-form";
 import { PageHeader } from "@/components/page/page-header";
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,9 @@ import { PageSkeleton } from "@/components/ui/skeleton";
 import { apiFetch } from "@/lib/api";
 import type {
   MoneyAccountKind,
-  MoneyAccountLeaf,
   MoneyAccountTree,
 } from "@/lib/banking-types";
 import { useEntity } from "@/lib/entity-context";
-import { formatTry } from "@/lib/money";
 
 type BranchKey = "banks" | "credit_cards";
 
@@ -24,10 +23,6 @@ type Props = {
   emptyHint: string;
   addLabel: string;
 };
-
-function AccountRow({ account }: { account: MoneyAccountLeaf }) {
-  return <BankAccountBalanceRow account={account} />;
-}
 
 export function BankingBranchListContent({
   branchKey,
@@ -93,27 +88,11 @@ export function BankingBranchListContent({
       <PageSkeleton when={loading} />
 
       {branch && (
-        <section className="rounded-lg border border-border bg-card">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <span className="text-sm font-medium text-muted-foreground">
-              Total
-            </span>
-            <span className="tabular-nums text-sm font-medium">
-              {formatTry(branch.balance_kurus)}
-            </span>
-          </div>
-          {branch.accounts.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-muted-foreground">
-              {emptyHint}
-            </p>
-          ) : (
-            <div className="divide-y divide-border px-4">
-              {branch.accounts.map((account) => (
-                <AccountRow key={account.id} account={account} />
-              ))}
-            </div>
-          )}
-        </section>
+        <MoneyAccountStickerGrid
+          accounts={branch.accounts}
+          totalKurus={branch.balance_kurus}
+          emptyHint={emptyHint}
+        />
       )}
 
       <MoneyAccountForm
