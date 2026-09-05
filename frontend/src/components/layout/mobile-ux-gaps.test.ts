@@ -88,9 +88,17 @@ describe("mobile UX gaps — card list forks", () => {
 describe("section tabs scroll tray", () => {
   it("SectionTabs uses horizontal scroll instead of wrap", () => {
     const source = sourceDeclaring("SectionTabs");
-    expect(source).toContain("overflow-x-auto");
-    expect(source).toContain("whitespace-nowrap");
-    expect(source).toContain("flex-nowrap");
-    expect(source).not.toContain("flex-wrap");
+    expect(source).toContain("TAB_TRACK_SCROLL");
+    expect(source).not.toContain("TAB_TRACK_WRAP");
+    const track = sourceDeclaring("TAB_TRACK_SCROLL");
+    expect(track).toMatch(
+      /TAB_TRACK_SCROLL\s*=\s*cn\(\s*[^)]*overflow-x-auto/,
+    );
+    expect(track).toMatch(
+      /TAB_TRACK_SCROLL\s*=\s*cn\(\s*[^)]*flex-nowrap/,
+    );
+    expect(track).toMatch(
+      /TAB_TRACK_SCROLL\s*=\s*cn\(\s*[^)]*whitespace-nowrap/,
+    );
   });
 });

@@ -5,6 +5,7 @@
  * Ledgers, review queues and list pages all filter; before this each wrote its
  * own pill markup with slightly different padding and active colours. */
 
+import { MOBILE_TOUCH_TARGET } from "@/lib/mobile-shell";
 import { cn } from "@/lib/utils";
 
 export type FilterChip<T extends string> = {
@@ -33,7 +34,7 @@ export function FilterChips<T extends string>({
     <div
       role="group"
       aria-label={ariaLabel}
-      className={cn("flex flex-wrap gap-1", className)}
+      className={cn("flex flex-wrap gap-1.5", className)}
     >
       {chips.map((chip) => {
         const active = chip.id === value;
@@ -43,16 +44,12 @@ export function FilterChips<T extends string>({
             type="button"
             aria-pressed={active}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs transition-colors",
-              // The inactive chips were a grey border around grey text, so a
-              // row of filters read as disabled labels rather than choices.
-              // The chosen filter is filled; the others stay outlined. Unlike
-              // the action buttons these are a set you pick from, so telling
-              // the picked one apart is the whole job — filling all of them
-              // would say nothing.
+              "inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-sm transition-colors",
+              MOBILE_TOUCH_TARGET,
+              // Chosen = filled; others outlined — same language as tab track.
               active
-                ? "bg-primary font-medium text-primary-foreground"
-                : "border border-primary/40 text-primary hover:bg-primary/15",
+                ? "bg-primary font-semibold text-primary-foreground shadow-sm"
+                : "border border-primary/40 font-medium text-primary hover:bg-primary/15",
             )}
             onClick={() => onChange(chip.id)}
           >

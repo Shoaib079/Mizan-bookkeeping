@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Prominent tabs & filter chips (`v0.prominent-tabs`).** Section tabs (Banking, Sales, Review, Delivery, …) and Settings tabs use a shared segment **track** + filled active (same tokens as `SegmentedControl`); FilterChips are taller (`h-9` / 44px on phone). Delivery platform filter and Record payment kind picker reuse FilterChips / SegmentedControl. Vitest + tsc + eslint + next build green.
+
 - **Import statement one title (`v0.import-one-title`).** Dropped the panel `<h1>` (“Import bank statement…”) so desktop and phone use only FormPage / PageHeader (“Import statement” + account meta). Record form H2 left as-is. Vitest + tsc + eslint + next build green.
 
 - **Record mobile full form (`v0.record-mobile-full-form`).** Phone: Record desk keeps the same 3×3 tile grid; tapping a tile opens that form full-screen with Back (grid + recent hidden). Desktop grid + side form unchanged. Vitest + tsc + eslint + next build green.

@@ -489,11 +489,14 @@ describe("filters read as choices", () => {
     // row of disabled labels rather than filters you can press.
     const source = sourceDeclaring("FilterChip");
     expect(source).not.toContain("border border-border text-muted-foreground");
-    expect(source).toContain("border-primary/40 text-primary");
+    expect(source).toContain("border-primary/40");
+    expect(source).toContain("text-primary");
     // The chosen chip is solidly filled — a tint was repeatedly read as no
     // colour at all. The unchosen ones stay outlined, because telling the
     // picked one apart is the whole point of a filter row.
-    expect(source).toContain("bg-primary font-medium text-primary-foreground");
+    expect(source).toContain("bg-primary font-semibold text-primary-foreground");
+    expect(source).toContain("MOBILE_TOUCH_TARGET");
+    expect(source).toContain("h-9");
   });
 
   it("ListPage gives filters their own row", () => {

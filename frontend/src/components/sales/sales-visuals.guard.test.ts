@@ -29,8 +29,9 @@ describe("Sales page visuals", () => {
   it("FilterChips active state is filled primary (Posted pill)", () => {
     const chips = sourceDeclaring("FilterChips");
     expect(chips).toContain(
-      "bg-primary font-medium text-primary-foreground",
+      "bg-primary font-semibold text-primary-foreground",
     );
+    expect(chips).toContain("MOBILE_TOUCH_TARGET");
     expect(chips).not.toContain("bg-[var(--segment-active-bg)]");
   });
 

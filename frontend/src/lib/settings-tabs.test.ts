@@ -76,10 +76,12 @@ describe("RestaurantSettingsContent tabbed layout", () => {
 });
 
 describe("SettingsPageTabs chrome", () => {
-  it("uses the larger tab padding from UX polish", () => {
+  it("uses the shared filled track chrome like SectionTabs", () => {
     const src = sourceDeclaring("SettingsPageTabs");
-    expect(src).toContain("px-4 py-2.5 text-base");
+    expect(src).toContain("TAB_TRACK_WRAP");
+    expect(src).toContain("tabTrackItemClass");
     expect(src).toContain('role="tablist"');
     expect(src).toContain("SETTINGS_PAGE_TABS");
+    expect(src).not.toContain("rounded-t-md border border-transparent");
   });
 });

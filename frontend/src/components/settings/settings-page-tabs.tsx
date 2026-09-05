@@ -4,20 +4,21 @@ import {
   SETTINGS_PAGE_TABS,
   type SettingsPageTabId,
 } from "@/lib/settings-page-tabs";
-import { cn } from "@/lib/utils";
+import { TAB_TRACK_WRAP, tabTrackItemClass } from "@/lib/tab-track";
 
 type Props = {
   active: SettingsPageTabId;
   onChange: (id: SettingsPageTabId) => void;
 };
 
-/** Page-local settings tabs — same chrome size as SectionTabs, not nav-routed. */
+/** Page-local settings tabs — same track chrome as SectionTabs. */
 export function SettingsPageTabs({ active, onChange }: Props) {
   return (
     <div
-      className="mb-4 flex flex-wrap gap-1 border-b border-border"
+      className={TAB_TRACK_WRAP}
       role="tablist"
       aria-label="Restaurant settings"
+      data-testid="settings-page-tabs"
     >
       {SETTINGS_PAGE_TABS.map((tab) => {
         const isActive = tab.id === active;
@@ -29,11 +30,8 @@ export function SettingsPageTabs({ active, onChange }: Props) {
             aria-selected={isActive}
             id={`settings-tab-${tab.id}`}
             onClick={() => onChange(tab.id)}
-            className={cn(
-              "-mb-px inline-flex items-center gap-1.5 rounded-t-md border border-transparent px-4 py-2.5 text-base font-medium text-muted-foreground hover:text-foreground",
-              isActive &&
-                "border-border border-b-background bg-background text-primary",
-            )}
+            className={tabTrackItemClass(isActive)}
+            data-segment-active={isActive ? "true" : "false"}
           >
             {tab.label}
           </button>

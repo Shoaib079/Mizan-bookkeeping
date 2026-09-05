@@ -27,9 +27,11 @@ describe("UX polish 5", () => {
     );
   });
 
-  it("section tabs use larger padding and text", () => {
+  it("section tabs use the shared filled track chrome", () => {
     const src = sourceDeclaring("SectionTabs");
-    expect(src).toContain("px-4 py-2.5 text-base");
-    expect(src).not.toContain("px-3 py-2 text-sm font-medium text-muted-foreground");
+    expect(src).toContain("TAB_TRACK_SCROLL");
+    expect(src).toContain("tabTrackItemClass");
+    expect(src).not.toContain("rounded-t-md border border-transparent");
+    expect(src).not.toContain("px-4 py-2.5 text-base");
   });
 });

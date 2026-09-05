@@ -13,8 +13,8 @@ import { usePeopleRecordDialog } from "@/components/record/use-people-record-dia
 import { Combobox } from "@/components/ui/combobox";
 import { DateInput } from "@/components/ui/date-input";
 import { Label } from "@/components/ui/input";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import type { PersonPickerKind, RecordActionKey } from "@/lib/record-actions";
-import { cn } from "@/lib/utils";
 
 const PAYMENT_KINDS: {
   action: RecordActionKey;
@@ -54,24 +54,19 @@ export function RecordPaymentPanel({ onSaved }: Props) {
 
   return (
     <div className="space-y-3" data-testid="record-payment-panel">
-      <div className="flex flex-wrap gap-1.5">
-        {PAYMENT_KINDS.map((item, index) => (
-          <button
-            key={item.action}
-            type="button"
-            data-testid={`record-payment-tab-${item.kind}`}
-            onClick={() => setKindIndex(index)}
-            className={cn(
-              "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-              index === kindIndex
-                ? "border-primary/40 bg-primary/10 text-primary"
-                : "border-border text-muted-foreground hover:bg-muted/50",
-            )}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl
+        role="tablist"
+        ariaLabel="Payment type"
+        options={PAYMENT_KINDS.map((item) => ({
+          value: item.kind,
+          label: item.label,
+        }))}
+        value={selected.kind}
+        onChange={(kind) => {
+          const next = PAYMENT_KINDS.findIndex((item) => item.kind === kind);
+          if (next >= 0) setKindIndex(next);
+        }}
+      />
 
       {selected.cashOnly && (
         <p className="text-xs text-muted-foreground">

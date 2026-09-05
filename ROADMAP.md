@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Prominent tabs & filter chips (awaiting commit/tag) |
+| **Active slice**         | *(none)* |
 | **Next up**              | Optional: full-screen command search |
-| **Last completed slice** | **Import statement one title** (`v0.import-one-title`) |
-| **Last commit/tag**      | `v0.import-one-title` |
+| **Last completed slice** | **Prominent tabs & filter chips** (`v0.prominent-tabs`) |
+| **Last commit/tag**      | `v0.prominent-tabs` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Prominent tabs & filter chips (segment track on all section pages)               | `v0.prominent-tabs`                               | pending tag    | Restore underline SectionTabs; tiny FilterChips; hand-roll delivery/payment pickers |
+| Prominent tabs & filter chips (segment track on all section pages)               | `v0.prominent-tabs`                               | done           | Restore underline SectionTabs; tiny FilterChips; hand-roll delivery/payment pickers |
 | Import statement one title (FormPage only; no panel H1)                          | `v0.import-one-title`                             | done           | Re-add panel “Import bank statement” H1 under FormPage on desktop or phone |
 | Record mobile full form (tap tile → form; same grid)                             | `v0.record-mobile-full-form`                      | done           | Keep form under the 3×3 grid on phone; remove Back drill-in |
 | Leftover tables → mobile cards (GS lines, OB preview, partner profit)             | `v0.leftover-tables-mobile`                       | done           | Force wide DataTables on phone for group-sale lines / OB journal / partner profit preview |
@@ -1954,6 +1954,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Prominent tabs & filter chips                       | `v0.prominent-tabs`                               | Shared tab-track + filled active; larger FilterChips; delivery/payment reuse shared chrome |
 | 2026-09-05 | Import statement one title                          | `v0.import-one-title`                             | Remove panel H1; FormPage title + account meta only |
 | 2026-09-05 | Record mobile full form                             | `v0.record-mobile-full-form`                      | Phone: same tile grid; tap opens full form + Back; desktop unchanged |
 | 2026-09-05 | Leftover tables → mobile cards                      | `v0.leftover-tables-mobile`                       | Phone cards for group-sale menu lines, OB journal preview, partner profit preview; desktop tables unchanged |

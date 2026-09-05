@@ -9,8 +9,8 @@ import type { NavSectionId } from "@/lib/nav-sections";
 import { navSectionById } from "@/lib/nav-sections";
 import { reviewTabCount } from "@/lib/review-tab-counts";
 import { useReviewCountsContext } from "@/lib/review-counts-context";
+import { TAB_TRACK_SCROLL, tabTrackItemClass } from "@/lib/tab-track";
 import { useEntityAccess } from "@/lib/use-entity-access";
-import { cn } from "@/lib/utils";
 
 type SectionTabsProps = {
   sectionId: NavSectionId;
@@ -31,9 +31,10 @@ export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
 
   return (
     <div
-      className="mb-4 flex flex-nowrap gap-1 overflow-x-auto whitespace-nowrap border-b border-border"
+      className={TAB_TRACK_SCROLL}
       role="tablist"
       aria-label={ariaLabel}
+      data-testid="section-tabs"
     >
       {tabs.map((tab) => {
         const active = tab.match(pathname);
@@ -47,11 +48,8 @@ export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
             href={tab.href}
             role="tab"
             aria-selected={active}
-            className={cn(
-              "-mb-px inline-flex shrink-0 items-center gap-1.5 rounded-t-md border border-transparent px-4 py-2.5 text-base font-medium text-muted-foreground hover:text-foreground",
-              active &&
-                "border-border border-b-background bg-background text-primary",
-            )}
+            className={tabTrackItemClass(active)}
+            data-segment-active={active ? "true" : "false"}
           >
             {tab.label}
             {tabCount > 0 && <NavCountBadge count={tabCount} />}
