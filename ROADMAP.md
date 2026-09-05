@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Home recent entries mobile cards (awaiting commit/tag) |
-| **Next up**              | Remaining mobile UX gaps (command palette / 819 alignment) |
-| **Last completed slice** | **Statement classify mobile stack** (`v0.statement-classify-mobile`) |
-| **Last commit/tag**      | `v0.statement-classify-mobile` |
+| **Active slice**         | *(none)* |
+| **Next up**              | More search cleanup (one search; drop Filter list duplicate) |
+| **Last completed slice** | **Home recent entries mobile cards** (`v0.home-recent-entries-mobile`) |
+| **Last commit/tag**      | `v0.home-recent-entries-mobile` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | pending tag    | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
+| Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | done           | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
 | Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
 | Mobile one-title (PageHeader → top bar; no second H1 on phone)                   | `v0.mobile-one-title`                             | done           | Paint PageHeader H1 again under MobileTopBar; drop MobileShellTitleProvider / useRegisterMobileShellTitle |
 | Mobile UX gaps (Review/Split/Search + remaining money cards)                     | `v0.mobile-ux-gaps`                               | done           | Drop Review/Split from More; re-table-only bank activity / statement / delivery / split |

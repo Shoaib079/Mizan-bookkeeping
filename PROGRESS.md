@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Statement classify mobile stack (`v0.statement-classify-mobile`) |
-| **Last tag** | `v0.statement-classify-mobile` |
+| **Last completed slice** | Home recent entries mobile cards (`v0.home-recent-entries-mobile`) |
+| **Last tag** | `v0.home-recent-entries-mobile` |
 | **Unpushed** | no |
-| **Active slice** | Home recent entries mobile cards (`v0.home-recent-entries-mobile`) — green light done; awaiting owner commit/tag |
-| **Next up** | Remaining mobile UX gaps (command palette / 819 alignment) |
-| **Exact next action** | Commit + tag `v0.home-recent-entries-mobile` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Active slice** | — |
+| **Next up** | More search cleanup / full-screen command search (owner decide) |
+| **Exact next action** | Owner sign-off on More search UX |
+| **Gate** | Idle |
