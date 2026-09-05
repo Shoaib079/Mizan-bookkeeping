@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Mobile one-title (`v0.mobile-one-title`) |
-| **Last tag** | `v0.mobile-one-title` |
+| **Last completed slice** | Statement classify mobile stack (`v0.statement-classify-mobile`) |
+| **Last tag** | `v0.statement-classify-mobile` |
 | **Unpushed** | no |
-| **Active slice** | Statement classify mobile stack (`v0.statement-classify-mobile`) — green light done; awaiting owner commit/tag |
+| **Active slice** | — |
 | **Next up** | Remaining mobile UX gaps (command palette / home cards) |
-| **Exact next action** | Commit + tag `v0.statement-classify-mobile` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Exact next action** | Owner sign-off; next mobile UX slice |
+| **Gate** | Idle |

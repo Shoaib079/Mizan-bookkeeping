@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Statement classify mobile stack (awaiting commit/tag) |
+| **Active slice**         | *(none)* |
 | **Next up**              | Remaining mobile UX gaps (command palette / home cards / 819 alignment) |
-| **Last completed slice** | **Mobile one-title** (`v0.mobile-one-title`) |
-| **Last commit/tag**      | `v0.mobile-one-title` |
+| **Last completed slice** | **Statement classify mobile stack** (`v0.statement-classify-mobile`) |
+| **Last commit/tag**      | `v0.statement-classify-mobile` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | pending tag    | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
+| Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
 | Mobile one-title (PageHeader → top bar; no second H1 on phone)                   | `v0.mobile-one-title`                             | done           | Paint PageHeader H1 again under MobileTopBar; drop MobileShellTitleProvider / useRegisterMobileShellTitle |
 | Mobile UX gaps (Review/Split/Search + remaining money cards)                     | `v0.mobile-ux-gaps`                               | done           | Drop Review/Split from More; re-table-only bank activity / statement / delivery / split |
 | Sales + FX export downloads (Excel/PDF; sales period on All/Posted)              | `v0.sales-fx-export-downloads`                    | done           | Remove FX ledger export endpoints; sales Excel-only; hide period chips on All/Needs review |
