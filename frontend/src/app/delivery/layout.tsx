@@ -11,7 +11,7 @@ export default function DeliveryLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppShell title="Delivery" hideTrail>
+    <AppShell title="Delivery">
       <div>
         <SectionTabs sectionId="delivery" ariaLabel="Delivery sections" />
         <div>{Children.toArray(children)}</div>

@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SectionTabs } from "@/components/layout/section-tabs";
 import type { NavSectionId } from "@/lib/nav-sections";
 
-/** Shell title = section name. Tab labels live in SectionTabs only (no duplicate trail). */
+/** Shell title = section name. Tab labels live in SectionTabs only. */
 const SECTION_SHELL_TITLE: Record<NavSectionId, string> = {
   sales: "Sales",
   banking: "Banking",
@@ -33,10 +33,7 @@ export function SectionShell({
   title,
 }: SectionShellProps) {
   return (
-    <AppShell
-      title={title ?? SECTION_SHELL_TITLE[sectionId]}
-      hideTrail
-    >
+    <AppShell title={title ?? SECTION_SHELL_TITLE[sectionId]}>
       <div>
         <SectionTabs sectionId={sectionId} ariaLabel={ariaLabel} />
         <div>{Children.toArray(children)}</div>

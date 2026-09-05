@@ -25,9 +25,9 @@
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
-| **Next up**              | Optional: full-screen command search |
-| **Last completed slice** | **Money-account stickers** (`v0.money-account-stickers`) |
-| **Last commit/tag**      | `v0.money-account-stickers` |
+| **Next up**              | Audit section-tab vs page H1 doubles |
+| **Last completed slice** | **Drop shell section crumbs** (`v0.drop-shell-trail`) |
+| **Last commit/tag**      | `v0.drop-shell-trail` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -63,6 +63,7 @@
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Prominent tabs & filter chips (segment track on all section pages)               | `v0.prominent-tabs`                               | done           | Restore underline SectionTabs; tiny FilterChips; hand-roll delivery/payment pickers |
+| Drop shell section crumbs (Money out / Staff etc.)                               | `v0.drop-shell-trail`                             | pending tag    | Re-add muted Group / Section trail above PageHeader on desktop |
 | Money-account stickers (banks / cards / cash drawers)                            | `v0.money-account-stickers`                       | done           | Restore flat Total+row lists on Banks/Cards/Cash; skip HubTileCard |
 | Import statement one title (FormPage only; no panel H1)                          | `v0.import-one-title`                             | done           | Re-add panel “Import bank statement” H1 under FormPage on desktop or phone |
 | Record mobile full form (tap tile → form; same grid)                             | `v0.record-mobile-full-form`                      | done           | Keep form under the 3×3 grid on phone; remove Back drill-in |
@@ -1955,6 +1956,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Drop shell section crumbs                           | `v0.drop-shell-trail`                         | Remove muted Group / Section line above titles; keep back link |
 | 2026-09-05 | Money-account stickers                              | `v0.money-account-stickers`                   | Banks / credit cards / cash drawers: Total strip + per-account HubTileCard stickers |
 | 2026-09-05 | Prominent tabs & filter chips                       | `v0.prominent-tabs`                               | Shared tab-track + filled active; larger FilterChips; delivery/payment reuse shared chrome |
 | 2026-09-05 | Import statement one title                          | `v0.import-one-title`                             | Remove panel H1; FormPage title + account meta only |

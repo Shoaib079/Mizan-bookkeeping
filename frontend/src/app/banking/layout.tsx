@@ -11,7 +11,7 @@ export default function BankingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AppShell title="Banking" hideTrail>
+    <AppShell title="Banking">
       <div>
         <SectionTabs sectionId="banking" ariaLabel="Banking sections" />
         <div>{Children.toArray(children)}</div>

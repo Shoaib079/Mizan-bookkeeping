@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Drop shell section crumbs (`v0.drop-shell-trail`).** Removed the muted “Money out / Staff” (and similar Group / Section) line above page titles on desktop. Back link, sidebar, and section tabs already show where you are. Record form H2 unchanged. Vitest + tsc + eslint + next build green.
+
 - **Money-account stickers (`v0.money-account-stickers`).** Banks, credit cards, and cash drawers use a Total strip + one sticker per account (`HubTileCard` chrome, muted left bar, tinted icon). Tap opens account detail; cash keeps Rename. Dashboard Cash & bank list rows unchanged. Vitest + tsc + eslint + next build green.
 
 - **Prominent tabs & filter chips (`v0.prominent-tabs`).** Section tabs (Banking, Sales, Review, Delivery, …) and Settings tabs use a shared segment **track** + filled active (same tokens as `SegmentedControl`); FilterChips are taller (`h-9` / 44px on phone). Delivery platform filter and Record payment kind picker reuse FilterChips / SegmentedControl. Vitest + tsc + eslint + next build green.

@@ -12,32 +12,22 @@ describe("AppShell entity-switch reset", () => {
   });
 });
 
-describe("AppShell page trail — never duplicates the H1", () => {
-  it("trail is breadcrumb only; does not append title beside PageHeader", () => {
+describe("AppShell page trail — removed", () => {
+  it("does not paint a muted Group / Section crumb above the page title", () => {
     const src = source();
-    expect(src).toContain("const trail = breadcrumb");
-    expect(src).toContain('data-testid="page-shell-trail"');
+    expect(src).not.toContain("page-shell-trail");
+    expect(src).not.toContain("breadcrumbForPathname");
+    expect(src).not.toContain("hideTrail");
+    expect(src).not.toContain("const trail = breadcrumb");
     expect(src).not.toContain(
       "const trail = [breadcrumb, title].filter(Boolean).join",
     );
   });
 
-  it("Settings is a top-level crumb — never Understand / Settings", () => {
+  it("mutation: re-adding a shell trail → red", () => {
     const src = source();
-    expect(src).toContain('item.href === "/settings/restaurant"');
-    expect(src).toContain(
-      'group.label === "Overview" || item.href === "/settings/restaurant"',
-    );
-  });
-
-  it("mutation: trail appends title again → red", () => {
-    const src = source();
-    expect(src).not.toMatch(
-      /trail\s*=\s*\[breadcrumb,\s*title\]/,
-    );
-    expect(src).not.toMatch(
-      /\[breadcrumb,\s*title\]\.filter\(Boolean\)\.join/,
-    );
+    expect(src).not.toMatch(/data-testid=["']page-shell-trail["']/);
+    expect(src).not.toMatch(/Money out/);
   });
 });
 

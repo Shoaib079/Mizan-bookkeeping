@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Money-account stickers (`v0.money-account-stickers`) |
-| **Last tag** | `v0.money-account-stickers` |
+| **Last completed slice** | Drop shell section crumbs (`v0.drop-shell-trail`) |
+| **Last tag** | `v0.drop-shell-trail` |
 | **Unpushed** | no |
 | **Active slice** | — |
-| **Next up** | Optional: full-screen command search |
-| **Exact next action** | Owner decide next UX slice |
+| **Next up** | Audit section-tab vs page H1 doubles (Customer directory etc.) |
+| **Exact next action** | Owner: next slice after push |
 | **Gate** | Idle |

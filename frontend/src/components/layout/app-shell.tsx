@@ -18,7 +18,6 @@ import { CommandPalette } from "@/components/command-palette";
 import { useQuickActions } from "@/components/quick-actions";
 import { Logo } from "@/components/ui/logo";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
-import { navGroups, isNavItemActive } from "@/lib/app-routes";
 import { shouldShowNewMenu } from "@/lib/entity-access";
 import { useEntity } from "@/lib/entity-context";
 import { pushNavHistory } from "@/lib/nav-history";
@@ -29,22 +28,6 @@ import { useIsMobileShell } from "@/lib/use-mobile-shell";
 import { ReviewCountsProvider } from "@/lib/review-counts-context";
 import { useReviewCounts } from "@/lib/use-review-counts";
 import { cn } from "@/lib/utils";
-
-/** "Group / Section" crumb above the page title (audit A4/C3). */
-function breadcrumbForPathname(pathname: string, title: string): string | null {
-  for (const group of navGroups) {
-    for (const item of group.items) {
-      if (item.href === "/" || !isNavItemActive(pathname, item)) continue;
-      // Settings is a top-level destination — never "Understand / Settings".
-      const topLevel =
-        group.label === "Overview" || item.href === "/settings/restaurant";
-      const parts = topLevel ? [item.label] : [group.label, item.label];
-      if (parts[parts.length - 1] === title) parts.pop();
-      return parts.length > 0 ? parts.join(" / ") : null;
-    }
-  }
-  return null;
-}
 
 function NavHistoryTracker() {
   const pathname = usePathname();
@@ -59,28 +42,19 @@ function NavHistoryTracker() {
 export function AppShell({
   children,
   title = "Overview",
-  /** Section layouts already show tabs — skip the repeating trail above them. */
-  hideTrail = false,
 }: {
   children: React.ReactNode;
   title?: string;
-  hideTrail?: boolean;
 }) {
-  return (
-    <AppShellInner title={title} hideTrail={hideTrail}>
-      {children}
-    </AppShellInner>
-  );
+  return <AppShellInner title={title}>{children}</AppShellInner>;
 }
 
 function AppShellInner({
   children,
   title,
-  hideTrail,
 }: {
   children: React.ReactNode;
   title: string;
-  hideTrail: boolean;
 }) {
   const pathname = usePathname();
   const isMobile = useIsMobileShell();
@@ -98,7 +72,6 @@ function AppShellInner({
 
   const navSettings = { deliveryEnabled };
   const onReviewPage = pathname.startsWith("/review");
-  const breadcrumb = breadcrumbForPathname(pathname, title);
   const showRecordFab = shouldShowNewMenu(grants);
 
   const mobileTitle =
@@ -106,10 +79,9 @@ function AppShellInner({
       ? "Dashboard"
       : title;
 
-  // Desktop: section crumb above PageHeader — never append `title` again
-  // (that used to print "Dashboard" twice). Phone: PageHeader registers its
-  // title into MobileTopBar; the in-page H1 is sr-only so it is not painted twice.
-  const trail = breadcrumb;
+  // Phone: PageHeader registers its title into MobileTopBar; the in-page H1 is
+  // sr-only so it is not painted twice. No muted Group / Section crumb above
+  // the title — sidebar / back link / section tabs already show where you are.
 
   const mainChrome = (
     <>
@@ -117,14 +89,6 @@ function AppShellInner({
         <NavHistoryTracker />
       </Suspense>
       {!isMobile && <PageBackLink />}
-      {!isMobile && !hideTrail && trail ? (
-        <p
-          data-testid="page-shell-trail"
-          className="mb-1 text-xs text-muted-foreground"
-        >
-          {trail}
-        </p>
-      ) : null}
       <ReviewCountsProvider counts={reviewCounts} loading={reviewLoading}>
         <TransactionPeekProvider>{children}</TransactionPeekProvider>
       </ReviewCountsProvider>
