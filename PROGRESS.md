@@ -21,8 +21,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Banking hub drop New transfer (`v0.banking-hub-no-new-transfer`) |
-| **Last tag** | `v0.banking-hub-no-new-transfer` |
+| **Last completed slice** | Delete restaurant on Backups only (`v0.settings-delete-on-backups`) |
+| **Last tag** | `v0.settings-delete-on-backups` |
 | **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Optional: full-screen command search |

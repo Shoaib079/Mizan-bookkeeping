@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Delete restaurant on Backups only (`v0.settings-delete-on-backups`).** “Delete this restaurant” no longer appears under every Settings tab — only on Backups, below Backup now. Vitest settings-tabs guard updated.
+
 - **Banking hub drop New transfer (`v0.banking-hub-no-new-transfer`).** Account overview is stickers only; New transfer lives on Transfers (and account detail). Vitest green for hub guard.
 
 - **Banking hub stickers (`v0.banking-hub-stickers`).** Dropped Accounts / Transfers / Cash drawer tab bar (one banking section tab → SectionTabs hides). Cash drawer stays a hub sticker only; Transfers is a fifth hub sticker. Transfer/cash pages show their H1 again; hub keeps “Account overview”. Vitest + tsc + eslint + next build green.

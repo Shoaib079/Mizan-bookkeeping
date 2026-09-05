@@ -262,10 +262,14 @@ export function RestaurantSettingsContent() {
         </FormSection>
       )}
 
-      {activeTab === "backups" && <BackupsInfoPanel embedded />}
-
-      {/* Always below the tab panels — read Backups before deleting. */}
-      <DeleteRestaurantPanel />
+      {activeTab === "backups" && (
+        <>
+          <BackupsInfoPanel embedded />
+          <div className="mt-4">
+            <DeleteRestaurantPanel />
+          </div>
+        </>
+      )}
     </FormPage>
   );
 }

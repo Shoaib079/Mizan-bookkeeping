@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Optional: full-screen command search |
-| **Last completed slice** | **Banking hub drop New transfer** (`v0.banking-hub-no-new-transfer`) |
-| **Last commit/tag**      | `v0.banking-hub-no-new-transfer` |
+| **Last completed slice** | **Delete restaurant on Backups only** (`v0.settings-delete-on-backups`) |
+| **Last commit/tag**      | `v0.settings-delete-on-backups` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -63,6 +63,7 @@
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Prominent tabs & filter chips (segment track on all section pages)               | `v0.prominent-tabs`                               | done           | Restore underline SectionTabs; tiny FilterChips; hand-roll delivery/payment pickers |
+| Delete restaurant on Backups tab only                                            | `v0.settings-delete-on-backups`                   | done           | Show Delete restaurant under every Settings tab again |
 | Banking hub drop New transfer (stickers only on overview)                        | `v0.banking-hub-no-new-transfer`                  | done           | Put New transfer primary back on Account overview hub |
 | Banking hub stickers (no tab bar; Transfers sticker)                             | `v0.banking-hub-stickers`                         | done           | Re-add Accounts/Transfers/Cash drawer tabs; drop Transfers hub tile |
 | Single-tab section chrome (hide lone tab; restore directory titles)              | `v0.single-tab-section`                           | done           | Paint a one-item Suppliers tab track; hide Supplier/Team/Partner directory titles |
@@ -1960,6 +1961,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Delete restaurant on Backups only                   | `v0.settings-delete-on-backups`               | Delete this restaurant only on Backups tab |
 | 2026-09-05 | Banking hub drop New transfer                       | `v0.banking-hub-no-new-transfer`              | Remove hub New transfer button/dialog; Transfers sticker only |
 | 2026-09-05 | Banking hub stickers                                | `v0.banking-hub-stickers`                     | Collapse banking tabs; Transfers hub sticker; cash/transfer titles restored |
 | 2026-09-05 | Single-tab section chrome                           | `v0.single-tab-section`                       | Hide SectionTabs when ≤1 tab; restore Supplier/Team/Partner directory titles |

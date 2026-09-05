@@ -58,12 +58,20 @@ describe("RestaurantSettingsContent tabbed layout", () => {
     expect(src).toContain('activeTab === "teams"');
   });
 
-  it("keeps delete restaurant below the tab panels", () => {
+  it("shows delete restaurant only on the Backups tab", () => {
     const src = sourceDeclaring("RestaurantSettingsContent");
-    const tabsJsx = src.lastIndexOf("<SettingsPageTabs");
-    const delJsx = src.lastIndexOf("<DeleteRestaurantPanel");
-    expect(tabsJsx).toBeGreaterThan(-1);
-    expect(delJsx).toBeGreaterThan(tabsJsx);
+    expect(src).toMatch(
+      /activeTab === "backups"[\s\S]*DeleteRestaurantPanel/,
+    );
+    expect(src).not.toContain(
+      "Always below the tab panels — read Backups before deleting.",
+    );
+    const backupsIdx = src.indexOf('activeTab === "backups"');
+    const delIdx = src.indexOf("<DeleteRestaurantPanel");
+    expect(backupsIdx).toBeGreaterThan(-1);
+    expect(delIdx).toBeGreaterThan(backupsIdx);
+    // Not rendered outside the backups branch (no second copy after tabs).
+    expect(src.indexOf("<DeleteRestaurantPanel", delIdx + 1)).toBe(-1);
   });
 
   it("does not stack all sections as a single long scroll of FormSections", () => {
