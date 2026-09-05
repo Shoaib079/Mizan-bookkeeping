@@ -24,7 +24,7 @@
 | **Last completed slice** | Home recent entries mobile cards (`v0.home-recent-entries-mobile`) |
 | **Last tag** | `v0.home-recent-entries-mobile` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | More search cleanup / full-screen command search (owner decide) |
-| **Exact next action** | Owner sign-off on More search UX |
-| **Gate** | Idle |
+| **Active slice** | More search cleanup (`v0.more-search-cleanup`) — green light done; awaiting owner commit/tag |
+| **Next up** | Full-screen command search on phone (optional) |
+| **Exact next action** | Commit + tag `v0.more-search-cleanup` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

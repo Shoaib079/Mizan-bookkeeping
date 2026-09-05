@@ -1,8 +1,8 @@
 "use client";
 
-/** Mobile More hub — flat nav, list filter, app-wide palette search. */
+/** Mobile More hub — flat nav + app-wide palette search (no list filter). */
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { MobileEntitySwitcher } from "@/components/layout/mobile-entity-switcher";
-import { Input } from "@/components/ui/input";
 import { NavCountBadge } from "@/components/ui/nav-count-badge";
 import {
   appRoutes,
@@ -38,12 +37,6 @@ export const MORE_NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/cards", label: "Cards" },
   { href: "/reports", label: "Reports" },
 ];
-
-export function matchesMoreNavSearch(label: string, query: string): boolean {
-  const q = query.trim().toLowerCase();
-  if (!q) return true;
-  return label.toLowerCase().includes(q);
-}
 
 function routeForHref(href: string): AppRoute | undefined {
   return appRoutes.find((r) => r.href === href);
@@ -100,14 +93,12 @@ export function MobileMoreMenu() {
   const { deliveryEnabled } = useQuickActions();
   const { grants } = useEntityAccess();
   const { counts } = useReviewCountsContext();
-  const [query, setQuery] = useState("");
 
   const navRows = useMemo(() => {
     const settings = { deliveryEnabled };
     return MORE_NAV_ITEMS.flatMap((entry) => {
       if (entry.href === "/split") {
         if (!hasGrant(grants, "nav:record")) return [];
-        if (!matchesMoreNavSearch(entry.label, query)) return [];
         return [
           {
             href: entry.href,
@@ -119,7 +110,6 @@ export function MobileMoreMenu() {
       }
       if (entry.href === "/review") {
         if (!hasGrant(grants, "nav:review")) return [];
-        if (!matchesMoreNavSearch(entry.label, query)) return [];
         const route = routeForHref("/review");
         return [
           {
@@ -135,7 +125,6 @@ export function MobileMoreMenu() {
       if (filterNavItemsByEntitySettings([route], settings).length === 0) {
         return [];
       }
-      if (!matchesMoreNavSearch(entry.label, query)) return [];
       return [
         {
           href: entry.href,
@@ -145,13 +134,9 @@ export function MobileMoreMenu() {
         },
       ];
     });
-  }, [query, deliveryEnabled, grants, counts.total]);
+  }, [deliveryEnabled, grants, counts.total]);
 
-  const showSettings =
-    hasGrant(grants, "nav:settings") &&
-    matchesMoreNavSearch("Settings", query);
-
-  const showAppSearch = matchesMoreNavSearch("Search", query) || query.trim() === "";
+  const showSettings = hasGrant(grants, "nav:settings");
 
   if (hasLimitedMoreMenu(grants)) {
     return (
@@ -169,36 +154,16 @@ export function MobileMoreMenu() {
     <div className="pb-2">
       <MobileEntitySwitcher />
 
-      <div className="mb-3 px-3">
-        <label className="relative block">
-          <span className="sr-only">Filter this list</span>
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden
-          />
-          <Input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Filter list…"
-            className="h-11 pl-9"
-            autoComplete="off"
-          />
-        </label>
+      <div className="mb-4 px-3">
+        <button
+          type="button"
+          onClick={openAppSearch}
+          className="flex h-11 w-full items-center gap-2 rounded-xl border border-border bg-card px-3 text-left text-sm text-muted-foreground shadow-sm active:bg-muted/60"
+        >
+          <Search className="size-4 shrink-0" aria-hidden />
+          <span className="flex-1">Search the app…</span>
+        </button>
       </div>
-
-      {showAppSearch && (
-        <div className="mb-4 px-3">
-          <button
-            type="button"
-            onClick={openAppSearch}
-            className="flex h-11 w-full items-center gap-2 rounded-xl border border-border bg-card px-3 text-left text-sm text-muted-foreground shadow-sm active:bg-muted/60"
-          >
-            <Search className="size-4 shrink-0" aria-hidden />
-            <span className="flex-1">Search the app…</span>
-          </button>
-        </div>
-      )}
 
       <div className="overflow-hidden rounded-xl bg-card shadow-sm">
         {navRows.map((row) => (
@@ -217,11 +182,6 @@ export function MobileMoreMenu() {
             icon={Settings}
             mutedIcon
           />
-        )}
-        {navRows.length === 0 && !showSettings && (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            No matches for &ldquo;{query.trim()}&rdquo;
-          </p>
         )}
       </div>
     </div>

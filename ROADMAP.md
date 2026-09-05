@@ -24,8 +24,8 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | More search cleanup (one search; drop Filter list duplicate) |
+| **Active slice**         | More search cleanup (awaiting commit/tag) |
+| **Next up**              | Full-screen command search on phone (optional) |
 | **Last completed slice** | **Home recent entries mobile cards** (`v0.home-recent-entries-mobile`) |
 | **Last commit/tag**      | `v0.home-recent-entries-mobile` |
 
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| More search cleanup (drop Filter list; keep Search the app)                      | `v0.more-search-cleanup`                          | pending tag    | Re-add Filter list on More; restore matchesMoreNavSearch list filter |
 | Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | done           | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
 | Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
 | Mobile one-title (PageHeader → top bar; no second H1 on phone)                   | `v0.mobile-one-title`                             | done           | Paint PageHeader H1 again under MobileTopBar; drop MobileShellTitleProvider / useRegisterMobileShellTitle |
@@ -1945,6 +1946,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | More search cleanup                                 | `v0.more-search-cleanup`                          | Drop Filter list on More; keep Search the app + top-bar search only |
 | 2026-09-05 | Home recent entries mobile cards                    | `v0.home-recent-entries-mobile`                   | Phone: MobileCardList for RecentEntriesCard; desktop table split; Record desk shares same component |
 | 2026-09-05 | Statement classify mobile stack                     | `v0.statement-classify-mobile`                     | Phone: stacked type/who/Post; hide empty target; hide bank-fee tip; bulk same; Post→salary unchanged |
 | 2026-09-05 | Mobile one-title                                    | `v0.mobile-one-title`                                | PageHeader registers title into MobileTopBar; phone H1 sr-only; title-only headers collapse; bottom tabs unchanged |

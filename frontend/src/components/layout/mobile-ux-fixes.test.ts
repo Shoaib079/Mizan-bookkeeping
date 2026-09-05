@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  matchesMoreNavSearch,
-  MORE_NAV_ITEMS,
-} from "@/components/layout/mobile-more-menu";
+import { MORE_NAV_ITEMS } from "@/components/layout/mobile-more-menu";
 import { sourceDeclaring } from "@/test-support/source";
 
 describe("mobile more menu", () => {
-  it("lists Review and Split and keeps a flat searchable set", () => {
+  it("lists Review and Split; one app search — no Filter list", () => {
     expect(MORE_NAV_ITEMS.map((item) => item.label)).toEqual([
       "Review",
       "Delivery",
@@ -22,15 +19,12 @@ describe("mobile more menu", () => {
     const source = sourceDeclaring("MobileMoreMenu");
     expect(source).not.toContain("Money in");
     expect(source).toContain("mizan:command-palette");
+    expect(source).toContain("Search the app");
     expect(source).toContain("NavCountBadge");
-    expect(source).toContain("Filter list");
-  });
-
-  it("filters by label case-insensitively", () => {
-    expect(matchesMoreNavSearch("Customers", "")).toBe(true);
-    expect(matchesMoreNavSearch("Customers", "  cust ")).toBe(true);
-    expect(matchesMoreNavSearch("Staff", "partner")).toBe(false);
-    expect(matchesMoreNavSearch("Settings", "set")).toBe(true);
+    expect(source).not.toContain("Filter list");
+    expect(source).not.toContain("matchesMoreNavSearch");
+    expect(source).not.toContain("useState");
+    expect(source).not.toContain("No matches");
   });
 
   it("bottom tabs put Sales after Home and drop Review", () => {

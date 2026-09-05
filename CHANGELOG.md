@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **More search cleanup (`v0.more-search-cleanup`).** More tab: removed **Filter list…**; kept a single **Search the app…** row (same command palette as the top-bar Search). Dead `matchesMoreNavSearch` / query state gone. Vitest + tsc + eslint + next build green.
+
 - **Home recent entries mobile cards (`v0.home-recent-entries-mobile`).** Phone: `RecentEntriesCard` uses `MobileCardList` (date · type · amount · tap opens peek). Desktop keeps the fixed table. Split into `recent-entries-table` + `recent-entries-mobile-list`; Record desk shares the same component. Vitest + tsc + eslint + next build green.
 
 - **Statement classify mobile stack (`v0.statement-classify-mobile`).** Phone (&lt;819px): classify bar stacks amount → type → who → full-width Post; mobile labels; hide target when type needs none; hide bank-fee tip (Learn as field stays). Bulk bar same stack. Target comboboxes get 44px min height. Desktop row layout unchanged. **Post → salary dialog unchanged.** Vitest + tsc + eslint + next build green.
