@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Leftover tables → mobile cards (`v0.leftover-tables-mobile`) |
-| **Last tag** | `v0.leftover-tables-mobile` |
+| **Last completed slice** | Record mobile full form (`v0.record-mobile-full-form`) |
+| **Last tag** | `v0.record-mobile-full-form` |
 | **Unpushed** | no |
-| **Active slice** | Record mobile full form (`v0.record-mobile-full-form`) — green light done; awaiting owner commit/tag |
+| **Active slice** | — |
 | **Next up** | Optional: full-screen command search |
-| **Exact next action** | Commit + tag `v0.record-mobile-full-form` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Exact next action** | Owner decide next UX slice |
+| **Gate** | Idle |
