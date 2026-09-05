@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | 819 shell layout alignment (`v0.shell-layout-819`) |
-| **Last tag** | `v0.shell-layout-819` |
+| **Last completed slice** | Mobile date pick (`v0.mobile-date-pick`) |
+| **Last tag** | `v0.mobile-date-pick` |
 | **Unpushed** | no |
-| **Active slice** | Mobile date pick (`v0.mobile-date-pick`) — green light done; awaiting owner commit/tag |
+| **Active slice** | — |
 | **Next up** | Optional: full-screen command search; leftover tables / import wizard |
-| **Exact next action** | Commit + tag `v0.mobile-date-pick` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Exact next action** | Owner decide next UX slice |
+| **Gate** | Idle |
