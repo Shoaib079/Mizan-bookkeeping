@@ -199,7 +199,6 @@ export default function StaffPage() {
     <AppShell title="Staff">
       <ListPage
         title="Team directory"
-      hideTitleOnDesktop
         loading={loading}
         error={error}
         forbidden={

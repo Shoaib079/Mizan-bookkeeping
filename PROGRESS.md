@@ -21,8 +21,8 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Hide redundant section titles on desktop (`v0.hide-title-desktop`) |
-| **Last tag** | `v0.hide-title-desktop` |
+| **Last completed slice** | Single-tab section chrome (`v0.single-tab-section`) |
+| **Last tag** | `v0.single-tab-section` |
 | **Unpushed** | no |
 | **Active slice** | — |
 | **Next up** | Optional: full-screen command search |

@@ -27,21 +27,6 @@ describe("hideTitleOnDesktop — section list doubles", () => {
         needle: 'title="Customer directory"',
       },
       {
-        label: "SuppliersPage",
-        src: sourceDeclaring("SuppliersPage"),
-        needle: 'title="Supplier directory"',
-      },
-      {
-        label: "StaffPage",
-        src: sourceDeclaring("StaffPage"),
-        needle: 'title="Team directory"',
-      },
-      {
-        label: "PartnersPage",
-        src: sourceDeclaring("PartnersPage"),
-        needle: 'title="Partner directory"',
-      },
-      {
         label: "GroupMenusPanel",
         src: sourceDeclaring("GroupMenusPanel"),
         needle: 'title="Menu catalogue"',

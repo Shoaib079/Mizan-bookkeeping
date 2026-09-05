@@ -29,6 +29,10 @@ export function SectionTabs({ sectionId, ariaLabel }: SectionTabsProps) {
     return true;
   });
 
+  // One tab = no choice. Sidebar / page title already name the section
+  // (Suppliers, and any future single-tab section).
+  if (tabs.length <= 1) return null;
+
   return (
     <div
       className={TAB_TRACK_SCROLL}

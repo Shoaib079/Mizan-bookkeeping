@@ -26,8 +26,8 @@
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
 | **Active slice**         | *(none)* |
 | **Next up**              | Optional: full-screen command search |
-| **Last completed slice** | **Hide redundant section titles on desktop** (`v0.hide-title-desktop`) |
-| **Last commit/tag**      | `v0.hide-title-desktop` |
+| **Last completed slice** | **Single-tab section chrome** (`v0.single-tab-section`) |
+| **Last commit/tag**      | `v0.single-tab-section` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -63,6 +63,7 @@
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Prominent tabs & filter chips (segment track on all section pages)               | `v0.prominent-tabs`                               | done           | Restore underline SectionTabs; tiny FilterChips; hand-roll delivery/payment pickers |
+| Single-tab section chrome (hide lone tab; restore directory titles)              | `v0.single-tab-section`                           | pending tag    | Paint a one-item Suppliers tab track; hide Supplier/Team/Partner directory titles |
 | Hide redundant section titles on desktop (tabs already name the page)           | `v0.hide-title-desktop`                           | done           | Paint Customer directory (etc.) under section tabs on desktop again |
 | Drop shell section crumbs (Money out / Staff etc.)                               | `v0.drop-shell-trail`                             | done           | Re-add muted Group / Section trail above PageHeader on desktop |
 | Money-account stickers (banks / cards / cash drawers)                            | `v0.money-account-stickers`                       | done           | Restore flat Total+row lists on Banks/Cards/Cash; skip HubTileCard |
@@ -1957,6 +1958,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Single-tab section chrome                           | `v0.single-tab-section`                       | Hide SectionTabs when ≤1 tab; restore Supplier/Team/Partner directory titles |
 | 2026-09-05 | Hide redundant section titles on desktop            | `v0.hide-title-desktop`                       | PageHeader hideTitleOnDesktop; directories/catalogues/review queues under tabs |
 | 2026-09-05 | Drop shell section crumbs                           | `v0.drop-shell-trail`                         | Remove muted Group / Section line above titles; keep back link |
 | 2026-09-05 | Money-account stickers                              | `v0.money-account-stickers`                   | Banks / credit cards / cash drawers: Total strip + per-account HubTileCard stickers |

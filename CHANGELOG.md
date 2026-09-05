@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Single-tab section chrome (`v0.single-tab-section`).** SectionTabs renders nothing when only one tab is visible (Suppliers). Restored desktop titles on Supplier / Team / Partner directories — no lonely tab track and no need for a fake second tab. Multi-tab sections unchanged. Vitest + tsc + eslint + next build green.
+
 - **Hide redundant section titles on desktop (`v0.hide-title-desktop`).** When section tabs (or the sidebar) already name the page — e.g. Customers + “Customer directory” — the PageHeader H1 is `sr-only` on desktop too (phone was already fine via mobile one-title). Actions / meta / stickers stay. Directories, catalogues, banking hub, sales/cards, cash, transfers, delivery overview, and review queues opt in. Vitest + tsc + eslint + next build green.
 
 - **Drop shell section crumbs (`v0.drop-shell-trail`).** Removed the muted “Money out / Staff” (and similar Group / Section) line above page titles on desktop. Back link, sidebar, and section tabs already show where you are. Record form H2 unchanged. Vitest + tsc + eslint + next build green.
