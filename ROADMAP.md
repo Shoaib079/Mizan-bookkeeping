@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Leftover tables → mobile cards (awaiting commit/tag) |
+| **Active slice**         | *(none)* |
 | **Next up**              | Optional: full-screen command search |
-| **Last completed slice** | **Dropdown viewport align** (`v0.dropdown-viewport-align`) |
-| **Last commit/tag**      | `v0.dropdown-viewport-align` |
+| **Last completed slice** | **Leftover tables → mobile cards** (`v0.leftover-tables-mobile`) |
+| **Last commit/tag**      | `v0.leftover-tables-mobile` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Leftover tables → mobile cards (GS lines, OB preview, partner profit)             | `v0.leftover-tables-mobile`                       | pending tag    | Force wide DataTables on phone for group-sale lines / OB journal / partner profit preview |
+| Leftover tables → mobile cards (GS lines, OB preview, partner profit)             | `v0.leftover-tables-mobile`                       | done           | Force wide DataTables on phone for group-sale lines / OB journal / partner profit preview |
 | Dropdown viewport align (… / Download / month pack)                              | `v0.dropdown-viewport-align`                      | done           | Hard-code left-0 on mobile for header menus; force horizontal page scroll when "…" opens |
 | Statement import wizard mobile (mapping first; sticky Import)                    | `v0.statement-import-mobile`                      | done           | Preview-above-mapping on phone; bury Import after the table; tiny assign chips under 819 |
 | Mobile date pick (no keypad; calendar below field)                               | `v0.mobile-date-pick`                             | done           | Re-open numeric keypad with calendar on phone; flip mobile calendar above the field |

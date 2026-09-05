@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Dropdown viewport align (`v0.dropdown-viewport-align`) |
-| **Last tag** | `v0.dropdown-viewport-align` |
+| **Last completed slice** | Leftover tables → mobile cards (`v0.leftover-tables-mobile`) |
+| **Last tag** | `v0.leftover-tables-mobile` |
 | **Unpushed** | no |
-| **Active slice** | Leftover tables → mobile cards (`v0.leftover-tables-mobile`) — green light done; awaiting owner commit/tag |
+| **Active slice** | — |
 | **Next up** | Optional: full-screen command search |
-| **Exact next action** | Commit + tag `v0.leftover-tables-mobile` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Exact next action** | Owner decide next UX slice |
+| **Gate** | Idle |
