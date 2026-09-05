@@ -21,10 +21,10 @@
 | Field | Value |
 |-------|-------|
 | **Phase** | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Last completed slice** | Home recent entries mobile cards (`v0.home-recent-entries-mobile`) |
-| **Last tag** | `v0.home-recent-entries-mobile` |
+| **Last completed slice** | More search cleanup (`v0.more-search-cleanup`) |
+| **Last tag** | `v0.more-search-cleanup` |
 | **Unpushed** | no |
-| **Active slice** | More search cleanup (`v0.more-search-cleanup`) — green light done; awaiting owner commit/tag |
-| **Next up** | Full-screen command search on phone (optional) |
-| **Exact next action** | Commit + tag `v0.more-search-cleanup` when owner confirms |
-| **Gate** | Verify → Self-audit done; Commit/tag pending |
+| **Active slice** | — |
+| **Next up** | Optional: full-screen command search; leftover tables / import; 819 alignment |
+| **Exact next action** | Owner pick next mobile UX slice |
+| **Gate** | Idle |

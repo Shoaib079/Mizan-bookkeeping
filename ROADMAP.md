@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | More search cleanup (awaiting commit/tag) |
-| **Next up**              | Full-screen command search on phone (optional) |
-| **Last completed slice** | **Home recent entries mobile cards** (`v0.home-recent-entries-mobile`) |
-| **Last commit/tag**      | `v0.home-recent-entries-mobile` |
+| **Active slice**         | *(none)* |
+| **Next up**              | Optional: full-screen command search; leftover tables / import; 819 alignment |
+| **Last completed slice** | **More search cleanup** (`v0.more-search-cleanup`) |
+| **Last commit/tag**      | `v0.more-search-cleanup` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| More search cleanup (drop Filter list; keep Search the app)                      | `v0.more-search-cleanup`                          | pending tag    | Re-add Filter list on More; restore matchesMoreNavSearch list filter |
+| More search cleanup (drop Filter list; keep Search the app)                      | `v0.more-search-cleanup`                          | done           | Re-add Filter list on More; restore matchesMoreNavSearch list filter |
 | Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | done           | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
 | Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
 | Mobile one-title (PageHeader → top bar; no second H1 on phone)                   | `v0.mobile-one-title`                             | done           | Paint PageHeader H1 again under MobileTopBar; drop MobileShellTitleProvider / useRegisterMobileShellTitle |
