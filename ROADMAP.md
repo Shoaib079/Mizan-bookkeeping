@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | Dropdown viewport align (awaiting commit/tag) |
+| **Active slice**         | *(none)* |
 | **Next up**              | Optional: full-screen command search; leftover tables (group-sale lines, OB preview, partner profit preview) |
-| **Last completed slice** | **Statement import wizard mobile** (`v0.statement-import-mobile`) |
-| **Last commit/tag**      | `v0.statement-import-mobile` |
+| **Last completed slice** | **Dropdown viewport align** (`v0.dropdown-viewport-align`) |
+| **Last commit/tag**      | `v0.dropdown-viewport-align` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Dropdown viewport align (… / Download / month pack)                              | `v0.dropdown-viewport-align`                      | pending tag    | Hard-code left-0 on mobile for header menus; force horizontal page scroll when "…" opens |
+| Dropdown viewport align (… / Download / month pack)                              | `v0.dropdown-viewport-align`                      | done           | Hard-code left-0 on mobile for header menus; force horizontal page scroll when "…" opens |
 | Statement import wizard mobile (mapping first; sticky Import)                    | `v0.statement-import-mobile`                      | done           | Preview-above-mapping on phone; bury Import after the table; tiny assign chips under 819 |
 | Mobile date pick (no keypad; calendar below field)                               | `v0.mobile-date-pick`                             | done           | Re-open numeric keypad with calendar on phone; flip mobile calendar above the field |
 | 819 shell layout alignment (report period + KPI grids + header)                  | `v0.shell-layout-819`                             | done           | Re-fork ReportDateRange / PageHeader aside at sm (640); KPI `sm:grid-cols-3` under mobile shell |
