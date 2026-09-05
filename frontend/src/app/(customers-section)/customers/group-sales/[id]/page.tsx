@@ -18,15 +18,8 @@ import { GroupSaleDiscountDialog } from "@/components/forms/group-sale-discount-
 import { GroupSaleForm } from "@/components/forms/group-sale-form";
 import { VoidSubledgerDialog } from "@/components/forms/void-subledger-dialog";
 import { VoidTriggerButton } from "@/components/ledger/void-trigger-button";
+import { GroupSaleMenuLines } from "@/components/group-sales/group-sale-menu-lines";
 import { Button } from "@/components/ui/button";
-import {
-  DataTable,
-  DataTableBody,
-  DataTableCell,
-  DataTableHead,
-  DataTableHeaderCell,
-  DataTableRow,
-} from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { apiFetch, entityPath } from "@/lib/api";
 import { useWriteChrome } from "@/lib/use-write-chrome";
@@ -251,42 +244,11 @@ export default function GroupSaleDetailPage() {
             </DetailSection>
           )}
           <DetailSection title="Menu lines">
-      <DataTable>
-        <DataTableHead>
-          <tr>
-            <DataTableHeaderCell>Menu</DataTableHeaderCell>
-            <DataTableHeaderCell>Pax</DataTableHeaderCell>
-            <DataTableHeaderCell>Rate / person</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">Line total</DataTableHeaderCell>
-            <DataTableHeaderCell align="right">TRY</DataTableHeaderCell>
-          </tr>
-        </DataTableHead>
-        <DataTableBody>
-          {sale.lines.map((line) => (
-            <DataTableRow key={line.id}>
-              <DataTableCell>{line.menu_name_snapshot}</DataTableCell>
-              <DataTableCell>{line.pax}</DataTableCell>
-              <DataTableCell className="tabular-nums">
-                {isForex
-                  ? formatFxNative(
-                      line.rate_per_person_minor,
-                      sale.forex_currency!,
-                    )
-                  : formatTry(line.rate_per_person_minor)}
-              </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {isForex
-                  ? formatFxNative(line.line_total_minor, sale.forex_currency!)
-                  : formatTry(line.line_total_minor)}
-              </DataTableCell>
-              <DataTableCell align="right" className="tabular-nums">
-                {formatTry(line.line_total_kurus)}
-              </DataTableCell>
-            </DataTableRow>
-          ))}
-        </DataTableBody>
-      </DataTable>
-        </DetailSection>
+            <GroupSaleMenuLines
+              lines={sale.lines}
+              forexCurrency={sale.forex_currency}
+            />
+          </DetailSection>
         </>
       }
     >

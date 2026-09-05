@@ -24,8 +24,8 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | *(none)* |
-| **Next up**              | Optional: full-screen command search; leftover tables (group-sale lines, OB preview, partner profit preview) |
+| **Active slice**         | Leftover tables → mobile cards (awaiting commit/tag) |
+| **Next up**              | Optional: full-screen command search |
 | **Last completed slice** | **Dropdown viewport align** (`v0.dropdown-viewport-align`) |
 | **Last commit/tag**      | `v0.dropdown-viewport-align` |
 
@@ -62,6 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Leftover tables → mobile cards (GS lines, OB preview, partner profit)             | `v0.leftover-tables-mobile`                       | pending tag    | Force wide DataTables on phone for group-sale lines / OB journal / partner profit preview |
 | Dropdown viewport align (… / Download / month pack)                              | `v0.dropdown-viewport-align`                      | done           | Hard-code left-0 on mobile for header menus; force horizontal page scroll when "…" opens |
 | Statement import wizard mobile (mapping first; sticky Import)                    | `v0.statement-import-mobile`                      | done           | Preview-above-mapping on phone; bury Import after the table; tiny assign chips under 819 |
 | Mobile date pick (no keypad; calendar below field)                               | `v0.mobile-date-pick`                             | done           | Re-open numeric keypad with calendar on phone; flip mobile calendar above the field |
@@ -1950,6 +1951,7 @@ Ordered from the 2026-08-20 read-only audits (A = detail pages, B = Excel/PDF). 
 
 | Date       | Slice                                           | Commit/tag                                             | Summary                                                                                                                                                                                                                                                       |
 | ---------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-05 | Leftover tables → mobile cards                      | `v0.leftover-tables-mobile`                       | Phone cards for group-sale menu lines, OB journal preview, partner profit preview; desktop tables unchanged |
 | 2026-09-05 | Dropdown viewport align                             | `v0.dropdown-viewport-align`                      | Measure trigger; OverflowMenu/Download/MonthPack pick left vs right + max-w clamp; no sm:right-0 hard-code |
 | 2026-09-05 | Statement import wizard mobile                      | `v0.statement-import-mobile`                      | Phone: mapping above preview; sticky Import above tabs; hide panel H1; touch targets; capped preview height |
 | 2026-09-05 | Mobile date pick (no keypad; below field)           | `v0.mobile-date-pick`                             | Phone DateInput readOnly + inputMode none; calendar always below with maxHeight scroll |

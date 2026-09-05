@@ -1,6 +1,6 @@
 "use client";
 
-/** Preview banner + allocation split table. */
+/** Preview banner + allocation split — table on desktop, cards on phone. */
 
 import {
   DataTable,
@@ -10,8 +10,11 @@ import {
   DataTableHeaderCell,
   DataTableRow,
 } from "@/components/ui/data-table";
+import { MobileCardList, MobileCardRow } from "@/components/ui/mobile-card-list";
 import type { PartnerProfitPreviewResponse } from "@/components/forms/partner-profit-allocation-types";
+import { DESKTOP_SHELL_ONLY, MOBILE_SHELL_ONLY } from "@/lib/mobile-shell";
 import { formatTrDate, formatTry } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 export type PartnerProfitAllocationPreviewProps = {
   preview: PartnerProfitPreviewResponse;
@@ -22,6 +25,8 @@ export function PartnerProfitAllocationPreview({
   preview,
   sourceBanner,
 }: PartnerProfitAllocationPreviewProps) {
+  const netting = preview.net_against_drawings;
+
   return (
     <div className="space-y-2">
       {sourceBanner && (
@@ -29,22 +34,61 @@ export function PartnerProfitAllocationPreview({
           {sourceBanner}
         </p>
       )}
-      {preview.netting_as_of && preview.net_against_drawings && (
+      {preview.netting_as_of && netting && (
         <p className="text-xs text-muted-foreground">
           Netting uses partner balances on or before{" "}
           {formatTrDate(preview.netting_as_of)}.
         </p>
       )}
-      {/* Scrolls rather than clips where the width still is not enough
-          — a phone dialog is full-screen at every size, and the money
-          columns no longer wrap to make themselves fit. */}
-      <div className="overflow-x-auto rounded-lg border border-border">
+
+      <MobileCardList className={MOBILE_SHELL_ONLY}>
+        {preview.lines.map((line) => (
+          <MobileCardRow
+            key={line.partner_id}
+            title={line.partner_name}
+            meta={
+              <>
+                <span>{line.ownership_share_pct}% share</span>
+                {netting ? (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span>Gross {formatTry(line.gross_amount_kurus)}</span>
+                    {line.offset_kurus > 0 ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <span>Offset −{formatTry(line.offset_kurus)}</span>
+                      </>
+                    ) : null}
+                  </>
+                ) : null}
+              </>
+            }
+            amount={formatTry(line.amount_kurus)}
+          />
+        ))}
+        <MobileCardRow
+          title="Total"
+          meta={
+            netting ? (
+              <span>Gross {formatTry(preview.total_profit_kurus)}</span>
+            ) : undefined
+          }
+          amount={formatTry(preview.total_allocated_kurus)}
+        />
+      </MobileCardList>
+
+      <div
+        className={cn(
+          DESKTOP_SHELL_ONLY,
+          "overflow-x-auto rounded-lg border border-border",
+        )}
+      >
         <DataTable>
           <DataTableHead>
             <DataTableRow>
               <DataTableHeaderCell>Partner</DataTableHeaderCell>
               <DataTableHeaderCell>Share</DataTableHeaderCell>
-              {preview.net_against_drawings && (
+              {netting && (
                 <>
                   <DataTableHeaderCell align="right">Gross</DataTableHeaderCell>
                   <DataTableHeaderCell align="right">Offset</DataTableHeaderCell>
@@ -58,7 +102,7 @@ export function PartnerProfitAllocationPreview({
               <DataTableRow key={line.partner_id}>
                 <DataTableCell>{line.partner_name}</DataTableCell>
                 <DataTableCell>{line.ownership_share_pct}%</DataTableCell>
-                {preview.net_against_drawings && (
+                {netting && (
                   <>
                     <DataTableCell
                       align="right"
@@ -87,7 +131,7 @@ export function PartnerProfitAllocationPreview({
             <DataTableRow>
               <DataTableCell className="font-medium">Total</DataTableCell>
               <DataTableCell>{""}</DataTableCell>
-              {preview.net_against_drawings && (
+              {netting && (
                 <>
                   <DataTableCell
                     align="right"

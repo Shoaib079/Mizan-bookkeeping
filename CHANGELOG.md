@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Leftover tables → mobile cards (`v0.leftover-tables-mobile`).** Phone (&lt;820): group-sale menu lines, opening-balances journal preview, and partner profit allocation preview use `MobileCardList`; desktop keeps DataTables. Shared shell tokens (`MOBILE_SHELL_ONLY` / `DESKTOP_SHELL_ONLY`). Vitest + tsc + eslint + next build green.
+
 - **Dropdown viewport align (`v0.dropdown-viewport-align`).** Header "…" / Download / Month pack menus measure the trigger and open left or right so the panel stays on screen (fixes horizontal page scroll when "…" sat on the right). Shared `dropdown-align` + `useDropdownHAlign`; viewport max-width clamp on all three. Vitest + tsc + eslint + next build green.
 
 - **Statement import wizard mobile (`v0.statement-import-mobile`).** Phone (&lt;820): column mapping above file preview; sticky Other file / Import above the tab bar; panel H1 hidden (PageHeader / top bar only); 44px touch targets on mapping fields and assign chips; shorter preview max-height. Desktop sidebar + Import footer unchanged. Vitest + tsc + eslint + next build green.
