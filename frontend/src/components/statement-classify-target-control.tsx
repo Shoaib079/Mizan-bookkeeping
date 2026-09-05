@@ -16,6 +16,10 @@ import {
   type StatementClassificationPickers,
 } from "@/lib/use-statement-classification-pickers";
 
+/** Desktop row height; phone shell gets min 44px touch target. */
+const TARGET_COMBO_CLASS =
+  "h-9 w-full min-w-0 text-xs max-[819px]:min-h-11";
+
 export type StatementClassifyTargetValues = {
   classification: StatementLineClassification;
   supplierId: string;
@@ -69,7 +73,7 @@ export function StatementClassifyTargetControl({
         onValueChange={values.setSupplierId}
         options={pickers.suppliers.map((s) => ({ value: s.id, label: s.name }))}
         placeholder="Supplier…"
-        className="h-9 w-full min-w-0 text-xs"
+        className={TARGET_COMBO_CLASS}
       />
     );
   }
@@ -81,7 +85,7 @@ export function StatementClassifyTargetControl({
         onValueChange={values.setCustomerId}
         options={pickers.customers.map((c) => ({ value: c.id, label: c.name }))}
         placeholder="Customer…"
-        className="h-9 w-full min-w-0 text-xs"
+        className={TARGET_COMBO_CLASS}
       />
     );
   }
@@ -93,7 +97,7 @@ export function StatementClassifyTargetControl({
         onValueChange={values.setEmployeeId}
         options={pickers.employees.map((e) => ({ value: e.id, label: e.name }))}
         placeholder="Employee…"
-        className="h-9 w-full min-w-0 text-xs"
+        className={TARGET_COMBO_CLASS}
       />
     );
   }
@@ -112,7 +116,7 @@ export function StatementClassifyTargetControl({
           onValueChange={values.setPartnerId}
           options={pickers.partners.map((p) => ({ value: p.id, label: p.name }))}
           placeholder="Partner…"
-          className="h-9 w-full min-w-0 text-xs"
+          className={TARGET_COMBO_CLASS}
         />
         {values.classification === "partner_capital_contribution" && (
           <Input
@@ -120,7 +124,7 @@ export function StatementClassifyTargetControl({
             value={values.capitalNote}
             onChange={(e) => values.setCapitalNote(e.target.value)}
             placeholder="Note — why they invested…"
-            className="h-9 w-full min-w-0 text-xs"
+            className={TARGET_COMBO_CLASS}
             required={!bulk}
           />
         )}
@@ -138,7 +142,7 @@ export function StatementClassifyTargetControl({
           label: a.name,
         }))}
         placeholder={bulk ? "Other account…" : "Account…"}
-        className="h-9 w-full min-w-0 text-xs"
+        className={TARGET_COMBO_CLASS}
       />
     );
   }
@@ -153,7 +157,7 @@ export function StatementClassifyTargetControl({
           label: a.name,
         }))}
         placeholder={bulk ? "Credit card…" : "Card…"}
-        className="h-9 w-full min-w-0 text-xs"
+        className={TARGET_COMBO_CLASS}
       />
     );
   }
@@ -169,7 +173,7 @@ export function StatementClassifyTargetControl({
             placeholder={
               bulk ? "Expense GL…" : "Expense GL — rent, utilities, repairs…"
             }
-            className="h-9 w-full min-w-0 text-xs"
+            className={TARGET_COMBO_CLASS}
           />
         </div>
         {entityId && (
@@ -202,7 +206,7 @@ export function StatementClassifyTargetControl({
             ? "No income accounts"
             : "No income accounts — add one under Chart of accounts"
         }
-        className="h-9 w-full min-w-0 text-xs"
+        className={TARGET_COMBO_CLASS}
       />
     );
   }
@@ -222,7 +226,7 @@ export function StatementClassifyTargetControl({
                 ? "Could not load platforms"
                 : "No delivery platforms — add under Delivery → Platforms"
           }
-          className="h-9 w-full min-w-0 text-xs"
+          className={TARGET_COMBO_CLASS}
         />
         {!bulk && pickers.deliveryPlatformsError && (
           <p className="text-[11px] text-destructive">

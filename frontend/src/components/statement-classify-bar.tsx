@@ -17,7 +17,11 @@ import type {
   ClassifyStatementLineResult,
 } from "@/lib/banking-types";
 import { formatTrDate, formatTry } from "@/lib/money";
-import { classificationLabel } from "@/lib/statement-classification-options";
+import {
+  classificationLabel,
+  classificationOption,
+} from "@/lib/statement-classification-options";
+import { classifyTargetFieldLabel } from "@/lib/statement-classify-target-label";
 import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
 import { cn } from "@/lib/utils";
 
@@ -63,6 +67,8 @@ export function StatementClassifyBar({
       : line.amount_kurus < 0
         ? "text-destructive"
         : "";
+  const targetKind = classificationOption(s.classification)?.target ?? null;
+  const targetLabel = classifyTargetFieldLabel(targetKind);
 
   return (
     <div className="mb-4 shrink-0 space-y-2 rounded-lg border border-primary/30 bg-card p-3 shadow-sm">
@@ -105,10 +111,19 @@ export function StatementClassifyBar({
         onSubmit={s.inQueue ? s.handlePost : (e) => e.preventDefault()}
         className="rounded-md border border-border/60 bg-muted/15 p-2"
       >
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Phone: stacked form. Desktop: one search-bar row (unchanged). */}
+        <div
+          className={cn(
+            "flex gap-2",
+            "max-[819px]:flex-col max-[819px]:items-stretch",
+            "min-[820px]:flex-row min-[820px]:flex-wrap min-[820px]:items-center",
+          )}
+        >
           <span
             className={cn(
-              "shrink-0 tabular-nums text-sm font-semibold",
+              "shrink-0 tabular-nums font-semibold",
+              "max-[819px]:text-base",
+              "min-[820px]:text-sm",
               amountClass,
             )}
           >
@@ -117,26 +132,39 @@ export function StatementClassifyBar({
 
           {s.inQueue ? (
             <>
-              <div className="min-w-0 flex-[1_1_12rem] basis-[12rem]">
+              <div className="min-w-0 min-[820px]:flex-[1_1_12rem] min-[820px]:basis-[12rem]">
+                <Label
+                  htmlFor="classify-type"
+                  className="mb-0.5 text-[11px] text-muted-foreground min-[820px]:hidden"
+                >
+                  Type
+                </Label>
                 <ClassificationPicker
                   id="classify-type"
                   amountKurus={line.amount_kurus}
                   value={s.classification}
                   onValueChange={s.setClassification}
-                  className="h-9 w-full min-w-0 text-xs"
+                  className="h-9 w-full min-w-0 text-xs max-[819px]:min-h-11"
                   placement="below"
                   showHint
                 />
               </div>
-              <div className="min-w-0 flex-[2_1_10rem] basis-[10rem]">
-                <StatementClassifyTargetControl
-                  idPrefix="classify"
-                  entityId={s.entityId}
-                  pickers={pickers}
-                  deliveryPlatformHint={s.deliveryPlatformHint}
-                  values={s.targetValues}
-                />
-              </div>
+              {targetKind ? (
+                <div className="min-w-0 min-[820px]:flex-[2_1_10rem] min-[820px]:basis-[10rem]">
+                  {targetLabel ? (
+                    <p className="mb-0.5 text-[11px] text-muted-foreground min-[820px]:hidden">
+                      {targetLabel}
+                    </p>
+                  ) : null}
+                  <StatementClassifyTargetControl
+                    idPrefix="classify"
+                    entityId={s.entityId}
+                    pickers={pickers}
+                    deliveryPlatformHint={s.deliveryPlatformHint}
+                    values={s.targetValues}
+                  />
+                </div>
+              ) : null}
             </>
           ) : s.correctable ? (
             <div className="min-w-0 flex-1 text-sm leading-snug">
@@ -158,11 +186,16 @@ export function StatementClassifyBar({
             </p>
           )}
 
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <div
+            className={cn(
+              "flex shrink-0 flex-wrap items-center gap-2",
+              "max-[819px]:w-full max-[819px]:flex-col max-[819px]:items-stretch",
+            )}
+          >
             {s.inQueue && (
               <Button
                 type="submit"
-                className="h-9 gap-1 px-4 text-xs"
+                className="h-9 gap-1 px-4 text-xs max-[819px]:w-full max-[819px]:text-sm"
                 disabled={s.submitting || pickers.loading || s.amountMismatch}
               >
                 {s.submitting ? "Posting…" : "Post"}
@@ -174,7 +207,7 @@ export function StatementClassifyBar({
               <Button
                 type="button"
                 variant="secondary"
-                className="h-9 text-xs"
+                className="h-9 text-xs max-[819px]:w-full max-[819px]:text-sm"
                 onClick={s.openCorrectDialog}
               >
                 Correct…
@@ -206,19 +239,19 @@ export function StatementClassifyBar({
 
       {s.inQueue && (
         <div className="flex flex-wrap items-end gap-2 border-t border-border/60 pt-2">
-          <div className="min-w-[12rem] flex-1">
+          <div className="min-w-0 w-full flex-1 min-[820px]:min-w-[12rem]">
             <Label htmlFor="learn-as" className="text-[11px] text-muted-foreground">
               Learn as (optional rule token)
             </Label>
             <Input
               id="learn-as"
-              className="mt-0.5 h-8 text-xs"
+              className="mt-0.5 h-8 text-xs max-[819px]:min-h-11"
               value={s.learnAs}
               onChange={(e) => s.setLearnAs(e.target.value)}
               placeholder="e.g. BSMV, HAVALE ÜCRET"
             />
           </div>
-          <p className="text-[11px] text-muted-foreground lg:max-w-md">
+          <p className="hidden text-[11px] text-muted-foreground min-[820px]:block lg:max-w-md">
             Bank charges (BSM, havale, commission) →{" "}
             <strong className="font-medium text-foreground">Bank charges</strong>.
             &ldquo;Decide later&rdquo; does not post — find those under Skipped.

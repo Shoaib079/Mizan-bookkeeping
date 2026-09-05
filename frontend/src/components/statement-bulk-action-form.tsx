@@ -10,8 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import type { StatementLineClassification } from "@/lib/banking-types";
+import { classificationOption } from "@/lib/statement-classification-options";
 import type { StatementBulkMode } from "@/lib/statement-bulk-selection";
+import { classifyTargetFieldLabel } from "@/lib/statement-classify-target-label";
 import type { StatementClassificationPickers } from "@/lib/use-statement-classification-pickers";
+import { cn } from "@/lib/utils";
 
 type SelectionCheck =
   | { ok: true }
@@ -58,10 +61,19 @@ export function StatementBulkActionForm({
   targetsStillRequired,
   onSubmit,
 }: Props) {
+  const targetKind = classificationOption(classification)?.target ?? null;
+  const targetLabel = classifyTargetFieldLabel(targetKind);
+
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-2">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="min-w-[12rem] flex-1">
+      <div
+        className={cn(
+          "flex gap-2",
+          "max-[819px]:flex-col max-[819px]:items-stretch",
+          "min-[820px]:flex-row min-[820px]:flex-wrap min-[820px]:items-end",
+        )}
+      >
+        <div className="min-w-0 w-full min-[820px]:min-w-[12rem] min-[820px]:flex-1">
           <Label htmlFor="bulk-classification" className="text-[11px]">
             Classification
           </Label>
@@ -71,22 +83,24 @@ export function StatementBulkActionForm({
             value={classification}
             onValueChange={onClassificationChange}
             disabled={submitting}
-            className="mt-1 h-9 w-full text-xs"
+            className="mt-1 h-9 w-full text-xs max-[819px]:min-h-11"
           />
         </div>
-        <div className="min-w-[10rem] flex-[2]">
-          <Label className="text-[11px]">Target</Label>
-          <div className="mt-1">
-            <StatementClassifyTargetControl
-              idPrefix="bulk"
-              entityId={entityId}
-              pickers={pickers}
-              deliveryPlatformHint={null}
-              values={targetValues}
-              variant="bulk"
-            />
+        {targetKind ? (
+          <div className="min-w-0 w-full min-[820px]:min-w-[10rem] min-[820px]:flex-[2]">
+            <Label className="text-[11px]">{targetLabel ?? "Target"}</Label>
+            <div className="mt-1">
+              <StatementClassifyTargetControl
+                idPrefix="bulk"
+                entityId={entityId}
+                pickers={pickers}
+                deliveryPlatformHint={null}
+                values={targetValues}
+                variant="bulk"
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
 
       {mode === "post" && (
@@ -129,9 +143,10 @@ export function StatementBulkActionForm({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-[819px]:flex-col max-[819px]:items-stretch">
         <Button
           type="submit"
+          className="max-[819px]:w-full"
           disabled={
             submitting ||
             pickers.loading ||

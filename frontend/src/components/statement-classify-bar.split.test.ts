@@ -9,6 +9,7 @@ describe("StatementClassifyBar split", () => {
     expect(bar).toContain("StatementClassifyCorrectDialog");
     expect(bar).toContain("useStatementClassifyBar");
     expect(bar).toContain("StaffSalaryPaymentDialog");
+    expect(bar).toContain("max-[819px]:flex-col");
   });
 
   it("mutation: classify/correct posting lives in the hook", () => {

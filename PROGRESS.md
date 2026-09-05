@@ -24,7 +24,7 @@
 | **Last completed slice** | Mobile one-title (`v0.mobile-one-title`) |
 | **Last tag** | `v0.mobile-one-title` |
 | **Unpushed** | no |
-| **Active slice** | — |
-| **Next up** | Statement classify-bar mobile stack |
-| **Exact next action** | Owner sign-off; next mobile UX slice |
-| **Gate** | Idle |
+| **Active slice** | Statement classify mobile stack (`v0.statement-classify-mobile`) — green light done; awaiting owner commit/tag |
+| **Next up** | Remaining mobile UX gaps (command palette / home cards) |
+| **Exact next action** | Commit + tag `v0.statement-classify-mobile` when owner confirms |
+| **Gate** | Verify → Self-audit done; Commit/tag pending |

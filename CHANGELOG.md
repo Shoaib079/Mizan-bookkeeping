@@ -8,6 +8,8 @@ Every change in plain English, dated (see CURSOR_RULES.md §8).
 
 ## 2026-09-05
 
+- **Statement classify mobile stack (`v0.statement-classify-mobile`).** Phone (&lt;819px): classify bar stacks amount → type → who → full-width Post; mobile labels; hide target when type needs none; hide bank-fee tip (Learn as field stays). Bulk bar same stack. Target comboboxes get 44px min height. Desktop row layout unchanged. **Post → salary dialog unchanged.** Vitest + tsc + eslint + next build green.
+
 - **Mobile one-title (`v0.mobile-one-title`).** Phone shows the page title once in the top bar: `PageHeader` registers via `MobileShellTitleProvider`; the in-page H1 is `sr-only` under 819px; title-only headers (e.g. More) collapse so there is no empty border. Bottom tabs stay. Desktop unchanged. Vitest + tsc + eslint + next build green.
 
 ## 2026-09-02
