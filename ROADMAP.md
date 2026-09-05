@@ -24,10 +24,10 @@
 | Field                    | Value                                                                                                        |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | **Active phase**         | Phase 13 — Post-launch UX & insights (app is LIVE) |
-| **Active slice**         | 819 shell layout alignment (awaiting commit/tag) |
-| **Next up**              | Optional: full-screen command search; leftover tables / import wizard |
-| **Last completed slice** | **More search cleanup** (`v0.more-search-cleanup`) |
-| **Last commit/tag**      | `v0.more-search-cleanup` |
+| **Active slice**         | *(none)* |
+| **Next up**              | Optional: mobile date pick without keypad; full-screen search; leftover tables / import |
+| **Last completed slice** | **819 shell layout alignment** (`v0.shell-layout-819`) |
+| **Last commit/tag**      | `v0.shell-layout-819` |
 
 
 **FINANCIAL_AUDIT is now closed except F2.** F1 resolved; **F3 closed (close-time snapshot), F4 closed (year-end close), F5 closed (override), F6 mitigated (hint).** **F2 (no output VAT → P&L is not tax basis) remains the only substantive finding**, and is a deliberate deferral: these books are a management view, and the mali müşavir files from invoices. **Fixed assets / depreciation are knowingly absent** (owner decision 2026-07-27, DECISIONS.md) — a capital purchase is expensed, so a big-purchase month understates profit while cash stays correct.
@@ -62,7 +62,7 @@
 
 | Work                                                                             | Tag / commit                                      | Status         | Do **not** duplicate                                                                                                       |
 | -------------------------------------------------------------------------------- | ------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 819 shell layout alignment (report period + KPI grids + header)                  | `v0.shell-layout-819`                             | pending tag    | Re-fork ReportDateRange / PageHeader aside at sm (640); KPI `sm:grid-cols-3` under mobile shell |
+| 819 shell layout alignment (report period + KPI grids + header)                  | `v0.shell-layout-819`                             | done           | Re-fork ReportDateRange / PageHeader aside at sm (640); KPI `sm:grid-cols-3` under mobile shell |
 | More search cleanup (drop Filter list; keep Search the app)                      | `v0.more-search-cleanup`                          | done           | Re-add Filter list on More; restore matchesMoreNavSearch list filter |
 | Home recent entries mobile cards                                                 | `v0.home-recent-entries-mobile`                   | done           | Force min-w table on phone for RecentEntriesCard; drop MobileCardList fork |
 | Statement classify mobile stack (stacked form; hide empty target)                | `v0.statement-classify-mobile`                    | done           | Restore flex-wrap-only classify/bulk bars on phone; always show empty target slot |
